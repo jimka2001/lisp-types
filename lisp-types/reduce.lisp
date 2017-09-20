@@ -142,6 +142,11 @@
                  (setf type nil)))
              (when (and? type)
                (setf type (cons 'and (remove-duplicates (cdr type) :test #'eq))))
+             (when (and? type)
+               ;; (and a) --> a
+               (when (and (cdr type)
+                          (null (cddr type)))
+                 (setf type (cadr type))))
              (when (or? type)
                ;; (or a b T c d) --> T
                (when (member t (cdr type) :test #'eq)
@@ -162,6 +167,11 @@
                  (setf type t)))
              (when (or? type)
                (setf type (cons 'or (remove-duplicates (cdr type) :test #'eq))))
+             (when (or? type)
+               ;; (or a) --> a
+               (when (and (cdr type)
+                          (null (cddr type)))
+                 (setf type (cadr type))))
              (when (not? type)
                ;; (not (not a)) --> a
                (while (and (not? type)
