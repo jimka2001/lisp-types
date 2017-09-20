@@ -254,7 +254,7 @@
 (define-test disjoint-cmp-l
   (let ((type-specifiers
           '(CONDITION RESTART RATIONAL CONS RATIO READER-ERROR STRUCTURE-CLASS
-            SYNONYM-STREAM ARITHMETIC-ERROR CHAR-CODE WARNING FLOAT-RADIX
+            SYNONYM-STREAM ARITHMETIC-ERROR TEST-CHAR-CODE WARNING FLOAT-RADIX
             SIMPLE-BIT-VECTOR STREAM-ERROR ARRAY STYLE-WARNING)))
     (slow-decompose-types-bdd-graph type-specifiers 
                                 :sort-nodes #'(lambda (graph)

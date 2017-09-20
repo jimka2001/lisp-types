@@ -434,10 +434,10 @@
                   (string-equal name (symbol-name f))))
               *decomposition-function-descriptors*))))
 
-(defun find-decomposition-discrepancy (&optional (type-specs '(array-rank array-total-size bignum bit
+(defun find-decomposition-discrepancy (&optional (type-specs '(test-array-rank test-array-total-size bignum bit
                                                                complex fixnum float float-digits
                                                                float-radix integer number ratio rational real
-                                                               char-code ;; char-int
+                                                               test-char-code ;; char-int
                                                                double-float ;; long-float
                                                                unsigned-byte)))
   (labels ((recure ( type-specs)

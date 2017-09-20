@@ -76,7 +76,7 @@
                                   :test #'equivalent-types-p)))
 
 (define-test type/3-types
-  (let ((decomp (bdd-decompose-types '(CHAR-CODE DOUBLE-FLOAT UNSIGNED-BYTE))))
+  (let ((decomp (bdd-decompose-types '(TEST-CHAR-CODE DOUBLE-FLOAT UNSIGNED-BYTE))))
     (dolist (t1 decomp)
       (dolist (t2 (remove t1 decomp))
         (assert-false (subtypep t1 t2))
@@ -100,9 +100,14 @@
   )
 
 
+(deftype test-array-rank () '(integer 0 (65529)))
+(deftype test-array-total-size () `(integer 0 (,(- most-positive-fixnum 2))))
+(deftype test-char-code () '(integer 0 (#x110000)))
+(deftype test-char-int () 'test-char-code)
+
 (define-test type/bdd-performance-test
-  (let* ((decomp '((AND (NOT BIT) ARRAY-RANK) BIT (AND (NOT CHAR-INT) ARRAY-TOTAL-SIZE)
-                   (AND CHAR-INT (NOT ARRAY-RANK)) BASE-CHAR (AND CHARACTER (NOT BASE-CHAR))
+  (let* ((decomp '((AND (NOT BIT) TEST-ARRAY-RANK) BIT (AND (NOT TEST-CHAR-INT) TEST-ARRAY-TOTAL-SIZE)
+                   (AND TEST-CHAR-INT (NOT TEST-ARRAY-RANK)) BASE-CHAR (AND CHARACTER (NOT BASE-CHAR))
                    (AND (NOT CELL-ERROR) BUILT-IN-CLASS ARITHMETIC-ERROR)
                    (AND (NOT CLASS) (NOT CELL-ERROR) ARITHMETIC-ERROR)
                    (AND CELL-ERROR BUILT-IN-CLASS ARITHMETIC-ERROR)
@@ -111,7 +116,7 @@
                    (AND CLASS (NOT CELL-ERROR) (NOT BUILT-IN-CLASS) (NOT ARITHMETIC-ERROR))
                    (AND (NOT COMPLEX) (NOT CLASS) (NOT CHARACTER) (NOT CELL-ERROR)
                     (NOT BROADCAST-STREAM) (NOT BOOLEAN) (NOT BIGNUM) ATOM
-                    (NOT ARRAY-TOTAL-SIZE) (NOT ARRAY) (NOT ARITHMETIC-ERROR))
+                    (NOT TEST-ARRAY-TOTAL-SIZE) (NOT ARRAY) (NOT ARITHMETIC-ERROR))
                    COMPLEX (AND (NOT CLASS) CELL-ERROR (NOT ARITHMETIC-ERROR))
                    (AND CELL-ERROR BUILT-IN-CLASS (NOT ARITHMETIC-ERROR))
                    (AND CLASS CELL-ERROR (NOT BUILT-IN-CLASS) ARITHMETIC-ERROR)
@@ -135,7 +140,7 @@
       (when (valid-type-p sym)
 	(push sym all-types)))
     (setf all-types (set-difference all-types '(compiled-function control-error division-by-zero error
-                                                char-code base-char)))
+                                                test-char-code base-char)))
     (setf all-types (sort all-types #'string<))
     (bdd-call-with-new-hash
      (lambda ()

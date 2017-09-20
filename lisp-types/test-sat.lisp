@@ -95,13 +95,13 @@
 
   (let ((types '(rational bit integer long-float real floating-point-inexact
 		 double-float bignum signed-byte float unsigned-byte single-float number fixnum
-		 char-int complex)))
+		 test-char-int complex)))
     (assert-false (set-exclusive-or (decompose-types-sat types)
 		      (decompose-types types) :test #'equivalent-types-p))
 
   (let ((types '(short-float ratio rational bit integer long-float real floating-point-inexact
 		 double-float bignum signed-byte float unsigned-byte single-float number fixnum
-		 char-int complex)))
+		 test-char-int complex)))
     (assert-false (set-exclusive-or (decompose-types-sat types)
 				    (decompose-types types)
 				    :test #'equivalent-types-p)))
@@ -109,7 +109,7 @@
 
   (let ((types '(short-float ratio rational bit integer long-float real floating-point-inexact
 		 double-float bignum signed-byte float unsigned-byte single-float number fixnum
-		 char-int complex)))
+		 test-char-int complex)))
     (assert-false (set-exclusive-or (decompose-types-sat types)
 				    (decompose-types types)
 				    :test #'equivalent-types-p))))
@@ -127,10 +127,10 @@
 
 
 (defun types/sanity-test ()
-  (let ((numerical-types '(array-rank array-total-size bignum bit
+  (let ((numerical-types '(test-array-rank test-array-total-size bignum bit
                            complex fixnum float float-digits
                            float-radix integer number ratio rational real
-                           char-code ;; char-int
+                           test-char-code ;; test-char-int
                            double-float ;; long-float
                            ;;short-float signed-byte single-float
                            unsigned-byte)))
@@ -143,7 +143,7 @@
     (do-external-symbols (sym :cl)
       (when (valid-type-p sym)
 	(push sym all-types)))
-    (setf all-types (set-difference all-types '(compiled-function char-code control-error division-by-zero error)))
+    (setf all-types (set-difference all-types '(compiled-function test-char-code control-error division-by-zero error)))
     (setf all-types (sort all-types #'string<))
     (let ((testing-types (list (pop all-types))))
       (loop :while testing-types
