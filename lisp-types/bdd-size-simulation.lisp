@@ -180,7 +180,7 @@
     (flet ((individual-plot (stream num-vars &aux (plist (find num-vars data :key (getter :num-vars))))
              (format stream "\\begin{tikzpicture}~%")
              (format stream "\\begin{axis}[~% xlabel=ROBDD node count for ~D variables,~% ymajorgrids,~% yminorgrids,~% xmajorgrids,~% xminorgrids,~% ylabel=Number of Boolean functions,~% legend style={font=\tiny}~%]~%" num-vars)
-             (format stream "\\addplot[color=blue] coordinates {~%")
+             (format stream "\\addplot[color=blue,mark=*] coordinates {~%")
              (dolist (item (getf plist :counts))
                (format stream "(~D,~D)~%" (car item) (coerce (nth 3 item) 'double-float)))
              (format stream "};~%")
