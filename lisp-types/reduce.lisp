@@ -231,6 +231,7 @@ If :full nil is given, then an incomplete but fast reduction is done.  No step i
 a call to subtypep or friends."
   (declare (optimize (speed 3) (compilation-speed 0))
 	   (inline sub-super reduce-absorption reduce-redundancy remove-supers remove-subs))
+
   (labels ((build (op zero args)
              (cond ((null args)
                     zero)
@@ -447,7 +448,8 @@ a call to subtypep or friends."
 		  (type list operands))
 	 (ecase operator
 	   ((and)			; REDUCE AND
-	    (setf operands (remove-supers operands)) ; (and float number) --> (and float)
+	    (when full
+              (setf operands (remove-supers operands))) ; (and float number) --> (and float)
 	    (while (some #'and? operands)
 					; (and (and A B) X Y) --> (and A B X Y)
 	      (setf operands (mapcan #'(lambda (operand)
@@ -535,44 +537,45 @@ a call to subtypep or friends."
 	      (t
 	       (make-and operands))))
 	   ((or)					  ; REDUCE OR
-	    (setf operands (remove-subs operands)) ; (or float number) --> (or number)
-	    (setf operands (reduce-absorption operands))
-	    (when (some #'and? operands)
-	      (setf operands (reduce-redundancy operands)))
+	    (when full
+              (setf operands (remove-subs operands)) ; (or float number) --> (or number)
+              (setf operands (reduce-absorption operands))
+              (when (some #'and? operands)
+                (setf operands (reduce-redundancy operands)))
 
-	    ;; consensus theorem
-	    ;; AB + A!C + BC = AB + A!C
-	    ;; ABU + A!CU + BCU = ABU + A!CU
-	    (labels ((find-potential-consensus-tail (and1 and2)
-		       (declare (type (cons symbol list) and1 and2))
-		       ;; exists? x in and1 where x! is in and2?
-		       (let ((t1 (find-if (lambda (t1)
-					    (member `(not ,t1) (cdr and2) :test #'equal))
-					  (cdr and1))))
-			 (declare (notinline union))
-			 (when t1
-			   (union (remove t1 (cdr and1) :test #'equal)
-				  (remove `(not ,t1) (cdr and2) :test #'equal)
-				  :test #'equal))))
-		     (pair-consensus (t1 t2 &aux (tail (find-potential-consensus-tail t1 t2)))
-		       (find-if #'(lambda (t4) (and (and? t4)
-						    (set-equalp tail (cdr t4))))
-				operands))
-		     (find-consensus-term (&aux consensus)
-		       (dolist (t1 operands)
-			 (when (and? t1)
-			   (dolist (t2 operands)
-			     (cond
-			       ((null (and? t2)))
-			       ((equal t1 t2))
-			       (t
-				(setf consensus (or (pair-consensus t1 t2)
-						    (pair-consensus t2 t1)))
-				(when consensus
-				  (return-from find-consensus-term consensus)))))))))
-	      (let (consensus-term)
-		(loop :while (setf consensus-term (find-consensus-term))
-		      :do (setf operands (remove consensus-term operands :test #'equal)))))
+              ;; consensus theorem
+              ;; AB + A!C + BC = AB + A!C
+              ;; ABU + A!CU + BCU = ABU + A!CU
+              (labels ((find-potential-consensus-tail (and1 and2)
+                         (declare (type (cons symbol list) and1 and2))
+                         ;; exists? x in and1 where x! is in and2?
+                         (let ((t1 (find-if (lambda (t1)
+                                              (member `(not ,t1) (cdr and2) :test #'equal))
+                                            (cdr and1))))
+                           (declare (notinline union))
+                           (when t1
+                             (union (remove t1 (cdr and1) :test #'equal)
+                                    (remove `(not ,t1) (cdr and2) :test #'equal)
+                                    :test #'equal))))
+                       (pair-consensus (t1 t2 &aux (tail (find-potential-consensus-tail t1 t2)))
+                         (find-if #'(lambda (t4) (and (and? t4)
+                                                      (set-equalp tail (cdr t4))))
+                                  operands))
+                       (find-consensus-term (&aux consensus)
+                         (dolist (t1 operands)
+                           (when (and? t1)
+                             (dolist (t2 operands)
+                               (cond
+                                 ((null (and? t2)))
+                                 ((equal t1 t2))
+                                 (t
+                                  (setf consensus (or (pair-consensus t1 t2)
+                                                      (pair-consensus t2 t1)))
+                                  (when consensus
+                                    (return-from find-consensus-term consensus)))))))))
+                (let (consensus-term)
+                  (loop :while (setf consensus-term (find-consensus-term))
+                        :do (setf operands (remove consensus-term operands :test #'equal))))))
 	    (while (some #'or? operands) ; (or A (or U V) (or X Y) B C) --> (or A U V X Y B C)
 	      (setf operands (mapcan #'(lambda (operand)
                                          (if (or? operand)
