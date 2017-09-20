@@ -68,10 +68,12 @@
 
      (defun ,with-name (thunk)
        (declare (type (function () t) thunk))
-       (let ((,hash (make-hash-table :test #'equal)))
-         (declare (ignorable ,hash))
-         (prog1 (funcall thunk)
-           (format t "finished with ~A=~A~%" ',fun-name ,hash))))
+       (if (null ,hash)
+           (let ((,hash (make-hash-table :test #'equal)))
+             (declare (ignorable ,hash))
+             (prog1 (funcall thunk)
+               (format t "finished with ~A=~A~%" ',fun-name ,hash)))
+           (funcall thunk)))
        
      (defun ,fun-name (&rest arg)
        ,doc-string
