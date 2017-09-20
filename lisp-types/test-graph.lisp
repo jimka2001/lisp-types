@@ -95,10 +95,15 @@
   (let ((all-numbers (set-difference (valid-subtypes 'number)
                                      ;; redundante types
                                      '(nil single-float signed-byte double-float test-char-int))))
-    
-    (assert-false (set-exclusive-or (decompose-types all-numbers)
-                                    (decompose-types-graph all-numbers)
-                                    :test #'equivalent-types-p))))
+    (call-with-subtypep-cache
+     (lambda ()
+       (call-with-subtype-hash
+        (lambda ()
+          (call-with-equiv-hash
+           (lambda ()
+             (assert-false (set-exclusive-or (decompose-types all-numbers)
+                                             (decompose-types-graph all-numbers)
+                                             :test #'equivalent-types-p))))))))))
 
 (define-test type/graph-7
   (let ((types '( UNSIGNED-BYTE BIGNUM TEST-ARRAY-RANK RATIONAL)))
