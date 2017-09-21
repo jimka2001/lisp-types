@@ -94,11 +94,10 @@
     ;;                   (and array sequence (not vector))
     ;;                   (and (not float) (not integer) (not ratio) real)
     ;;                   (and (not bignum) (not fixnum) unsigned-byte)))))
-    (call-with-subtypep-cache
-     (lambda ()
-       (prog1 (funcall thunk)
-         (when verbose
-           (format t "finished with ~A~%" *bdd-hash*)))))))
+    (caching-types
+     (prog1 (funcall thunk)
+       (when verbose
+         (format t "finished with ~A~%" *bdd-hash*))))))
   
 (defun bdd-make-key (label left right)
   (list left right label))

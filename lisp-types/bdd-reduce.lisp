@@ -561,12 +561,9 @@ of min-terms, this function returns a list of the min-terms."
 
 (defun bdd-decompose-types (type-specifiers)
   (when type-specifiers
-    (call-with-disjoint-hash
-        (lambda ()
-          (call-with-subtype-hash
-              (lambda ()
-                (mapcar #'bdd-to-dnf
-                        (%bdd-decompose-types type-specifiers))))))))
+    (caching-types
+      (mapcar #'bdd-to-dnf
+              (%bdd-decompose-types type-specifiers)))))
 
 (defun bdd-find-dup-bdds (bdds)
   "A debugging function.  It can be used to find whether two (or more) bdds

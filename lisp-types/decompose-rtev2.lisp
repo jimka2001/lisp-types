@@ -60,8 +60,5 @@
   "Given a list TYPE-SPECIFIERS of lisp type names, return a list of disjoint, 
 non-nil type-specifiers comprising the same union, with each of the resulting
 type-specifiers being a sub-type of one of the given type-specifiers."
-  (call-with-disjoint-hash
-      (lambda ()
-        (call-with-subtype-hash
-            (lambda ()
-              (slow-decompose-types-rtev2 type-specifiers))))))
+  (caching-types
+    (slow-decompose-types-rtev2 type-specifiers)))

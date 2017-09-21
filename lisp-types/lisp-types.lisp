@@ -266,6 +266,17 @@ i.e., is a subtype of nil."
       (multiple-value-bind (T2<=T1 okT2T2) (smarter-subtypep T2 T1)
         (values (and T1<=T2 T2<=T1) (and okT1T2 okT2T2))))))
 
+(defmacro caching-types (&body body)
+  `(call-with-disjoint-hash
+    (lambda ()
+      (call-with-subtype-hash
+       (lambda ()
+         (call-with-equiv-hash
+          (lambda ()
+            (call-with-subtypep-cache
+             (lambda ()
+               ,@body)))))))))
+
 (defun set-equalp (set-a set-b &key (test #'equal))
   (declare (notinline set-exclusive-or))
   (not (set-exclusive-or set-a set-b :test test)))
