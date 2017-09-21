@@ -52,7 +52,7 @@
 	     (forget (type)
 	       (setf type-specifiers (remove type type-specifiers :test #'eq)))
 	     (remember (type)
-	       (pushnew type type-specifiers :test #'equivalent-types-p)))
+	       (pushnew (type-to-dnf type) type-specifiers :test #'equivalent-types-p)))
       (while type-specifiers
         (remove-disjoint)
         (multiple-value-bind (foundp T1 T2) (find-intersecting)

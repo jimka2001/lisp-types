@@ -162,8 +162,8 @@ If N > (length of data) then a permutation of DATA is returned"
   "The sbcl subtypep function does not know that (eql :x) is a subtype of keyword,
 this function SMARTER-SUBTYPEP understands this."
   (declare (optimize (speed 3) (compilation-speed 0)))
-  (let ((t1 (reduce-lisp-type t1 :full nil))
-        (t2 (reduce-lisp-type t2 :full nil)))
+  (let ((t1 (type-to-dnf t1))
+        (t2 (type-to-dnf t2)))
     (multiple-value-bind (T1<=T2 OK) (cached-subtypep t1 t2)
       (cond
         (OK
@@ -188,10 +188,10 @@ i.e., is a subtype of nil."
 
 (defun slow-disjoint-types-p (t1 t2
                               &aux
-                                (T1 (reduce-lisp-type t1 :full nil))
-                                (T2 (reduce-lisp-type t2 :full nil))
+                                (T1 (type-to-dnf t1))
+                                (T2 (type-to-dnf t2))
                                 X Y
-                                (t12 (reduce-lisp-type (list 'and T1 T2) :full nil)))
+                                (t12 (type-to-dnf (list 'and T1 T2))))
   "SLOW-DISJOINT-TYPES-P returns a list of two booleans, whereas DISJOINT-TYPES-P returns
  the two corresponding VALUES."
   (declare (notinline subsetp))
@@ -260,8 +260,8 @@ i.e., is a subtype of nil."
 
 (def-cache-fun (equivalent-types-p call-with-equiv-hash) (T1 T2)
                "Two types are considered equivalent if each is a subtype of the other."
-  (let ((T1 (reduce-lisp-type T1 :full nil))
-        (T2 (reduce-lisp-type T2 :full nil)))
+  (let ((T1 (type-to-dnf T1))
+        (T2 (type-to-dnf T2)))
     (multiple-value-bind (T1<=T2 okT1T2) (smarter-subtypep T1 T2)
       (multiple-value-bind (T2<=T1 okT2T2) (smarter-subtypep T2 T1)
         (values (and T1<=T2 T2<=T1) (and okT1T2 okT2T2))))))

@@ -68,8 +68,8 @@ is the work-horse for REDUCED-TYPECASE."
 		  (remember term nil)))))
 	   (transform-clauses (clauses)
 	     (loop :for clause :in clauses
-		   :collect (let* ((t2 (substitute-type (car clause) reductions))
-				   (t3 (reduce-lisp-type t2)))
+		   :collect (let* ((t2 (type-to-dnf (substitute-type (car clause) reductions)))
+				   (t3 (reduce-lisp-type (type-to-dnf t2))))
 			      (remember (car clause) nil)
 			      (remember t2 nil)
 			      (remember t3 nil)
