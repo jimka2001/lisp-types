@@ -114,6 +114,10 @@
                (when (member nil (cdr type) :test #'eq)
                  (setf type nil)))
              (when (and? type)
+               ;; (and a b nil c d) --> (and a b c d)
+               (when (member t (cdr type) :test #'eq)
+                 (setf type (cons 'and (remove t (cdr type) :test #'eq)))))
+             (when (and? type)
                ;; (and) --> t
                (when (null (cdr type))
                  (setf type t)))
@@ -152,6 +156,10 @@
                (when (member t (cdr type) :test #'eq)
                  (setf type t)))
              (when (or? type)
+               ;; (or a b nil c d) --> (or a b c d)
+               (when (member nil (cdr type) :test #'eq)
+                 (setf type (cons 'or (remove nil (cdr type) :test #'eq)))))
+             (when (or? type)
                ;; (or) --> nil
                (when (null (cdr type))
                  (setf type nil)))
@@ -172,6 +180,13 @@
                (when (and (cdr type)
                           (null (cddr type)))
                  (setf type (cadr type))))
+             (when (equal type '(not t))
+               ;; (not t) --> nil
+               (setf type nil))
+             (when (equal type '(not nil))
+               ;; (not nil) --> t
+               (setf type t))
+               
              (when (not? type)
                ;; (not (not a)) --> a
                (while (and (not? type)
