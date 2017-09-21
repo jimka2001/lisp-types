@@ -83,7 +83,7 @@
   operands)
 
 (defun type-to-dnf (type)
-  (declare (optimize (speed 3) (safety 0) (debug 0) (compilation-speed 0) (space 0)))
+  (declare (optimize (speed 3) (debug 0) (compilation-speed 0) (space 0)))
   (labels ((and? (obj)
              (and (consp obj)
                   (eq 'and (car obj))))

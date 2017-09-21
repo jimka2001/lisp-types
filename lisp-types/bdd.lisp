@@ -104,7 +104,7 @@
 
 (defun bdd-find-int-int (hash label left right)
   (declare (type fixnum left right)
-           (optimize (speed 3) (safety 0)))
+           (optimize (speed 3)))
   (gethash (bdd-make-key label left right) hash))
 
 (defun bdd-find (hash label left-bdd right-bdd)
@@ -164,7 +164,7 @@
       (error "invalid type specifier: ~A" label)))
 
 (defmethod bdd ((expr list))
-  (declare (optimize (speed 3) (safety 0) (debug 0) (compilation-speed 0) (space 0)))
+  (declare (optimize (speed 3) (debug 0) (compilation-speed 0) (space 0)))
   (destructuring-bind (head &rest tail) expr
     (flet ((bdd-tail ()
              (mapcar #'bdd tail)))

@@ -115,7 +115,7 @@
 (defun bdd-find-reduction (label bdd reduction-rules)
   (declare (type bdd bdd)
            (type list reduction-rules)
-           (optimize (speed 3) (safety 0)))
+           (optimize (speed 3)))
   "Apply each of the REDUCTION-RULES to BDD.  Some of the reduction rules may
 result in reducing the BDD to a simpler form.   If no reduction rule applies
 then NIL is returned, otherwise the reduced BDD is returned.
@@ -493,7 +493,7 @@ convert it to DNF (disjunctive-normal-form)"
   (bdd-to-dnf (bdd type)))
 
 (defun %bdd-decompose-types (type-specifiers)
-  (declare (optimize (debug 0) (safety 0) (speed 3))) ;; optimize tail call 
+  (declare (optimize (debug 0) (speed 3))) ;; optimize tail call 
   (bdd-call-with-new-hash
    (lambda (&aux (bdds (remove-if #'bdd-empty-type (mapcar #'bdd type-specifiers))))
      (declare (type list bdds))
