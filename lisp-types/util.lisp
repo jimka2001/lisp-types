@@ -54,6 +54,8 @@
                 (t
                  (setf (gethash key hash) (multiple-value-list (funcall thunk))))))))))
 
+(defvar *verbose-caching* nil)
+
 (defmacro def-cache-fun ((fun-name with-name &key (hash (gensym "hash"))) lam-list doc-string  &body body)
   "Define two functions named by FUN-NAME and WITH-NAME.  The lambda list of the 
  first function is given by LAM-LIST.  The semantics of the first function will be
@@ -72,7 +74,8 @@
            (let ((,hash (make-hash-table :test #'equal)))
              (declare (ignorable ,hash))
              (prog1 (funcall thunk)
-               (format t "finished with ~A=~A~%" ',fun-name ,hash)))
+               (when *verbose-caching*
+                 (format t "finished with ~A=~A~%" ',fun-name ,hash))))
            (funcall thunk)))
        
      (defun ,fun-name (&rest arg)
