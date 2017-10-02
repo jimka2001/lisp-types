@@ -82,6 +82,28 @@
 			      operands)))
   operands)
 
+(defun reduce-member-type (type-spec)
+  (declare (optimize (speed 3) (compilation-speed 0) (debug 0)))
+  (cond
+    ((and (consp type-spec)
+          (eq 'AND (car type-spec)))
+     ;; is it of the form (AND ... (MEMBER ...) ...)
+     ;; or (AND ... (EQL ...) ...)
+     (let ((hit (find-if (lambda (t2)
+                           (and (consp t2)
+                                (or (eq 'MEMBER (car t2))
+                                    (eq 'EQL (car t2)))))
+                         (cdr type-spec))))
+       ;; found the (MEMBER ...) or (EQL ...)
+       (if hit ;; now remove all the elements of the (MEMBER ...) or (EQL ...) which fail to match the type
+           `(member ,@(remove-if-not (lambda (obj)
+                                       (typep obj type-spec))
+                                     (cdr hit)))
+           type-spec)))
+    (t
+     type-spec)))
+
+
 (defun type-to-dnf (type)
   (declare (optimize (speed 3) (debug 0) (compilation-speed 0) (space 0)))
   (labels ((and? (obj)
@@ -109,6 +131,8 @@
                 type)))
            (to-dnf (type)
              (declare (type (or list symbol) type))
+             (when (and? type)
+               (setf type (reduce-member-type type)))
              (when (and? type)
                ;; (and a b NIL c d) --> NIL
                (when (member nil (cdr type) :test #'eq)
