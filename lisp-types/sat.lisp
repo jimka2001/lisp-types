@@ -92,21 +92,22 @@ There are three cases of constraints generated.
   "Return a list of decomposed types"
   (let (disjoint
 	(constraints (generate-constraints types)))
-    (visit-min-terms (lambda (min-term)
-		       (unless (some (lambda (constraint)
-                                       ;; if constraint = (A (not B) C)
-                                       ;; and min-term = (A X (not B) Y C)
-                                       ;; so every element of the constraint is also an element of min-term
-				       (every (lambda (term)
-						(member term min-term :test #'equal))
-					      constraint))
-				     constraints)
-			 (let ((new-type (cons 'and (copy-list min-term))))
-			   (unless (cached-subtypep new-type nil)
-			     (push  new-type
-				    disjoint)))))
-		     types)
-    (cond
-      (reduce (mapcar #'reduce-lisp-type disjoint))
-      (t
-       disjoint))))
+    (caching-types
+     (visit-min-terms (lambda (min-term)
+                        (unless (some (lambda (constraint)
+                                        ;; if constraint = (A (not B) C)
+                                        ;; and min-term = (A X (not B) Y C)
+                                        ;; so every element of the constraint is also an element of min-term
+                                        (every (lambda (term)
+                                                 (member term min-term :test #'equal))
+                                               constraint))
+                                      constraints)
+                          (let ((new-type (cons 'and (copy-list min-term))))
+                            (unless (cached-subtypep new-type nil)
+                              (push  new-type
+                                     disjoint)))))
+                      types)
+     (cond
+       (reduce (mapcar #'reduce-lisp-type disjoint))
+       (t
+        disjoint)))))
