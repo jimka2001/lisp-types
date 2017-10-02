@@ -37,6 +37,7 @@
    "BDD"
    "RUN-PROGRAM"
    "GC"
+   "CACHING-TYPES"
    ))
 
 (in-package   :lisp-types)
