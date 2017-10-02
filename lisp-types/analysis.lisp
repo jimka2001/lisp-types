@@ -1271,8 +1271,125 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                                               bdd-decompose-types
                                               decompose-types-rtev2
                                               decompose-types-graph)))
+(defun display-theta (n theta)
+  (flet ((e2 (theta)
+           (- (expt 2 (expt 2 theta))
+              (expt 2 (expt 2 (1- theta)))))
+         (e1 (theta)
+           (expt 2 (- n theta 1)))
+         (pr (n fn)
+           (format t " ~A=" fn)
+           (if (< (log n) 10)
+               (format t "~D" n)
+               (format t "2^~A" (log n 2)))))
+    (loop for i from (1- theta) to (1+ theta)
+          do (format t "n=~D log_2(~D)=~D theta=~D" n n (floor (log n 2)) i)
+          do (pr (e2 i) "e2")
+          do (format t " ~A"
+                     (cond
+                       ((< (e2 i) (e1 i))
+                        "<")
+                       ((= (e2 i) (e1 i))
+                        "=")
+                       (t ">")))
+          do (pr (e1 i) "e1")
+          do (terpri))))
 
 
+(defun theta (n &key verbose)
+  (let ((theta (floor (log n 2)))
+        direction
+        (iterations 1))
+    (flet ((e2 (theta)
+             (- (expt 2 (expt 2 theta))
+                (expt 2 (expt 2 (1- theta)))))
+           (e1 (theta)
+             (expt 2 (- n theta 1))))
+      (cond
+        ((<= (e1 theta)
+             (e2 theta))
+         (setf direction 'downward)
+         (when verbose
+           (format t "n=~3D downward ~4A <= ~10A "
+                   n
+                   (log (e1 theta) 2)
+                   (log (e2 theta) 2)))
+         (decf theta)
+         (incf iterations)
+         (loop while (<= (e1 theta)
+                         (e2 theta))
+               do (decf theta)
+               do (incf iterations)))
+        (t
+         (setf direction 'upward)
+         (when verbose
+           (format t "n=~3D upward   ~4A >  ~10A "
+                   n (log (e1 theta) 2)
+                   (log (e2 theta) 2) ))
+         (incf theta)
+         (incf iterations)
+         (loop while (< (e2 theta)
+                        (e1 theta))
+               do (incf theta)
+               do (incf iterations))
+         (decf theta)))
+      (assert (and (>= (e2 (1+ theta)) (e1 (1+ theta)))
+                   (< (e2 theta) (e1 theta)))
+              (theta)
+              "theta=~D expecting e2(~D)=~A >= e1(~D)=~A e2(~D)=~A < e1(~D)=~A"
+              theta
+              (1+ theta) (e2 (1+ theta)) (1+ theta) (e1 (1+ theta))
+              theta (e2 theta) theta (e1 theta)))
+    (when verbose
+      (format t "iterations=~D  theta=~D = log_2(~D)+~D~%"
+              (1- iterations)
+              theta n
+              (- theta (floor (log n 2)))))
+    (values (1- iterations) direction theta)))
+
+(defun power-diff (n)
+  (- (expt 2 (expt 2 n))
+     (expt 2 (expt 2 (1- n)))))
+
+(defun cmp-power-diff (n)
+  (let ((theta (floor (log n 2))))
+    (- (power-diff theta)
+       (expt 2 (- n theta 1)))))
+    
+
+
+(let* ((n 16398)
+       (theta (floor (log n 2))))
+  (- 16384.0 (log (- (expt 2 (expt 2 theta))
+          (expt 2 (expt 2 (- theta 1)))) 2.0)) )
+
+(let ((n 16398))
+  (log (expt 2 (- n 13 1)) 2)) ;; 16384.0
+
+(let ((n 16398))
+  (log (expt 2 (- n 14 1)) 2)) ; 16383.0
+
+(let ((n 16398))
+  (- (expt 2 (expt 2 n))
+          (expt 2 (expt 2 (- n 1)))))
+
+
+(defun find-theta (limit &key verbose)
+  (let ((hash-iterations (make-hash-table))
+        (hash-directions (make-hash-table)))
+    (loop for n from 1 to limit
+          do (multiple-value-bind (iterations direction theta) (theta n :verbose verbose)
+               (declare (type (member upward downward) direction)
+                        (ignore theta))
+               (incf (gethash iterations hash-iterations 0))
+               (incf (gethash direction hash-directions 0))))
+    (maphash (lambda (key value)
+               (format t "iterations=~D occurances=~D~%" key value))
+             hash-iterations)
+    (maphash (lambda (key value)
+               (format t "direction=~A occurances=~D~%" key value))
+             hash-directions)))
+    
 
 
 
