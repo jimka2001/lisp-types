@@ -498,7 +498,7 @@ convert it to DNF (disjunctive-normal-form)"
    (lambda (&aux (bdds (remove-if #'bdd-empty-type (mapcar #'bdd type-specifiers))))
      (declare (type list bdds))
      (labels ((try (bdds disjoint-bdds &aux (bdd-a (car bdds)))
-                (declare (type bdd bdd-a))
+                (declare (type (or null bdd) bdd-a))
                 (cond
                   ((null bdds)
                    disjoint-bdds)
