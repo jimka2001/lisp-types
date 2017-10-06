@@ -1359,20 +1359,6 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
     
 
 
-(let* ((n 16398)
-       (theta (floor (log n 2))))
-  (- 16384.0 (log (- (expt 2 (expt 2 theta))
-          (expt 2 (expt 2 (- theta 1)))) 2.0)) )
-
-(let ((n 16398))
-  (log (expt 2 (- n 13 1)) 2)) ;; 16384.0
-
-(let ((n 16398))
-  (log (expt 2 (- n 14 1)) 2)) ; 16383.0
-
-(let ((n 16398))
-  (- (expt 2 (expt 2 n))
-          (expt 2 (expt 2 (- n 1)))))
 
 
 (defun find-theta (limit &key verbose)
