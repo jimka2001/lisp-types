@@ -1297,7 +1297,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
 
 
 (defun theta (n &key verbose)
-  (let ((theta (floor (log n 2)))
+  (let ((theta (1+ (floor (log (1- n) 2))))
         direction
         (iterations 1))
     (flet ((e2 (theta)
@@ -1341,10 +1341,11 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
               (1+ theta) (e2 (1+ theta)) (1+ theta) (e1 (1+ theta))
               theta (e2 theta) theta (e1 theta)))
     (when verbose
-      (format t "iterations=~D  theta=~D = log_2(~D)+~D~%"
+      (format t "iterations=~D  init=~D theta=~D = 1+log_2(~D-1)+~D~%"
               (1- iterations)
+              (1+ (floor (log (1- n) 2)))
               theta n
-              (- theta (floor (log n 2)))))
+              (- theta (1+ (floor (log (1- n) 2))))))
     (values (1- iterations) direction theta)))
 
 (defun power-diff (n)
@@ -1377,7 +1378,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
 (defun find-theta (limit &key verbose)
   (let ((hash-iterations (make-hash-table))
         (hash-directions (make-hash-table)))
-    (loop for n from 1 to limit
+    (loop for n from 2 to limit
           do (multiple-value-bind (iterations direction theta) (theta n :verbose verbose)
                (declare (type (member upward downward) direction)
                         (ignore theta))
@@ -1391,6 +1392,21 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
              hash-directions)))
     
 
+(defun estim (n nterms)
+  (labels ((rec (l i accum)
+             (if (zerop i)
+                 accum
+                 (rec (log (- n l) 2) (1- i) (cons l accum)))))
+    (let ((seq (nreverse (rec (log n 2) nterms nil))))
+      (maplist (lambda (tail)
+                 (if (cdr tail)
+                     (destructuring-bind (a b &rest ignored) tail
+                       (declare (ignore ignored))
+                       (list a (cond ((< a b) 1)
+                                     ((= a b) 0)
+                                     (t -1)) (- a b)))
+                     (car tail)))
+               seq))))
 
 
 #|
