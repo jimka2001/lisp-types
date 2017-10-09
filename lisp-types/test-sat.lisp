@@ -43,97 +43,149 @@
 
 
 
-(define-test type/sat
+(define-test type/sat1
   ;; crashes in allegro
-  (cl-user::print-vals
-   (let* ((A '(1 2 3 4 5 6 7 8 9 10 12 13))
-          (B '(2 3 5 6))
-          (C '(3 4 5 7))
-          (D '(5 6 7 8 9 13))
-          (E '(9))
-          (F '(10))
-          (G '(11))
-          (H '(9 12 13))
-          (types `((member ,@A)
-                   (member ,@B)
-                   (member ,@C)
-                   (member ,@D)
-                   (member ,@E)
-                   (member ,@F)
-                   (member ,@G)
-                   (member ,@H))))
+  (let* ((A '(1 2 3 4 5 6 7 8 9 10 12 13))
+         (B '(2 3 5 6))
+         (C '(3 4 5 7))
+         (D '(5 6 7 8 9 13))
+         (E '(9))
+         (F '(10))
+         (G '(11))
+         (H '(9 12 13))
+         (types `((member ,@A)
+                  (member ,@B)
+                  (member ,@C)
+                  (member ,@D)
+                  (member ,@E)
+                  (member ,@F)
+                  (member ,@G)
+                  (member ,@H))))
 
 
-     (lisp-types::generate-constraints types)
-     (caching-types
-       (assert-false (set-exclusive-or '((eql 1)
-                                         (eql 2)
-                                         (eql 3)
-                                         (eql 4)
-                                         (eql 5)
-                                         (eql 6)
-                                         (eql 7)
-                                         (eql 8)
-                                         (eql 9)
-                                         (eql 10)
-                                         (eql 11)
-                                         (eql 12)
-                                         (eql 13))
-                                       (decompose-types-sat types)
-                                       :test #'equivalent-types-p))))
-  
-   (let ((types '(bignum unsigned-byte fixnum)))
-     (caching-types
-       (assert-false (set-exclusive-or (decompose-types-sat types)
-                                       (decompose-types types)
-                                       :test #'equivalent-types-p))))
-  
-   (let ((types '(rational 
-                  bit
-                  real 
-                  bignum
-                  float
-                  unsigned-byte
-                  number
-                  )))
-     (caching-types
-       (assert-false (set-exclusive-or (decompose-types-sat types)
-                                       (decompose-types types)
-                                       :test #'equivalent-types-p))))
-
-   (let ((types '(rational bit integer long-float real floating-point-inexact
-                  double-float bignum signed-byte float unsigned-byte single-float number fixnum
-                  test-char-int complex)))
-     (caching-types
-       (assert-false (set-exclusive-or (decompose-types-sat types)
-                                       (decompose-types types) :test #'equivalent-types-p)))
-
-     (let ((types '(short-float ratio rational bit integer long-float real floating-point-inexact
-                    double-float bignum signed-byte float unsigned-byte single-float number fixnum
-                    test-char-int complex)))
-       (caching-types
-         (assert-false (set-exclusive-or (decompose-types-sat types)
-                                         (decompose-types types)
-                                         :test #'equivalent-types-p))))
-
-
-     (let ((types '(short-float ratio rational bit integer long-float real floating-point-inexact
-                    double-float bignum signed-byte float unsigned-byte single-float number fixnum
-                    test-char-int complex)))
-       (caching-types
-         (assert-false (set-exclusive-or (decompose-types-sat types)
-                                         (decompose-types types)
-                                         :test #'equivalent-types-p))))))
+    (lisp-types::generate-constraints types)
+    (caching-types
+      (assert-false (set-exclusive-or '((eql 1)
+                                        (eql 2)
+                                        (eql 3)
+                                        (eql 4)
+                                        (eql 5)
+                                        (eql 6)
+                                        (eql 7)
+                                        (eql 8)
+                                        (eql 9)
+                                        (eql 10)
+                                        (eql 11)
+                                        (eql 12)
+                                        (eql 13))
+                                      (decompose-types-sat types)
+                                      :test #'equivalent-types-p))))
 
   
 
   )
+
 
 (define-test types/sat2
   (let ((all-numbers (valid-subtypes 'number)))
     (assert-false (set-exclusive-or (decompose-types all-numbers)
                                     (decompose-types-sat all-numbers)
                                     :test #'equivalent-types-p))))
+
+(define-test type/sat3
+  ;; crashes in allegro
+  (let* ((A '(1 2 3 4 5 6 7 8 9 10 12 13))
+         (B '(2 3 5 6))
+         (C '(3 4 5 7))
+         (D '(5 6 7 8 9 13))
+         (E '(9))
+         (F '(10))
+         (G '(11))
+         (H '(9 12 13))
+         (types `((member ,@A)
+                  (member ,@B)
+                  (member ,@C)
+                  (member ,@D)
+                  (member ,@E)
+                  (member ,@F)
+                  (member ,@G)
+                  (member ,@H))))
+
+
+    (lisp-types::generate-constraints types)
+    (caching-types
+      (assert-false (set-exclusive-or '((eql 1)
+                                        (eql 2)
+                                        (eql 3)
+                                        (eql 4)
+                                        (eql 5)
+                                        (eql 6)
+                                        (eql 7)
+                                        (eql 8)
+                                        (eql 9)
+                                        (eql 10)
+                                        (eql 11)
+                                        (eql 12)
+                                        (eql 13))
+                                      (decompose-types-sat types)
+                                      :test #'equivalent-types-p))))
+
+  
+
+  )
+
+(define-test type/sat4
+  (let ((types '(bignum unsigned-byte fixnum)))
+    (caching-types
+      (assert-false (set-exclusive-or (decompose-types-sat types)
+                                      (decompose-types types)
+                                      :test #'equivalent-types-p))))  )
+
+
+(define-test type/sat5
+  (let ((types '(rational 
+                 bit
+                 real 
+                 bignum
+                 float
+                 unsigned-byte
+                 number
+                 )))
+    (caching-types
+      (assert-false (set-exclusive-or (decompose-types-sat types)
+                                      (decompose-types types)
+                                      :test #'equivalent-types-p))))
+  )
+
+(define-test type/sat6
+
+  (let ((types '(rational bit integer long-float real floating-point-inexact
+                 double-float bignum signed-byte float unsigned-byte single-float number fixnum
+                 test-char-int complex)))
+    (caching-types
+      (assert-false (set-exclusive-or (decompose-types-sat types)
+                                      (decompose-types types) :test #'equivalent-types-p)))
+
+    (let ((types '(short-float ratio rational bit integer long-float real floating-point-inexact
+                   double-float bignum signed-byte float unsigned-byte single-float number fixnum
+                   test-char-int complex)))
+      (caching-types
+        (assert-false (set-exclusive-or (decompose-types-sat types)
+                                        (decompose-types types)
+                                        :test #'equivalent-types-p))))
+
+
+    (let ((types '(short-float ratio rational bit integer long-float real floating-point-inexact
+                   double-float bignum signed-byte float unsigned-byte single-float number fixnum
+                   test-char-int complex)))
+      (caching-types
+        (assert-false (set-exclusive-or (decompose-types-sat types)
+                                        (decompose-types types)
+                                        :test #'equivalent-types-p)))))
+
+  
+
+  )
 
 
 
