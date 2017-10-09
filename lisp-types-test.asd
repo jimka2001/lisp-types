@@ -37,4 +37,5 @@
      (:file "analysis" :depends-on ("test-lisp-types")) ;; valid-subtypes
      (:file "test-bdd" :depends-on ("analysis" "test-lisp-types" "test-perf"))
      (:file "test-bdd-reduce-17")
+     (:file "test-dnf")
      ))))
