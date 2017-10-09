@@ -81,6 +81,7 @@
 (defvar *bdd-hash* (bdd-new-hash))
 (defvar *bdd-verbose* nil)
 
+
 (defmacro bdd-with-new-hash (vars &body body)
   `(bdd-call-with-new-hash (lambda ,vars ,@body)))
 

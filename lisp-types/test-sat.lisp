@@ -111,7 +111,6 @@
                   (member ,@G)
                   (member ,@H))))
 
-
     (lisp-types::generate-constraints types)
     (caching-types
       (assert-false (set-exclusive-or '((eql 1)
