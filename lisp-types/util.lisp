@@ -32,7 +32,7 @@
   )
 
 
-(defun gc ()
+(defun garbage-collect ()
   #+sbcl (sb-ext::gc :full t)
   #+allegro (excl:gc t)
 )

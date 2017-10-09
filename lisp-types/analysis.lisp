@@ -262,7 +262,7 @@
                                            (min (/ c len)
                                                 (/ (- time-out-time (get-universal-time)) suite-time-out))))
               (funcall (pop delayed))))))
-      (gc)
+      (garbage-collect)
       (log-data)))
   t)
 
@@ -366,7 +366,7 @@
      (format t "skipping duplicate ~A ~A~%" decompose types)
      nil)
     (t
-     (gc)
+     (garbage-collect)
      (let ((result (call-with-timeout time-out
                                       (lambda ()
                                         (funcall f types))
