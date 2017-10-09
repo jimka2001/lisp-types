@@ -490,12 +490,12 @@
   ;;  in different types being calculated
   (labels ((equiv-type-sets (set1 set2)
              (and (= (length set1) (length set2))
-                  (bdd-call-with-new-hash
-                   (lambda () (or (null (set-exclusive-or set1 set2 :test #'%equal))
-                                  (let ((bdd-set1 (bdd `(or ,@set1)))
-                                        (bdd-set2 (bdd `(or ,@set2))))
-                                  (and (eq *bdd-false* (bdd-and-not bdd-set1 bdd-set2))
-                                       (eq *bdd-false* (bdd-and-not bdd-set2 bdd-set1)))))))))
+                  (bdd-with-new-hash ()
+                    (or (null (set-exclusive-or set1 set2 :test #'%equal))
+                        (let ((bdd-set1 (bdd `(or ,@set1)))
+                              (bdd-set2 (bdd `(or ,@set2))))
+                          (and (eq *bdd-false* (bdd-and-not bdd-set1 bdd-set2))
+                               (eq *bdd-false* (bdd-and-not bdd-set2 bdd-set1))))))))
            (%equal (t1 t2)
              (or (bdd-type-equal (bdd t1) (bdd t2))
                  (equivalent-types-p t1 t2)))
@@ -585,9 +585,8 @@
                             (bdd-to-dnf (bdd-and-not bdd-given bdd-calc)))))))))
     (when good-results
       (let ((res1 (car good-results)))
-        (bdd-call-with-new-hash
-         (lambda ()
-           (check-1 (getf res1 :types) (getf res1 :value) (getf res1 :decompose)))))
+        (bdd-with-new-hash ()
+          (check-1 (getf res1 :types) (getf res1 :value) (getf res1 :decompose))))
       
       (dolist (res (cdr good-results))
         (compare (car good-results) res)))))

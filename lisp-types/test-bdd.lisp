@@ -142,24 +142,23 @@
     (setf all-types (set-difference all-types '(compiled-function control-error division-by-zero error
                                                 test-char-code base-char)))
     (setf all-types (sort all-types #'string<))
-    (bdd-call-with-new-hash
-     (lambda ()
-       
-       (let ((n 1)
-             (testing-types (list (pop all-types))))
-         (flet ((test1 (types &aux sorted)
-                  (format t "~A~%" (car types))
-                  (let ((t1 (get-internal-run-time))
-                        (t2 (progn (setf sorted (bdd-decompose-types types))
-                                   (get-internal-run-time))))
-                    (format t "   ~D ~D ~F~%"
-                            n
-                            (length sorted)
-                            (/ (- t2 t1) internal-time-units-per-second))
-                    (incf n))))
-           (loop :while testing-types
-                 :do (progn (test1 testing-types)
-                            (push (pop all-types) testing-types)))))))))
+    (bdd-with-new-hash ()
+     
+      (let ((n 1)
+            (testing-types (list (pop all-types))))
+        (flet ((test1 (types &aux sorted)
+                 (format t "~A~%" (car types))
+                 (let ((t1 (get-internal-run-time))
+                       (t2 (progn (setf sorted (bdd-decompose-types types))
+                                  (get-internal-run-time))))
+                   (format t "   ~D ~D ~F~%"
+                           n
+                           (length sorted)
+                           (/ (- t2 t1) internal-time-units-per-second))
+                   (incf n))))
+          (loop :while testing-types
+                :do (progn (test1 testing-types)
+                           (push (pop all-types) testing-types))))))))
 
 (defclass A-150 () ())
 (defclass B-151 () ())
@@ -173,121 +172,113 @@
 (deftype non-number () `(not number))
 (deftype non-integer () `(not integer))
 (define-test type/bdd-reduce
-  (bdd-call-with-new-hash
-   (lambda ()
+  (bdd-with-new-hash ()
 
-  ;; there are six cases to test
+    ;; there are six cases to test
 
-  ;; 1) disjoint on left
-  ;;  (number (string nil t) nil)
-  ;;  --> (number t nil)
-  (assert-true (equal (bdd-serialize
-                       (bdd-node 'number
-                                 (bdd-node 'string nil t)
-                                 nil))
-                      '(number t nil)))
+    ;; 1) disjoint on left
+    ;;  (number (string nil t) nil)
+    ;;  --> (number t nil)
+    (assert-true (equal (bdd-serialize
+                         (bdd-node 'number
+                                   (bdd-node 'string nil t)
+                                   nil))
+                        '(number t nil)))
         
-  ;; 2) disjoint on right of negative type
-  (assert-true (equal (bdd-serialize
-                       (bdd-node 'non-number
-                                 nil
-                                 (bdd-node 'string nil t)))
-                      '(non-number nil t)))
+    ;; 2) disjoint on right of negative type
+    (assert-true (equal (bdd-serialize
+                         (bdd-node 'non-number
+                                   nil
+                                   (bdd-node 'string nil t)))
+                        '(non-number nil t)))
                       
-  ;; 3) subtype on right
-  (assert-true (equal (bdd-serialize
-                       (bdd-node 'integer
-                                 (bdd-node 'number t nil)
-                                 nil))
-                      '(integer t nil)))
+    ;; 3) subtype on right
+    (assert-true (equal (bdd-serialize
+                         (bdd-node 'integer
+                                   (bdd-node 'number t nil)
+                                   nil))
+                        '(integer t nil)))
 
-  ;; 4) subtype on left of negative type
-  (assert-true (equal (bdd-serialize
-                       (bdd-node 'non-number
-                                 (bdd-node 'integer nil t)
-                                 nil))
-                      '(non-number t nil)))
+    ;; 4) subtype on left of negative type
+    (assert-true (equal (bdd-serialize
+                         (bdd-node 'non-number
+                                   (bdd-node 'integer nil t)
+                                   nil))
+                        '(non-number t nil)))
                       
 
-  ;; 5) supertype on left
-  (assert-true (equal (bdd-serialize
-                       (bdd-node 'integer
-                                 (bdd-node 'number t nil)
-                                 nil))
-                      '(integer t nil)))
+    ;; 5) supertype on left
+    (assert-true (equal (bdd-serialize
+                         (bdd-node 'integer
+                                   (bdd-node 'number t nil)
+                                   nil))
+                        '(integer t nil)))
 
-  ;; 6) supertype on right of negative type
-  (assert-true (equal (bdd-serialize
-                       (bdd-node 'non-integer
-                                 nil
-                                 (bdd-node 'number t nil)))
-                      '(non-integer nil t))))))
+    ;; 6) supertype on right of negative type
+    (assert-true (equal (bdd-serialize
+                         (bdd-node 'non-integer
+                                   nil
+                                   (bdd-node 'number t nil)))
+                        '(non-integer nil t)))))
 
 (define-test test/bdd-numbers
-  (bdd-call-with-new-hash
-   (lambda ()
-
-  (assert-true (types/cmp-perfs :limit 15 :decompose 'lisp-types::bdd-decompose-types :types (valid-subtypes 'number))))))
+  (bdd-with-new-hash ()
+    (assert-true (types/cmp-perfs :limit 15 :decompose 'lisp-types::bdd-decompose-types :types (valid-subtypes 'number)))))
 
 
 (define-test test/bdd-cmp
-  (bdd-call-with-new-hash
-   (lambda ()
+  (bdd-with-new-hash ()
+    ;; =
+    (assert-true (eq '= (bdd-cmp 'a 'a)))
+    (assert-true (eq '= (bdd-cmp "a" "a")))
+    (assert-true (eq '= (bdd-cmp 1 1)))
+    (assert-true (eq '= (bdd-cmp 1.0 1.0)))
+    (assert-true (eq '= (bdd-cmp 1/2 1/2)))
+    (assert-true (eq '= (bdd-cmp nil nil)))
+    (assert-true (eq '= (bdd-cmp '(a 1 1.0) '(a 1 1.0))))
 
-  ;; =
-  (assert-true (eq '= (bdd-cmp 'a 'a)))
-  (assert-true (eq '= (bdd-cmp "a" "a")))
-  (assert-true (eq '= (bdd-cmp 1 1)))
-  (assert-true (eq '= (bdd-cmp 1.0 1.0)))
-  (assert-true (eq '= (bdd-cmp 1/2 1/2)))
-  (assert-true (eq '= (bdd-cmp nil nil)))
-  (assert-true (eq '= (bdd-cmp '(a 1 1.0) '(a 1 1.0))))
+    ;; <
+    (assert-true (eq '< (bdd-cmp "CL-USER" "KEYWORD")))
+    (assert-true (eq '< (bdd-cmp 'CL-USER::x :x)))
+    (assert-true (eq '< (bdd-cmp '(a b c) '(a b c d))))
+    (assert-true (eq '< (bdd-cmp '(a 1 c) '(a 2 c d))))
+    (assert-true (eq '< (bdd-cmp '(a 1 c d) '(a 2 c))))
+    (assert-true (eq '< (bdd-cmp 'string 'symbol)))
+    ;; (assert-true (eq '< (bdd-cmp "string" 'symbol)))
+    (assert-true (eq '< (bdd-cmp 'cons 'null)))
+    (assert-true (eq '< (bdd-cmp nil '(a))))
+    (assert-true (eq '< (bdd-cmp 1/3 1/2)))
 
-  ;; <
-  (assert-true (eq '< (bdd-cmp "CL-USER" "KEYWORD")))
-  (assert-true (eq '< (bdd-cmp 'CL-USER::x :x)))
-  (assert-true (eq '< (bdd-cmp '(a b c) '(a b c d))))
-  (assert-true (eq '< (bdd-cmp '(a 1 c) '(a 2 c d))))
-  (assert-true (eq '< (bdd-cmp '(a 1 c d) '(a 2 c))))
-  (assert-true (eq '< (bdd-cmp 'string 'symbol)))
-  ;; (assert-true (eq '< (bdd-cmp "string" 'symbol)))
-  (assert-true (eq '< (bdd-cmp 'cons 'null)))
-  (assert-true (eq '< (bdd-cmp nil '(a))))
-  (assert-true (eq '< (bdd-cmp 1/3 1/2)))
-
-  ;; >
-  (assert-true (eq '> (bdd-cmp "KEYWORD" "CL-USER")))
-  (assert-true (eq '> (bdd-cmp :x 'CL-USER::x)))
-  (assert-true (eq '> (bdd-cmp '(a b c d) '(a b c))))
-  (assert-true (eq '> (bdd-cmp '(a 2 c d) '(a 1 c))))
-  (assert-true (eq '> (bdd-cmp '(a 2 c) '(a 1 c d))))
-  (assert-true (eq '> (bdd-cmp 'symbol 'string)))
-  ;; (assert-true (eq '> (bdd-cmp 'symbol "string")))
-  (assert-true (eq '> (bdd-cmp 'null 'cons)))
-  (assert-true (eq '> (bdd-cmp '(a) nil)))
-  (assert-true (eq '> (bdd-cmp 1/2 1/3)))
-  )  ))
+    ;; >
+    (assert-true (eq '> (bdd-cmp "KEYWORD" "CL-USER")))
+    (assert-true (eq '> (bdd-cmp :x 'CL-USER::x)))
+    (assert-true (eq '> (bdd-cmp '(a b c d) '(a b c))))
+    (assert-true (eq '> (bdd-cmp '(a 2 c d) '(a 1 c))))
+    (assert-true (eq '> (bdd-cmp '(a 2 c) '(a 1 c d))))
+    (assert-true (eq '> (bdd-cmp 'symbol 'string)))
+    ;; (assert-true (eq '> (bdd-cmp 'symbol "string")))
+    (assert-true (eq '> (bdd-cmp 'null 'cons)))
+    (assert-true (eq '> (bdd-cmp '(a) nil)))
+    (assert-true (eq '> (bdd-cmp 1/2 1/3)))
+    )  )
                    
 (define-test test/bdd-type-p
-  (bdd-call-with-new-hash
-   (lambda ()
-     (assert-false (bdd-type-p  t (bdd '(or (and sequence (not array))
-                                         number
-                                         (and (not sequence) array)))))
-     (assert-true (bdd-type-p  3 (bdd '(or (and sequence (not array))
+  (bdd-with-new-hash ()
+    (assert-false (bdd-type-p  t (bdd '(or (and sequence (not array))
                                         number
-                                        (and (not sequence) array))))))))
-
+                                        (and (not sequence) array)))))
+    (assert-true (bdd-type-p  3 (bdd '(or (and sequence (not array))
+                                       number
+                                       (and (not sequence) array)))))))
 
 (define-test test/bdd-dnf
-  (bdd-call-with-new-hash
-   (lambda ()
+  (bdd-with-new-hash ()
      (assert-true (member 'number (bdd-to-dnf (bdd '(or (and sequence (not array))
                                                      number
                                                      (and (not sequence) array))))))
      (assert-false (member '(and number) (bdd-to-dnf (bdd '(or (and sequence (not array))
                                                             number
-                                                            (and (not sequence) array)))) :test #'equal)))))
+                                                            (and (not sequence) array)))) :test #'equal))))
 
 (defclass Z1 () ())
 (defclass Z2 () ())

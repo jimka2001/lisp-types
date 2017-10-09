@@ -468,10 +468,10 @@
 
 
 (defun decompose-types-bdd-graph-recursive-increasing-connections (type-specifiers)
-  (bdd-call-with-new-hash (lambda ()
-                       (slow-decompose-types-bdd-graph type-specifiers
-                                                   :sort-strategy "INCREASING-CONNECTIONS"
-                                                   :inner-loop :recursive))))
+  (bdd-with-new-hash ()
+    (slow-decompose-types-bdd-graph type-specifiers
+                                    :sort-strategy "INCREASING-CONNECTIONS"
+                                    :inner-loop :recursive)))
 
 (defmacro make-decompose-fun-combos ()
   (let (fun-defs
@@ -511,8 +511,8 @@
 
                 (push `(setf (get ',fun-name 'decompose-properties) ',props) prop-defs)
                 (push `(defun ,fun-name (type-specifiers)
-                         (bdd-call-with-new-hash (lambda ()
-                                              (slow-decompose-types-bdd-graph type-specifiers ,@props))))
+                         (bdd-with-new-hash ()
+                           (slow-decompose-types-bdd-graph type-specifiers ,@props)))
                       fun-defs)))))))
     (setf fun-names (mapcar #'cadr fun-defs))
     `(progn
