@@ -34,7 +34,8 @@
 (defvar *bdd-count* 1)
 (defclass bdd ()
   ((ident ;; :reader bdd-ident
-          :initarg :ident :initform (incf *bdd-count*))
+    :type unsigned-byte
+    :initarg :ident :initform (incf *bdd-count*))
    (label ;; :reader bdd-label
     :initarg :label)
    (dnf)
