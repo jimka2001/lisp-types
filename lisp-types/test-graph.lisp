@@ -103,26 +103,26 @@
 (define-test type/graph-7
   (let ((types '( UNSIGNED-BYTE BIGNUM TEST-ARRAY-RANK RATIONAL)))
     (assert-false (set-exclusive-or (DECOMPOSE-TYPES-GRAPH types)
-                                    (decompose-types types)
+                                    (decompose-types-rtev2 types)
                                     :test #'equivalent-types-p))))
 
 (define-test type/graph-6
   (let ((types '( UNSIGNED-BYTE FLOAT BIGNUM REAL TEST-ARRAY-RANK RATIONAL)))
     (assert-false (set-exclusive-or (DECOMPOSE-TYPES-GRAPH types)
-                                    (decompose-types types)
+                                    (decompose-types-rtev2 types)
                                     :test #'equivalent-types-p))))
 
 (define-test type/graph-5
   (let ((types '(COMPLEX FLOAT-DIGITS UNSIGNED-BYTE BIGNUM TEST-ARRAY-RANK RATIONAL)))
     (assert-false (set-exclusive-or (DECOMPOSE-TYPES-GRAPH types)
-                                    (decompose-types types)
+                                    (decompose-types-rtev2 types)
                                     :test #'equivalent-types-p))))
 
 (define-test type/graph-4
   (let ((types '((OR TEST-ARRAY-RANK (AND REAL (NOT BIGNUM) (NOT FLOAT) (NOT UNSIGNED-BYTE)))
                  (AND REAL (NOT BIGNUM) (NOT FLOAT) (NOT UNSIGNED-BYTE)))))
     (assert-false (set-exclusive-or (DECOMPOSE-TYPES-GRAPH types)
-                                    (decompose-types types)
+                                    (decompose-types-rtev2 types)
                                     :test #'equivalent-types-p))))
 
 (define-test type/graph-3
@@ -136,7 +136,7 @@
                  (AND REAL (NOT BIGNUM) (NOT FLOAT) (NOT UNSIGNED-BYTE))
                  )))
     (assert-false (set-exclusive-or (DECOMPOSE-TYPES-GRAPH types)
-                                    (decompose-types types)
+                                    (decompose-types-rtev2 types)
                                     :test #'equivalent-types-p))))
 
 (define-test type/graph-2
@@ -149,7 +149,7 @@
                  (AND UNSIGNED-BYTE (NOT TEST-ARRAY-RANK) (NOT BIGNUM))
                  (OR TEST-ARRAY-RANK (AND REAL (NOT BIGNUM) (NOT FLOAT) (NOT UNSIGNED-BYTE))))))
     (assert-false (set-exclusive-or (DECOMPOSE-TYPES-GRAPH types)
-                                    (decompose-types types)
+                                    (decompose-types-rtev2 types)
                                     :test #'equivalent-types-p))))
 
 (define-test type/graph
@@ -162,7 +162,7 @@
 							   TEST-ARRAY-RANK
 							   RATIONAL
 							   ))
-				  (decompose-types   '( COMPLEX
+				  (decompose-types-rtev2   '( COMPLEX
 						       FLOAT-DIGITS
 						       UNSIGNED-BYTE
 						       FLOAT
@@ -188,7 +188,7 @@
 							   RATIO
 
 							   SHORT-FLOAT))
-				  (decompose-types '( COMPLEX
+				  (decompose-types-rtev2 '( COMPLEX
 						     FIXNUM
 						     FLOAT-DIGITS
 						     NUMBER
@@ -220,7 +220,7 @@
 							   BIT
 							   RATIONAL
 							   SHORT-FLOAT))
-				  (decompose-types      '( COMPLEX
+				  (decompose-types-rtev2      '( COMPLEX
 							  FIXNUM
 							  FLOAT-DIGITS
 							  NUMBER
@@ -252,7 +252,7 @@
 							   RATIONAL
 							   RATIO
 							   SHORT-FLOAT))
-				  (decompose-types      '( COMPLEX
+				  (decompose-types-rtev2      '( COMPLEX
 							  FIXNUM
 							  FLOAT-DIGITS
 							  NUMBER
@@ -277,7 +277,7 @@
 							    (member 1 3)
 							    (member 2 4))
 							   (member 10 11)))
-				  (decompose-types       '((or (eql 10)
+				  (decompose-types-rtev2       '((or (eql 10)
 							    (member 1 2)
 							    (member 3 4))
 							   (or (eql 11)
@@ -286,69 +286,69 @@
 							   (member 10 11)))
 				  :test #'equivalent-types-p))
   (assert-false (set-exclusive-or (decompose-types-graph '((eql 1) (eql 2) (member 1 2)))
-				  (decompose-types       '((eql 1) (eql 2) (member 1 2)))
+				  (decompose-types-rtev2       '((eql 1) (eql 2) (member 1 2)))
 				  :test #'equivalent-types-p))
   (assert-false (set-exclusive-or (decompose-types-graph '(CONDITION CLASS CELL-ERROR BUILT-IN-CLASS))
-				  (decompose-types       '(CONDITION CLASS CELL-ERROR BUILT-IN-CLASS))
+				  (decompose-types-rtev2       '(CONDITION CLASS CELL-ERROR BUILT-IN-CLASS))
 				  :test #'equivalent-types-p))
   (assert-false (set-exclusive-or (decompose-types-graph '(CONDITION CONCATENATED-STREAM COMPLEX CLASS CHARACTER TEST-CHAR-INT
 							   CELL-ERROR BUILT-IN-CLASS BROADCAST-STREAM BOOLEAN BIT-VECTOR BIT
 							   BIGNUM BASE-STRING BASE-CHAR ATOM TEST-ARRAY-TOTAL-SIZE TEST-ARRAY-RANK ARRAY
 							   ARITHMETIC-ERROR))
-				  (decompose-types       '(CONDITION CONCATENATED-STREAM COMPLEX CLASS CHARACTER TEST-CHAR-INT
+				  (decompose-types-rtev2       '(CONDITION CONCATENATED-STREAM COMPLEX CLASS CHARACTER TEST-CHAR-INT
 							   CELL-ERROR BUILT-IN-CLASS BROADCAST-STREAM BOOLEAN BIT-VECTOR BIT
 							   BIGNUM BASE-STRING BASE-CHAR ATOM TEST-ARRAY-TOTAL-SIZE TEST-ARRAY-RANK ARRAY
 							   ARITHMETIC-ERROR))
 				  :test #'equivalent-types-p))
 
   (assert-false (set-exclusive-or (decompose-types-graph '( BIT  ATOM         TEST-ARRAY-RANK))
-				  (decompose-types       '( BIT  ATOM         TEST-ARRAY-RANK))
+				  (decompose-types-rtev2       '( BIT  ATOM         TEST-ARRAY-RANK))
 				  :test #'equivalent-types-p))
   (assert-false (set-exclusive-or (decompose-types-graph '( BIT  ATOM         TEST-ARRAY-RANK ARRAY))
-				  (decompose-types       '( BIT  ATOM         TEST-ARRAY-RANK ARRAY))
+				  (decompose-types-rtev2       '( BIT  ATOM         TEST-ARRAY-RANK ARRAY))
 				  :test #'equivalent-types-p))
   (assert-false (set-exclusive-or (decompose-types-graph '(TEST-CHAR-CODE CELL-ERROR BUILT-IN-CLASS BROADCAST-STREAM BOOLEAN
 							   BIT-VECTOR BIT BIGNUM BASE-STRING BASE-CHAR ATOM
 							   TEST-ARRAY-TOTAL-SIZE TEST-ARRAY-RANK ARRAY ARITHMETIC-ERROR))
-				  (decompose-types       '(TEST-CHAR-CODE CELL-ERROR BUILT-IN-CLASS BROADCAST-STREAM BOOLEAN
+				  (decompose-types-rtev2       '(TEST-CHAR-CODE CELL-ERROR BUILT-IN-CLASS BROADCAST-STREAM BOOLEAN
 							   BIT-VECTOR BIT BIGNUM BASE-STRING BASE-CHAR ATOM
 							   TEST-ARRAY-TOTAL-SIZE TEST-ARRAY-RANK ARRAY ARITHMETIC-ERROR))
 				  :test #'equivalent-types-p ))
   (assert-false (set-exclusive-or (decompose-types-graph '(cell-error arithmetic-error ))
-				  (decompose-types '(cell-error arithmetic-error ))
+				  (decompose-types-rtev2 '(cell-error arithmetic-error ))
 				  :test #'equivalent-types-p ))
   (assert-false (set-exclusive-or (decompose-types-graph '(cell-error BUILT-IN-CLASS ))
-				  (decompose-types '(cell-error BUILT-IN-CLASS ))
+				  (decompose-types-rtev2 '(cell-error BUILT-IN-CLASS ))
 				  :test #'equivalent-types-p ))
   (assert-false (set-exclusive-or (decompose-types-graph '( arithmetic-error BUILT-IN-CLASS ))
-				  (decompose-types '( arithmetic-error BUILT-IN-CLASS ))
+				  (decompose-types-rtev2 '( arithmetic-error BUILT-IN-CLASS ))
 				  :test #'equivalent-types-p ))
   (assert-false (set-exclusive-or (decompose-types-graph '(cell-error arithmetic-error BUILT-IN-CLASS ))
-				  (decompose-types '(cell-error arithmetic-error BUILT-IN-CLASS ))
+				  (decompose-types-rtev2 '(cell-error arithmetic-error BUILT-IN-CLASS ))
 				  :test #'equivalent-types-p ))
   (assert-false (set-exclusive-or (decompose-types-graph '(integer))
-				  (decompose-types '(integer))
+				  (decompose-types-rtev2 '(integer))
 				  :test #'equivalent-types-p ))
   (assert-false (set-exclusive-or (decompose-types-graph '(integer fixnum))
-				  (decompose-types '(integer fixnum))
+				  (decompose-types-rtev2 '(integer fixnum))
 				  :test #'equivalent-types-p))
   (assert-false (set-exclusive-or (decompose-types-graph '(fixnum number))
-				  (decompose-types '(fixnum number))
+				  (decompose-types-rtev2 '(fixnum number))
 				  :test #'equivalent-types-p))
   (assert-false (set-exclusive-or (decompose-types-graph '(integer number))
-				  (decompose-types '(integer number))
+				  (decompose-types-rtev2 '(integer number))
 				  :test #'equivalent-types-p))
   (assert-false (set-exclusive-or (decompose-types-graph '(integer fixnum number))
-				  (decompose-types '(integer fixnum number))
+				  (decompose-types-rtev2 '(integer fixnum number))
 				  :test #'equivalent-types-p))
   (assert-false (set-exclusive-or (decompose-types-graph '(integer fixnum number bit unsigned-byte bignum))
-				  (decompose-types '(integer fixnum number bit unsigned-byte bignum))
+				  (decompose-types-rtev2 '(integer fixnum number bit unsigned-byte bignum))
 				  :test #'equivalent-types-p))
   (assert-false (set-exclusive-or (decompose-types-graph '(FIXNUM TEST-CHAR-CODE UNSIGNED-BYTE))
-                                  (decompose-types       '(FIXNUM TEST-CHAR-CODE UNSIGNED-BYTE))
+                                  (decompose-types-rtev2       '(FIXNUM TEST-CHAR-CODE UNSIGNED-BYTE))
                                   :test #'equivalent-types-p))
   (assert-false (set-exclusive-or (decompose-types-graph '(FIXNUM (integer 0 (1114112)) UNSIGNED-BYTE))
-                        (decompose-types       '(FIXNUM (integer 0 (1114112)) UNSIGNED-BYTE))
+                        (decompose-types-rtev2       '(FIXNUM (integer 0 (1114112)) UNSIGNED-BYTE))
                         :test #'equivalent-types-p))
 
 
