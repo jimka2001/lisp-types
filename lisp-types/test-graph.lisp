@@ -96,7 +96,7 @@
                                      ;; redundante types
                                      '(nil single-float signed-byte double-float test-char-int))))
     (caching-types
-      (assert-false (set-exclusive-or (decompose-types all-numbers)
+      (assert-false (set-exclusive-or (decompose-types-rtev2 all-numbers)
                                       (decompose-types-graph all-numbers)
                                       :test #'equivalent-types-p)))))
 

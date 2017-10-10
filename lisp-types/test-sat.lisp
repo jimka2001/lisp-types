@@ -87,10 +87,18 @@
 
 
 (define-test types/sat2
-  (let ((all-numbers (valid-subtypes 'number)))
-    (assert-false (set-exclusive-or (decompose-types all-numbers)
-                                    (decompose-types-sat all-numbers)
-                                    :test #'equivalent-types-p))))
+  (let (all-numbers decom decom-sat excl)
+    ;; (cl-user::print-vals
+     (setf all-numbers (valid-subtypes 'number))
+     (length all-numbers)
+     (setf decom (decompose-types-graph all-numbers))
+     (length decom)
+     (setf decom-sat (decompose-types-sat all-numbers))
+     (length decom-sat)
+     (setf excl (set-exclusive-or decom decom-sat :test #'equivalent-types-p))
+     (assert-true (null excl))
+    ;;)
+  ))
 
 (define-test type/sat3
   ;; crashes in allegro
@@ -137,7 +145,7 @@
   (let ((types '(bignum unsigned-byte fixnum)))
     (caching-types
       (assert-false (set-exclusive-or (decompose-types-sat types)
-                                      (decompose-types types)
+                                      (decompose-types-graph types)
                                       :test #'equivalent-types-p))))  )
 
 
@@ -152,7 +160,7 @@
                  )))
     (caching-types
       (assert-false (set-exclusive-or (decompose-types-sat types)
-                                      (decompose-types types)
+                                      (decompose-types-graph types)
                                       :test #'equivalent-types-p))))
   )
 
@@ -163,14 +171,14 @@
                  test-char-int complex)))
     (caching-types
       (assert-false (set-exclusive-or (decompose-types-sat types)
-                                      (decompose-types types) :test #'equivalent-types-p)))
+                                      (decompose-types-graph types) :test #'equivalent-types-p)))
 
     (let ((types '(short-float ratio rational bit integer long-float real floating-point-inexact
                    double-float bignum signed-byte float unsigned-byte single-float number fixnum
                    test-char-int complex)))
       (caching-types
         (assert-false (set-exclusive-or (decompose-types-sat types)
-                                        (decompose-types types)
+                                        (decompose-types-graph types)
                                         :test #'equivalent-types-p))))
 
 
@@ -179,7 +187,7 @@
                    test-char-int complex)))
       (caching-types
         (assert-false (set-exclusive-or (decompose-types-sat types)
-                                        (decompose-types types)
+                                        (decompose-types-graph types)
                                         :test #'equivalent-types-p)))))
 
   

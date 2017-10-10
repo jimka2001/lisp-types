@@ -72,7 +72,7 @@
                                   :test #'equivalent-types-p))
 
   (assert-false (set-exclusive-or (bdd-decompose-types '(unsigned-byte bit fixnum rational number float))
-                                  (decompose-types     '(unsigned-byte bit fixnum rational number float))
+                                  (decompose-types-graph  '(unsigned-byte bit fixnum rational number float))
                                   :test #'equivalent-types-p)))
 
 (define-test type/3-types
