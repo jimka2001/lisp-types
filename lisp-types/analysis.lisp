@@ -284,6 +284,7 @@
                   (start-run-time (get-internal-run-time))
                   (start-real-time (get-internal-real-time)))
     (flet ((time-it ()
+             ;; evaluate THUNK several times (according to NUM-TRIES)
              (handler-bind ((error (lambda (e)
                                      ;; this handler explicitly declines to handle the error
                                      ;; thus the variable TIME-IT-ERROR will be set as a side
@@ -303,7 +304,7 @@
                         (run-time (/ (- run-time-t2 run-time-t1) internal-time-units-per-second)))
                    (setf result1
                          (cond
-                           ((not result1)
+                           ((not result1) ; if first time through dotime/try loop
                             (list :wall-time (the real wall-time)
                                   :run-time run-time
                                   :value s2))
@@ -315,6 +316,8 @@
                            (t
                             result1)))))
                (when th-observer
+                 ;; if we reach this line, that means the THUNK evaluated NUM-TRIES no of times before
+                 ;;   TH-OBSERVER finshed.  So we need to kill TH-OBSERVER
                  (setf th-worker-destroyed-observer
                        (bordeaux-threads:destroy-thread th-observer))))))
       (cond
@@ -339,14 +342,15 @@
          (setf th-worker (bordeaux-threads:make-thread #'time-it :name "th-handle thunk"))
          (handler-case (bordeaux-threads:join-thread th-worker)
            #+sbcl(SB-THREAD:JOIN-THREAD-ERROR (e)
-             (setf th-worker-join-failed e)
-             nil))
+                   (setf th-worker-join-failed e)
+                   nil))
          (handler-case (bordeaux-threads:join-thread th-observer)
            #+sbcl(SB-THREAD:JOIN-THREAD-ERROR (e)
-             (setf th-observer-join-failed e)
-             nil)))
-      (t
-       (time-it))))
+                   (setf th-observer-join-failed e)
+                   nil)))
+        (t
+         ;; no TIME-OUT given, so simply evaluate the THUNK (NUM-TRIES no. of times, taking the best case)
+         (time-it))))
     (assert (typep (or result1 result2) 'cons)
             (th-worker th-observer th-worker-destroyed-observer time-it-error th-worker-join-failed th-observer-join-failed result1 result2 time-out))
     (the cons (or result1 result2))))
