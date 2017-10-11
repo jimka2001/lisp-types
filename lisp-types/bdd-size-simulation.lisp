@@ -125,7 +125,7 @@
               do (progn (measure try randomp)
                         (funcall announcer try)))))
     (let (a-list sum average median)
-      (declare (notinline sort))
+      (declare #+sbcl (notinline sort))
       (maphash (lambda (&rest args)
                  (push args a-list))
                hash)
@@ -169,7 +169,7 @@
   (declare (type string prefix)
            (type list vars)
            (type fixnum num-samples)
-           (notinline sort))
+           #+sbcl (notinline sort))
   (ensure-directories-exist prefix)
   ;; prefix = "/Users/jnewton/newton.16.edtchs/src"
   (let (legend
@@ -264,7 +264,7 @@
     data))
 
 (defun all-possible-bdds (prefix vars &aux (num-vars (length vars)))
-  (declare (notinline sort)
+  (declare #+sbcl (notinline sort)
            (type string prefix)
            (type list vars)
           )

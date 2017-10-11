@@ -658,7 +658,7 @@
         (unless normalize
           (format stream "set logscale xy~%"))
         (labels ((xys (curve)
-                   (declare (notinline sort))
+                   (declare #+sbcl (notinline sort))
                    (destructuring-bind (&key xys &allow-other-keys) curve
                      (remove-duplicates (sort (copy-list xys)
                                               (lambda (a b)
@@ -837,7 +837,7 @@ the list of xys need not be already ordered."
 
 
 (defun sort-results (in out &rest options)
-  (declare (notinline sort))
+  (declare #+sbcl (notinline sort))
   (cond
     ((typep in '(or pathname string))
      (with-open-file (stream in :direction :input)
@@ -1123,7 +1123,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
 
 
 (defun analysis (file-names)
-  (declare (notinline sort))
+  (declare #+sbcl (notinline sort))
   (let* ((measures '(:recursive :inner-loop :sort-strategy :do-break-sub :do-break-loop))
         (table (make-hash-table :test #'eq))
         (data (sort (mapcan (lambda (file-name)

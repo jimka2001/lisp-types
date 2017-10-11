@@ -507,7 +507,7 @@ convert it to DNF (disjunctive-normal-form)"
                            (destructuring-bind (all-disjoint? bdd-set) acc
                              (declare (type (member t nil) all-disjoint?)
                                       (type list bdd-set)
-                                      (notinline union))
+                                      #+sbcl (notinline union))
                              (cond
                                ((bdd-empty-type bdd-ab)
                                 ;; If the intersection of A and B is the empty type,

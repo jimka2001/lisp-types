@@ -23,7 +23,7 @@
 
 (defun slow-decompose-types-rtev2 (type-specifiers)
   (declare (optimize (speed 3) (compilation-speed 0) (debug 0))
-           (notinline union))
+           #+sbcl (notinline union))
   (let ((type-specifiers (mapcar #'reduce-lisp-type-simple type-specifiers))
         (known-intersecting (make-hash-table :test #'equal)) decomposition) ;; the list of disjoint type-specifiers
     (labels ((disjoint? (T1 T2 &aux (key (list T1 T2)))

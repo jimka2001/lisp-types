@@ -63,7 +63,7 @@
 ;;   --> (or (and A B) E F)
 (defun reduce-absorption (operands)
   (declare (type list operands)
-	   (notinline member)
+	   #+sbcl (notinline member)
 	   (optimize (speed 3) (compilation-speed 0)))
   (dolist (operand operands)
     (setf operands (remove-if (lambda (op)
@@ -356,7 +356,7 @@ a call to subtypep or friends."
 	     (and (consp obj)
 		  (eq 'values (car obj))))
 	   (reducable-compound? (obj)
-	     (declare (notinline assoc))
+	     (declare #+sbcl (notinline assoc))
 	     (and (consp obj)
 		  (assoc (car obj) *compound-type-specifier-names*)))
 	   ;; (cons? (obj)
@@ -450,7 +450,7 @@ a call to subtypep or friends."
 		    (when key-tail
 		      (tconc type-conc (car key-tail))
 		      (dolist (keyword-spec (cdr key-tail))
-			(declare (notinline length))
+			(declare #+sbcl (notinline length))
 			(assert (= 2 (length keyword-spec)) ()
 				"Invalid &key ~S portion of ~S" keyword-spec arg-typespec)
 			(destructuring-bind (keyword spec) keyword-spec
@@ -458,7 +458,7 @@ a call to subtypep or friends."
 						 (reduce-lisp-type-once spec :full full))))))
 		    (car type-conc))))
 
-	   (declare (notinline length))
+	   (declare #+sbcl (notinline length))
 	   (case (length type)
 	     ((1)			; (function)
 	      'function)
@@ -524,7 +524,7 @@ a call to subtypep or friends."
 
        (destructuring-bind (operator &rest operands &aux remove-me) type
 	 (declare (type (member and or not) operator)
-		  (notinline remove-supers remove-subs reduce-absorption reduce-redundancy)
+		  #+sbcl (notinline remove-supers remove-subs reduce-absorption reduce-redundancy)
 		  (type list operands))
 	 (ecase operator
 	   ((and)			; REDUCE AND
@@ -561,7 +561,7 @@ a call to subtypep or friends."
 	       ;; (and (member a 2) symbol) --> (eql a)
 	       ;; (and (member a b) fixnum) --> nil
 	       (let ((objects (remove-if-not (lambda (e)
-					       (declare (notinline typep))
+					       (declare #+sbcl (notinline typep))
 					       (typep e type)) (cdr (find-if #'eql-or-member? operands)))))
 		 (make-member objects)))		     
 	      ((< 1 (count-if #'not-eql-or-member? operands)) ;; if multiple not-eql-or-member?
@@ -569,8 +569,8 @@ a call to subtypep or friends."
 	       ;;   --> (and A B (not (member 1 2 3 4 a b)))
 	       (multiple-value-bind (not-matches others) (partition-by-predicate #'not-eql-or-member? operands)
 		 (let ((not-common (cdr (cadr (car not-matches)))))
-		   (declare (notinline union)
-			    (notinline set-difference))
+		   (declare #+sbcl (notinline union)
+			    #+sbcl (notinline set-difference))
 		   (dolist (not-match (cdr not-matches))
 		     (setq not-common (union not-common (cdr (cadr not-match)))))
 		   `(and (not (member ,@not-common))

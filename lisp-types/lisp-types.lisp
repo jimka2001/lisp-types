@@ -107,7 +107,7 @@ If N > (length of data) then a permutation of DATA is returned"
   (cond
     ((typep t1 '(cons (member eql member))) ; (eql obj) or (member obj1 ...)
      (list (every #'(lambda (obj)
-                      (declare (notinline typep))
+                      (declare #+sbcl (notinline typep))
                       (typep obj t2))
                   (cdr t1))
            t))
@@ -194,7 +194,7 @@ i.e., is a subtype of nil."
                                 (t12 (type-to-dnf (list 'and T1 T2))))
   "SLOW-DISJOINT-TYPES-P returns a list of two booleans, whereas DISJOINT-TYPES-P returns
  the two corresponding VALUES."
-  (declare (notinline subsetp))
+  (declare #+sbcl (notinline subsetp))
   (multiple-value-bind (disjointp OK) (cached-subtypep t12 nil)
     (cond
       (OK
@@ -282,7 +282,7 @@ i.e., is a subtype of nil."
                ,@body)))))))))
 
 (defun set-equalp (set-a set-b &key (test #'equal))
-  (declare (notinline set-exclusive-or))
+  (declare #+sbcl (notinline set-exclusive-or))
   (not (set-exclusive-or set-a set-b :test test)))
 
 (defun set-subsetp (set-sub set-super &key (test #'equal))

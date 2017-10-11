@@ -24,8 +24,8 @@
 
 (defun slow-decompose-types (type-specifiers)
   (declare (optimize (speed 3) (compilation-speed 0) (debug 0))
-           (notinline union))
-  ;;  (declare (optimize (debug 3))  (notinline union))
+           #+sbcl (notinline union))
+  ;;  (declare (optimize (debug 3))  #+sbcl (notinline union))
   (let ((known-intersecting (make-hash-table :test #'equal)) decomposition) ;; the list of disjoint type-specifiers
     (labels ((disjoint? (T1 T2 &aux (key (list T1 T2)))
                (multiple-value-bind (hit found?) (gethash key known-intersecting)
