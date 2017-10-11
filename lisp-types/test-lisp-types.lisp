@@ -19,13 +19,8 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(defpackage :lisp-types.test
-  (:shadowing-import-from :lisp-types "TEST" "A")
-  ;;(:shadowing-import-from :closer-mop "STANDARD-GENERIC-FUNCTION" "DEFMETHOD" "DEFGENERIC")
-  (:use :cl :lisp-types :lisp-unit ;;:closer-mop
-   #+sbcl :sb-pcl
-   #+allegro :aclmop
-        ))
+
+(in-package :lisp-types.test)
 
 (eval-when (:execute :load-toplevel :compile-toplevel)
   (defun shadow-package-symbols ()
@@ -40,7 +35,6 @@
 (shadow-package-symbols)
 
 
-(in-package :lisp-types.test)
 
 (deftype test-array-rank () '(integer 0 (65529)))
 (deftype test-array-total-size () `(integer 0 (,(- most-positive-fixnum 2))))

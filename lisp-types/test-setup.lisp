@@ -19,6 +19,16 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+
+(defpackage :lisp-types.test
+  (:shadowing-import-from :lisp-types "TEST" "A")
+  ;;(:shadowing-import-from :closer-mop "STANDARD-GENERIC-FUNCTION" "DEFMETHOD" "DEFGENERIC")
+  (:use :cl :lisp-types :lisp-unit ;;:closer-mop
+   #+sbcl :sb-pcl
+   #+allegro :aclmop
+        ))
+
+
 (in-package :lisp-types.test)
 
 (let ((lisp-types-test (find-package  :lisp-types.test))
