@@ -100,10 +100,6 @@
   )
 
 
-(deftype test-array-rank () '(integer 0 (65529)))
-(deftype test-array-total-size () `(integer 0 (,(- most-positive-fixnum 2))))
-(deftype test-char-code () '(integer 0 (#x110000)))
-(deftype test-char-int () 'test-char-code)
 
 (define-test type/bdd-performance-test
   (let* ((decomp '((AND (NOT BIT) TEST-ARRAY-RANK) BIT (AND (NOT TEST-CHAR-INT) TEST-ARRAY-TOTAL-SIZE)
