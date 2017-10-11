@@ -43,7 +43,7 @@
 (in-package   :lisp-types)
 
 (defmacro exists (obj data &body body)
-  (etypecase obj
+  (typecase obj
     (list
      (let ((var (gensym "exists")))
        `(member-if (lambda (,var)
