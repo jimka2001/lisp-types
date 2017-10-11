@@ -25,7 +25,8 @@
   (declare (optimize (speed 3) (compilation-speed 0) (debug 0))
            #+sbcl (notinline union))
   (let ((type-specifiers (mapcar #'reduce-lisp-type-simple type-specifiers))
-        (known-intersecting (make-hash-table :test #'equal)) decomposition) ;; the list of disjoint type-specifiers
+        (known-intersecting (make-hash-table :test #'equal))
+        decomposition) ;; the list of disjoint type-specifiers
     (labels ((disjoint? (T1 T2 &aux (key (list T1 T2)))
                (multiple-value-bind (hit found?) (gethash key known-intersecting)
                  (cond
@@ -49,9 +50,9 @@
             (t
              (dolist (B intersecting)
                (forget B)
-               (remember (reduce-lisp-type-simple `(and ,A ,B)))
-               (remember (reduce-lisp-type-simple `(and ,A (not ,B))))
-               (remember (reduce-lisp-type-simple `(and (not ,A) ,B))))))))
+               (remember (type-to-dnf `(and ,A ,B)))
+               (remember (type-to-dnf `(and ,A (not ,B))))
+               (remember (type-to-dnf `(and (not ,A) ,B))))))))
       (mapcar 'reduce-lisp-type-full decomposition))))
 
 
