@@ -77,7 +77,8 @@
     c))
 
 (defun bdd-new-hash ()
-  (make-hash-table :test #'equal))
+  (make-hash-table :test #'equal
+                   #+allegro :values #+allegro :weak))
 
 (defvar *bdd-hash* (bdd-new-hash))
 (defvar *bdd-verbose* nil)
