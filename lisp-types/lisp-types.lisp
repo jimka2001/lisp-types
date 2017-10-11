@@ -263,8 +263,12 @@ i.e., is a subtype of nil."
   (let ((T1 (type-to-dnf T1))
         (T2 (type-to-dnf T2)))
     (multiple-value-bind (T1<=T2 okT1T2) (smarter-subtypep T1 T2)
-      (multiple-value-bind (T2<=T1 okT2T2) (smarter-subtypep T2 T1)
-        (values (and T1<=T2 T2<=T1) (and okT1T2 okT2T2))))))
+      (if (and okT1T2 (not T1<=T2))
+          (values nil t) ; no need to call subtypep a second time
+          (multiple-value-bind (T2<=T1 okT2T1) (smarter-subtypep T2 T1)
+            (if (and okT2T1 (not T2<=T1))
+                (values nil t)
+                (values (and T1<=T2 T2<=T1) (and okT1T2 okT2T1))))))))
 
 (defmacro caching-types (&body body)
   `(call-with-disjoint-hash
