@@ -40,4 +40,5 @@
      (:file "test-bdd-reduce-17")
      (:file "test-dnf")
      (:file "test-analysis" :depends-on ("analysis"))
+     (:file "test-reduce-lisp-type-once")
      ))))
