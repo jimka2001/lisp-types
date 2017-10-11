@@ -54,11 +54,17 @@
   (assert-false (dnf-type-p '(and a)))
   (assert-false (dnf-type-p '(or a)))
   (assert-false (dnf-type-p '(or (not (and a b)) (and c d))))
-  (assert-false (dnf-type-p '(or (and (not (and a b)) c) d))))
+  (assert-false (dnf-type-p '(or (and (not (and a b)) c) d)))
 
-(define-test types/reduce-lisp-type-once-1
-  (assert-true (4 = (length
-                     (reduce-lisp-type-once
+  (assert-false (dnf-type-p '(or a a)))
+  (assert-false (dnf-type-p '(and a a)))
+  (assert-false (dnf-type-p '(not a a))) ;; not dnf because syntactically incorrect
+
+)
+
+(define-test types/reduce-lisp-type-1
+  (assert-true (= 3 (length
+                     (reduce-lisp-type
                       '(OR (AND BIGNUM BIT FIXNUM UNSIGNED-BYTE (NOT BIGNUM)
                             (NOT BIT))
                         (AND BIGNUM BIT FIXNUM UNSIGNED-BYTE (NOT BIGNUM)
@@ -89,9 +95,9 @@
 
 
 
-(define-test types/reduce-lisp-type-once-2
+(define-test types/reduce-lisp-type-2
   (assert-true (dnf-type-p
-                (reduce-lisp-type-once
+                (reduce-lisp-type
                  '(AND (OR (AND BIGNUM BIT FIXNUM UNSIGNED-BYTE (NOT BIGNUM)
                             (NOT BIT))
                         (AND BIGNUM BIT FIXNUM UNSIGNED-BYTE (NOT BIGNUM)
@@ -122,9 +128,9 @@
                          (AND FIXNUM REAL (NOT BIT) (NOT FIXNUM)))))
                  :full nil))))
 
-(define-test types/reduce-lisp-type-once-3
+(define-test types/reduce-lisp-type-3
   (assert-true (dnf-type-p
-                (reduce-lisp-type-once
+                (reduce-lisp-type
                  '(AND
                    (OR (AND BIGNUM BIT FIXNUM UNSIGNED-BYTE (NOT BIGNUM) (NOT BIT))
                     (AND FIXNUM (NOT BIGNUM) (NOT BIT) (NOT FIXNUM))
@@ -169,9 +175,9 @@
                     (AND FIXNUM REAL (NOT BIT) (NOT FIXNUM))))
                  :full nil))))
 
-(define-test types/reduce-lisp-type-once-4
+(define-test types/reduce-lisp-type-4
   (assert-true (dnf-type-p
-                (reduce-lisp-type-once
+                (reduce-lisp-type
                  '(AND
                    (OR
                     (AND BIGNUM BIT FIXNUM UNSIGNED-BYTE (NOT BIGNUM) (NOT BIT))
@@ -205,9 +211,9 @@
                     (AND FIXNUM REAL (NOT BIT) (NOT FIXNUM))))
                  :full nil))))
 
-(define-test types/reduce-lisp-type-once-5
+(define-test types/reduce-lisp-type-5
   (assert-true (dnf-type-p
-                (reduce-lisp-type-once
+                (reduce-lisp-type
                  '(AND (OR (AND BIGNUM BIT FIXNUM UNSIGNED-BYTE (NOT BIGNUM)
                             (NOT BIT))
                         (AND BIGNUM BIT FIXNUM UNSIGNED-BYTE (NOT BIGNUM)
@@ -561,16 +567,93 @@
                     (AND FIXNUM REAL (NOT BIT) (NOT FIXNUM))))
                  :full nil))))
 
-(define-test types/reduce-lisp-type-once-6
+(define-test types/reduce-lisp-type-6
   (assert-true (dnf-type-p
-                (reduce-lisp-type-once '(AND (AND BIT FIXNUM UNSIGNED-BYTE)
+                (reduce-lisp-type '(AND (AND BIT FIXNUM UNSIGNED-BYTE)
                                          (OR (AND  BIT FIXNUM REAL UNSIGNED-BYTE)
                                           (AND BIT FIXNUM REAL UNSIGNED-BYTE (NOT FIXNUM)))) :full nil))))
 
-(define-test types/reduce-lisp-type-once-7
+(define-test types/reduce-lisp-type-7
   (assert-true (dnf-type-p
-                (reduce-lisp-type-once '(AND
+                (reduce-lisp-type '(AND
                                          (AND UNSIGNED-BYTE)
                                          (OR
                                           (AND UNSIGNED-BYTE)
                                           (AND REAL UNSIGNED-BYTE))) :full nil))))
+
+(define-test types/reduce-lisp-type-8
+  (assert-true (dnf-type-p
+                (reduce-lisp-type
+                '(AND 
+                  (OR 
+                   (AND BIT FIXNUM (NOT BIT))
+                   (AND FIXNUM (NOT BIT) (NOT FIXNUM)))
+                  (OR 
+                   (AND BIT FIXNUM REAL (NOT BIT) (NOT FIXNUM))
+                   (AND BIT FIXNUM REAL (NOT BIT))
+                   ))
+                :FULL NIL))))
+
+(define-test types/reduce-lisp-type-9
+  (assert-true (dnf-type-p
+                (reduce-lisp-type
+                '(AND 
+                  (OR 
+                   (AND BIT FIXNUM (NOT BIT))
+                   (AND FIXNUM (NOT BIT) (NOT FIXNUM)))
+                  (OR 
+                   (AND BIT FIXNUM
+                    (NOT BIT) (NOT FIXNUM))
+                   (AND BIT FIXNUM
+                    (NOT BIT))
+                   ))
+                :FULL NIL))))
+
+
+(define-test types/reduce-lisp-type-10
+  (assert-true (dnf-type-p
+                (reduce-lisp-type
+                '(AND (OR (AND BIGNUM BIT FIXNUM UNSIGNED-BYTE (NOT BIGNUM)
+                           (NOT BIT))
+                       (AND FIXNUM (NOT BIGNUM) (NOT BIT) (NOT FIXNUM))
+                       (AND FIXNUM (NOT BIT) (NOT FIXNUM)))
+                  (OR (AND BIGNUM BIT FIXNUM REAL UNSIGNED-BYTE (NOT BIGNUM)
+                       (NOT BIT))
+                   (AND BIGNUM BIT FIXNUM REAL UNSIGNED-BYTE (NOT BIGNUM)
+                    (NOT BIT))
+                   (AND BIGNUM BIT FIXNUM REAL UNSIGNED-BYTE (NOT BIGNUM)
+                    (NOT BIT) (NOT FIXNUM))
+                   (AND BIGNUM BIT FIXNUM REAL UNSIGNED-BYTE (NOT BIGNUM)
+                    (NOT BIT) (NOT FIXNUM))
+                   (AND BIGNUM BIT FIXNUM REAL UNSIGNED-BYTE (NOT BIT))
+                   (AND BIGNUM BIT FIXNUM REAL UNSIGNED-BYTE (NOT BIT))
+                   (AND BIGNUM BIT FIXNUM REAL UNSIGNED-BYTE (NOT BIT)
+                    (NOT FIXNUM))
+                   (AND BIGNUM BIT FIXNUM REAL UNSIGNED-BYTE (NOT BIT)
+                    (NOT FIXNUM))
+                   (AND BIGNUM BIT FIXNUM REAL (NOT BIGNUM) (NOT BIT))
+                   (AND BIGNUM BIT FIXNUM REAL (NOT BIGNUM) (NOT BIT)
+                    (NOT FIXNUM))
+                   (AND BIGNUM BIT FIXNUM REAL (NOT BIGNUM) (NOT BIT)
+                    (NOT FIXNUM))
+                   (AND BIGNUM BIT FIXNUM REAL (NOT BIT))
+                   (AND BIGNUM BIT FIXNUM REAL (NOT BIT))
+                   (AND BIGNUM BIT FIXNUM REAL (NOT BIT) (NOT FIXNUM))
+                   (AND BIGNUM BIT FIXNUM REAL (NOT BIT) (NOT FIXNUM))
+                   (AND BIGNUM FIXNUM REAL UNSIGNED-BYTE (NOT BIGNUM)
+                    (NOT BIT))
+                   (AND BIT FIXNUM REAL (NOT BIGNUM) (NOT BIT)
+                    (NOT FIXNUM))
+                   (AND BIT FIXNUM REAL (NOT BIT))
+                   (AND BIT FIXNUM REAL (NOT BIT) (NOT FIXNUM))
+                   (AND BIT FIXNUM REAL (NOT BIT) (NOT FIXNUM))
+                   (AND FIXNUM REAL UNSIGNED-BYTE (NOT BIGNUM) (NOT BIT)
+                    (NOT FIXNUM))
+                   (AND FIXNUM REAL UNSIGNED-BYTE (NOT BIGNUM) (NOT BIT)
+                    (NOT FIXNUM))
+                   (AND FIXNUM REAL UNSIGNED-BYTE (NOT BIT) (NOT FIXNUM))
+                   (AND FIXNUM REAL (NOT BIGNUM) (NOT BIT) (NOT FIXNUM))
+                   (AND FIXNUM REAL (NOT BIT) (NOT FIXNUM))))
+                :FULL NIL))))
+
+

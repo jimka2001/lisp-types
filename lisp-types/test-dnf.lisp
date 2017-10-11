@@ -1698,3 +1698,12 @@ NIL
     (assert-false (type-to-dnf false-type))))
 
 
+(define-test test-dnf/test1
+  (assert-true (dnf-type-p (type-to-dnf '(AND
+                                          (NOT FLOAT)
+                                          (NOT UNSIGNED-BYTE)
+                                          (NOT TEST-ARRAY-RANK)
+                                          REAL
+                                          (NOT FLOAT)
+                                          (NOT TEST-ARRAY-RANK)
+                                          TEST-FLOAT-DIGITS)))))

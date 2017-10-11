@@ -169,7 +169,7 @@
                             (member (cadr t1) (cdr type) :test #'equal)))
                  (setf type nil)))
              (when (and? type)
-               (setf type (cons 'and (remove-duplicates (cdr type) :test #'eq))))
+               (setf type (cons 'and (remove-duplicates (cdr type) :test #'equal))))
              (when (and? type)
                ;; (and a) --> a
                (when (and (cdr type)
@@ -198,7 +198,7 @@
                             (member (cadr t1) (cdr type) :test #'equal)))
                  (setf type t)))
              (when (or? type)
-               (setf type (cons 'or (remove-duplicates (cdr type) :test #'eq))))
+               (setf type (cons 'or (remove-duplicates (cdr type) :test #'equal))))
              (when (or? type)
                ;; (or a) --> a
                (when (and (cdr type)
@@ -228,7 +228,7 @@
                                                  (list 'not t1)) (cdr (cadr type)))))))
              (again type)))
     (fixed-point #'to-dnf
-                 type
+                 (alphabetize-type type)
                  :test #'equal)))
 
 (defvar *compound-type-specifier-names*
@@ -542,7 +542,7 @@ a call to subtypep or friends."
 					; (and A t B) --> (and A B)
 	      (setf operands (remove t operands)))
 
-
+            (setf type (cons 'and operands))
 	    (rule-case type
 	      ((null operands)		; (and) --> t
 	       t)
@@ -555,7 +555,8 @@ a call to subtypep or friends."
 		      (and-operands (remove match operands :test #'eq)))
 		 (make-or
 		       (loop :for or-operand :in (cdr match)
-			     :collect (make-and (cons or-operand and-operands))))))
+			     :collect (reduce-lisp-type-once (make-and (cons or-operand and-operands))
+                                                             :full full)))))
 	      ((some #'eql-or-member? operands)
 	       ;; (and (member a b 2 3) symbol) --> (member a b)
 	       ;; (and (member a 2) symbol) --> (eql a)
@@ -663,7 +664,9 @@ a call to subtypep or friends."
                                              (list operand)))
                                      operands)))
             (setf operands (remove-duplicates operands :test #'equal))
-	    (rule-case type
+            (setf type (cons 'or operands))
+
+            (rule-case type
 	      ((null operands)		; (or) --> nil
 	       nil)
 	      ((null (cdr operands))	; (or A) --> A
@@ -743,7 +746,7 @@ a call to subtypep or friends."
 				       (loop :for operand :in args
 					     :collect `(not ,operand)))))
 		  (t
-		   type)))))))))
+		   `(not ,(reduce-lisp-type-once (car operands) :full full)))))))))))
 
 (defun reduce-lisp-type (type &key (full t))
     "Given a common lisp type designator such as (AND A (or (not B) C)), apply some
@@ -757,9 +760,12 @@ be even simpler in cases such as (OR A B), or (AND A B).  A few restrictions app
 
 If :full nil is given, then a fast but incomplete reduction is done, i.e., a 
 reduction which does not involve calls to subtypep."
-  (alphabetize-type
-   (fixed-point (lambda (ty) (reduce-lisp-type-once ty :full full))
-		type :test #'equal)))
+  (fixed-point (lambda (ty) (alphabetize-type (reduce-lisp-type-once ty :full full)))
+               ;; alphabetize-type before calling fixed point, this
+               ;; will increase the chance of finding duplicate
+               ;; arguments of and/or making the type more quickly
+               ;; reducable
+               (alphabetize-type type) :test #'equal))
 
 (defun reduce-lisp-type-full (type)
   (reduce-lisp-type type :full t))

@@ -481,3 +481,12 @@
   (assert-true (equal '(t t) (multiple-value-list (disjoint-types-p '(not number) 'float))))
   (assert-true (equal '(t t) (multiple-value-list (disjoint-types-p 'float '(not number)))))
   (assert-false (disjoint-types-p '(not float) '(not integer))))
+
+(define-test type/alphbetize-type
+  (assert-true (equal (ALPHABETIZE-TYPE
+                       '(OR (AND (NOT FIXNUM) BIT FIXNUM (NOT BIT))
+                         (AND BIT FIXNUM (NOT BIT))
+                         (AND BIT FIXNUM (NOT BIT) (NOT FIXNUM))))
+                      '(OR (AND BIT FIXNUM (NOT BIT))
+                        (AND BIT FIXNUM (NOT BIT) (NOT FIXNUM))
+                        (AND BIT FIXNUM (NOT BIT) (NOT FIXNUM))))))
