@@ -268,6 +268,34 @@
 
 
 
+
+(defun best-time (num-tries thunk)
+  "returns a plist with the fields :wall-time :run-time :value"
+  (declare (type (and fixnum unsigned-byte) num-tries)
+           (type (function () t) thunk))
+  (let (result)
+    (dotimes (try num-tries)
+      (let* ((run-time-t1 (get-internal-run-time))
+             (start-real-time (get-internal-real-time))
+             (s2 (funcall thunk))
+             (run-time-t2 (get-internal-run-time))
+             (wall-time (/ (- (get-internal-real-time) start-real-time) internal-time-units-per-second))
+             (run-time (/ (- run-time-t2 run-time-t1) internal-time-units-per-second)))
+        (setf result
+              (cond
+                ((not result) ; if first time through dotime/try loop
+                 (list :wall-time (the real wall-time)
+                       :run-time run-time
+                       :value s2))
+                ((< run-time (the real (getf result :run-time)))
+                 (format t "[try ~D] found faster ~A < ~A~%" try run-time (getf result :run-time))
+                 (list :wall-time wall-time
+                       :run-time run-time
+                       :value s2))
+                (t
+                 result)))))
+    result))
+
 (defun call-with-timeout (time-out thunk num-tries)
   "TIME-OUT, integer, the wall-time allowed to call the function THUNK.
  THUNK is a 0-ary function returning some type X.
@@ -280,6 +308,31 @@
  Returns a plist, one of the following:
  (:wall-time rational :run-time rational :time-out integer) or
  (:wall-time rational :run-time rational :value X)"
+  (declare (type (or null (and fixnum unsigned-byte)) time-out)
+           (type (function () t) thunk)
+           (type (and fixnum unsigned-byte) num-tries))
+  (if (not time-out)
+      (best-time num-tries thunk)
+      (%call-with-timeout time-out thunk num-tries)))
+
+#+allegro
+(defun %call-with-timeout (time-out thunk num-tries)
+  (declare (type (and fixnum unsigned-byte) time-out num-tries)
+           (type (function () t) thunk))
+  (let ((start-run-time (get-internal-run-time))
+        (start-real-time (get-internal-real-time)))
+    (sys:with-timeout (time-out (let ((run-time (get-internal-run-time))
+                                      (real-time (get-internal-real-time)))
+                                  (list :wall-time (/ (- real-time start-real-time) internal-time-units-per-second)
+                                        :run-time  (/ (- run-time start-run-time) internal-time-units-per-second)
+                                        :time-out time-out)))
+      (best-time num-tries thunk))))
+
+
+#+sbcl 
+(defun %call-with-timeout (time-out thunk num-tries)
+  (declare (type (and fixnum unsigned-byte) time-out num-tries)
+           (type (function () t) thunk))
   (let (th-worker th-observer th-worker-join-failed th-observer-join-failed th-worker-destroyed-observer time-it-error result1 result2
                   (start-run-time (get-internal-run-time))
                   (start-real-time (get-internal-real-time)))
@@ -295,62 +348,38 @@
                                      (when th-observer
                                        (warn "killing thread ~A because of error ~A" th-observer e)
                                        (ignore-errors (bordeaux-threads:destroy-thread th-observer))))))
-               (dotimes (try num-tries)
-                 (let* ((run-time-t1 (get-internal-run-time))
-                        (start-real-time (get-internal-real-time))
-                        (s2 (funcall thunk))
-                        (run-time-t2 (get-internal-run-time))
-                        (wall-time (/ (- (get-internal-real-time) start-real-time) internal-time-units-per-second))
-                        (run-time (/ (- run-time-t2 run-time-t1) internal-time-units-per-second)))
-                   (setf result1
-                         (cond
-                           ((not result1) ; if first time through dotime/try loop
-                            (list :wall-time (the real wall-time)
-                                  :run-time run-time
-                                  :value s2))
-                           ((< run-time (the real (getf result1 :run-time)))
-                            (format t "[try ~D] found faster ~A < ~A~%" try run-time (getf result1 :run-time))
-                            (list :wall-time wall-time
-                                  :run-time run-time
-                                  :value s2))
-                           (t
-                            result1)))))
+               (setf result1 (best-time num-tries thunk))
                (when th-observer
                  ;; if we reach this line, that means the THUNK evaluated NUM-TRIES no of times before
                  ;;   TH-OBSERVER finshed.  So we need to kill TH-OBSERVER
                  (setf th-worker-destroyed-observer
                        (bordeaux-threads:destroy-thread th-observer))))))
-      (cond
-        (time-out
-         (setf th-observer
-               (bordeaux-threads:make-thread
-                (lambda (&aux elapsed (real-time (get-internal-real-time)) (run-time (get-internal-run-time)))
-                  (block waiting
-                    (dotimes (i time-out)
-                      (setf run-time (get-internal-run-time))
-                      (setf real-time (get-internal-real-time))
-                      (when (plusp (setf elapsed (/ (- real-time start-real-time) internal-time-units-per-second)))
-                        (when (> elapsed time-out)
-                          (return-from waiting)))
-                      (sleep 2)))
-                  (setf result2 (list :wall-time (/ (- real-time start-real-time) internal-time-units-per-second)
-                                      :run-time  (/ (- run-time start-run-time) internal-time-units-per-second)
-                                      :time-out time-out))
-                  (format t "killing thread ~A~%" th-worker)
-                  (bordeaux-threads:destroy-thread th-worker))
-                :name "th-observer stop-watch"))
-         (setf th-worker (bordeaux-threads:make-thread #'time-it :name "th-handle thunk"))
-         (handler-case (bordeaux-threads:join-thread th-worker)
-           #+sbcl(SB-THREAD:JOIN-THREAD-ERROR (e)
-                   (setf th-worker-join-failed e)
-                   nil))
-         (handler-case (bordeaux-threads:join-thread th-observer)
-           #+sbcl(SB-THREAD:JOIN-THREAD-ERROR (e)
-                   (setf th-observer-join-failed e)
-                   nil)))
-        (t
-         ;; no TIME-OUT given, so simply evaluate the THUNK (NUM-TRIES no. of times, taking the best case)
-         (time-it))))
+      (setf th-observer
+            (bordeaux-threads:make-thread
+             (lambda (&aux elapsed (real-time (get-internal-real-time)) (run-time (get-internal-run-time)))
+               (block waiting
+                 (dotimes (i time-out)
+                   (setf run-time (get-internal-run-time))
+                   (setf real-time (get-internal-real-time))
+                   (when (plusp (setf elapsed (/ (- real-time start-real-time) internal-time-units-per-second)))
+                     (when (> elapsed time-out)
+                       (return-from waiting)))
+                   (sleep 2)))
+               (setf result2 (list :wall-time (/ (- real-time start-real-time) internal-time-units-per-second)
+                                   :run-time  (/ (- run-time start-run-time) internal-time-units-per-second)
+                                   :time-out time-out))
+               (format t "killing thread ~A~%" th-worker)
+               (bordeaux-threads:destroy-thread th-worker))
+             :name "th-observer stop-watch"))
+      (setf th-worker (bordeaux-threads:make-thread #'time-it :name "th-handle thunk"))
+      (handler-case (cl-user::print-conditions (bordeaux-threads:join-thread th-worker))
+        #+sbcl(SB-THREAD:JOIN-THREAD-ERROR (e)
+                (setf th-worker-join-failed e)
+                nil))
+      (handler-case (bordeaux-threads:join-thread th-observer)
+        #+sbcl(SB-THREAD:JOIN-THREAD-ERROR (e)
+                (setf th-observer-join-failed e)
+                nil)))
     (assert (typep (or result1 result2) 'cons)
             (th-worker th-observer th-worker-destroyed-observer time-it-error th-worker-join-failed th-observer-join-failed result1 result2 time-out))
     (the cons (or result1 result2))))
