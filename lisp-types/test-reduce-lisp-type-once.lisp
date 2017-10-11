@@ -29,6 +29,33 @@
       (format t "4 importing name=~A into  :lisp-types.test~%" name)
       (shadowing-import name :lisp-types.test))))
 
+(define-test types/dnf-type-p
+  (assert-true (dnf-type-p nil))
+  (assert-true (dnf-type-p t))
+  (assert-true (dnf-type-p 'A))
+  (assert-true (dnf-type-p '(or a b)))
+  (assert-true (dnf-type-p '(and a b)))
+  (assert-true (dnf-type-p '(not a)))
+  (assert-true (dnf-type-p '(and a (not b))))
+  (assert-true (dnf-type-p '(or a (not b))))
+  (assert-true (dnf-type-p '(or
+                             (and a (not b))
+                             (and c (not d)))))
+
+  (assert-false (dnf-type-p '(and)))
+  (assert-false (dnf-type-p '(or)))
+  (assert-false (dnf-type-p '(not)))
+  (assert-false (dnf-type-p '(and (and a) b)))
+  (assert-false (dnf-type-p '(or (or a) b)))
+  (assert-false (dnf-type-p '(not (not a))))
+  (assert-false (dnf-type-p '(not (or a b))))
+  (assert-false (dnf-type-p '(not (and a b))))
+  (assert-false (dnf-type-p '(and (or a b) (or c))))
+  (assert-false (dnf-type-p '(and a)))
+  (assert-false (dnf-type-p '(or a)))
+  (assert-false (dnf-type-p '(or (not (and a b)) (and c d))))
+  (assert-false (dnf-type-p '(or (and (not (and a b)) c) d))))
+
 (define-test types/reduce-lisp-type-once-1
   (assert-true (4 = (length
                      (reduce-lisp-type-once

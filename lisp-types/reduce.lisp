@@ -272,6 +272,37 @@ If a type is found in this list that it treated as a declaration of to things:
 Applications are free to push entries onto this list to notify REDUCE-LISP-TYPE of how
 to reduce a type defined by DEFTYPE.")
 
+(defun dnf-type-p (type)
+  "Function useful for debugging to test whether a given type specifier is in DNF form."
+  (labels ((and-term-p (term)
+             (and (consp term)
+                  (eq 'and (car term))
+                  (cddr term)
+                  (forall t2 (cdr term)
+                    (or (other-term-p t2)
+                        (not-term-p t2)))))
+           (or-term-p (term)
+             (and (consp term)
+                  (eq 'or (car term))
+                  (cddr term)
+                  (forall t2 (cdr term)
+                    (or (and-term-p t2)
+                        (not-term-p t2)
+                        (other-term-p t2)))))
+           (not-term-p (term)
+             (and (consp term)
+                  (eq 'not (car term))
+                  (cdr term)
+                  (null (cddr term))
+                  (other-term-p (cadr term))))
+           (other-term-p (term)
+             (or (atom term)
+                 (not (member (car term) '(and or not))))))
+    (or (and-term-p type)
+        (not-term-p type)
+        (or-term-p type)
+        (other-term-p type))))
+
 (defun reduce-lisp-type-once (type &key (full t) &aux it)
   "Given a lisp type designator, make one pass at reducing it, removing redundant information such as
 repeated or contradictory type designators. 
