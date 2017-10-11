@@ -198,7 +198,7 @@
 
 (defun types/sanity-test ()
   (let ((numerical-types '(test-array-rank test-array-total-size bignum bit
-                           complex fixnum float float-digits
+                           complex fixnum float test-float-digits
                            float-radix integer number ratio rational real
                            test-char-code ;; test-char-int
                            double-float ;; long-float

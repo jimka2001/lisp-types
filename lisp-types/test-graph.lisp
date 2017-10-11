@@ -108,7 +108,7 @@
                                     :test #'equivalent-types-p))))
 
 (define-test type/graph-5
-  (let ((types '(COMPLEX FLOAT-DIGITS UNSIGNED-BYTE BIGNUM TEST-ARRAY-RANK RATIONAL)))
+  (let ((types '(COMPLEX TEST-FLOAT-DIGITS UNSIGNED-BYTE BIGNUM TEST-ARRAY-RANK RATIONAL)))
     (assert-false (set-exclusive-or (DECOMPOSE-TYPES-GRAPH types)
                                     (decompose-types-rtev2 types)
                                     :test #'equivalent-types-p))))
@@ -123,10 +123,10 @@
 (define-test type/graph-3
   (let ((types '(COMPLEX
                  FLOAT
-                 FLOAT-DIGITS
+                 TEST-FLOAT-DIGITS
                  (AND BIGNUM (NOT UNSIGNED-BYTE))
                  (AND BIGNUM UNSIGNED-BYTE)
-                 (AND TEST-ARRAY-RANK (NOT FLOAT-DIGITS))
+                 (AND TEST-ARRAY-RANK (NOT TEST-FLOAT-DIGITS))
                  (AND UNSIGNED-BYTE (NOT TEST-ARRAY-RANK) (NOT BIGNUM))
                  (AND REAL (NOT BIGNUM) (NOT FLOAT) (NOT UNSIGNED-BYTE))
                  )))
@@ -137,10 +137,10 @@
 (define-test type/graph-2
   (let ((types '(COMPLEX
                  FLOAT
-                 FLOAT-DIGITS
+                 TEST-FLOAT-DIGITS
                  (AND BIGNUM (NOT UNSIGNED-BYTE))
                  (AND BIGNUM UNSIGNED-BYTE)
-                 (AND TEST-ARRAY-RANK (NOT FLOAT-DIGITS))
+                 (AND TEST-ARRAY-RANK (NOT TEST-FLOAT-DIGITS))
                  (AND UNSIGNED-BYTE (NOT TEST-ARRAY-RANK) (NOT BIGNUM))
                  (OR TEST-ARRAY-RANK (AND REAL (NOT BIGNUM) (NOT FLOAT) (NOT UNSIGNED-BYTE))))))
     (assert-false (set-exclusive-or (DECOMPOSE-TYPES-GRAPH types)
@@ -149,7 +149,7 @@
 
 (define-test type/graph
   (assert-false (set-exclusive-or (DECOMPOSE-TYPES-GRAPH '( COMPLEX
-							   FLOAT-DIGITS
+							   TEST-FLOAT-DIGITS
 							   UNSIGNED-BYTE
 							   FLOAT
 							   BIGNUM
@@ -158,7 +158,7 @@
 							   RATIONAL
 							   ))
 				  (decompose-types-rtev2   '( COMPLEX
-						       FLOAT-DIGITS
+						       TEST-FLOAT-DIGITS
 						       UNSIGNED-BYTE
 						       FLOAT
 						       BIGNUM
@@ -169,7 +169,7 @@
 				  :test #'equivalent-types-p))
   (assert-false (set-exclusive-or (DECOMPOSE-TYPES-GRAPH '( COMPLEX
 							   FIXNUM
-							   FLOAT-DIGITS
+							   TEST-FLOAT-DIGITS
 							   NUMBER
 							   TEST-CHAR-CODE
 							   UNSIGNED-BYTE
@@ -185,7 +185,7 @@
 							   SHORT-FLOAT))
 				  (decompose-types-rtev2 '( COMPLEX
 						     FIXNUM
-						     FLOAT-DIGITS
+						     TEST-FLOAT-DIGITS
 						     NUMBER
 						     TEST-CHAR-CODE
 						     UNSIGNED-BYTE
@@ -202,7 +202,7 @@
 				  :test #'equivalent-types-p))
   (assert-false (set-exclusive-or (DECOMPOSE-TYPES-GRAPH '( COMPLEX
 							   FIXNUM
-							   FLOAT-DIGITS
+							   TEST-FLOAT-DIGITS
 							   NUMBER
 							   TEST-CHAR-CODE
 							   UNSIGNED-BYTE
@@ -217,7 +217,7 @@
 							   SHORT-FLOAT))
 				  (decompose-types-rtev2      '( COMPLEX
 							  FIXNUM
-							  FLOAT-DIGITS
+							  TEST-FLOAT-DIGITS
 							  NUMBER
 							  TEST-CHAR-CODE
 							  UNSIGNED-BYTE
@@ -233,7 +233,7 @@
 				  :test #'equivalent-types-p))
   (assert-false (set-exclusive-or (DECOMPOSE-TYPES-GRAPH '( COMPLEX
 							   FIXNUM
-							   FLOAT-DIGITS
+							   TEST-FLOAT-DIGITS
 							   NUMBER
 							   TEST-CHAR-CODE
 							   UNSIGNED-BYTE
@@ -249,7 +249,7 @@
 							   SHORT-FLOAT))
 				  (decompose-types-rtev2      '( COMPLEX
 							  FIXNUM
-							  FLOAT-DIGITS
+							  TEST-FLOAT-DIGITS
 							  NUMBER
 							  TEST-CHAR-CODE
 							  UNSIGNED-BYTE

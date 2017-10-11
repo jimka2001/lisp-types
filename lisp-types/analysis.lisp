@@ -55,7 +55,9 @@
       (when (and (valid-type-p sym)
                  (subtypep sym super))
 	(push sym all-types)))
-    all-types))
+    (remove-duplicates all-types :test (lambda (t1 t2)
+                                         (and (subtypep t1 t2)
+                                              (subtypep t2 t1))))))
 
 
 
@@ -468,8 +470,8 @@
               *decomposition-function-descriptors*))))
 
 (defun find-decomposition-discrepancy (&optional (type-specs '(test-array-rank test-array-total-size bignum bit
-                                                               complex fixnum float float-digits
-                                                               float-radix integer number ratio rational real
+                                                               complex fixnum float test-float-digits
+                                                               test-float-radix integer number ratio rational real
                                                                test-char-code ;; char-int
                                                                double-float ;; long-float
                                                                unsigned-byte)))

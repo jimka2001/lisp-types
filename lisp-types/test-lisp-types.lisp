@@ -36,6 +36,9 @@
 
 
 
+
+(deftype test-float-radix () '(integer 0 (64)))
+(deftype test-float-digits () '(integer 0 64))
 (deftype test-array-rank () '(integer 0 (65529)))
 (deftype test-array-total-size () `(integer 0 (,(- most-positive-fixnum 2))))
 (deftype test-char-code () '(integer 0 (#x110000)))
