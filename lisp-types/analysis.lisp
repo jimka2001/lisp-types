@@ -103,9 +103,26 @@
          (prog1 (progn ,@body)
            (when ,conditions
              (let ((n 0))
-               (format t "Conditions singled while evaluating: ~A~%" ',body)
+               (format t "Conditions signalled while evaluating: ~A~%" ',body)
                (dolist (condition (nreverse ,conditions))
                  (format t "~D: ~S~%" (incf n) condition)))))))))
+
+(defun call-asserting-conditions (thunk condition-types)
+  (handler-bind ((t #'(lambda (condition)
+                        (assert (member-if (lambda (c-type)
+                                             (typep condition c-type))
+                                           condition-types)
+                                ()
+                                "Evaluating expression raised invalid condition: ~A" condition))))
+    (funcall thunk)))
+
+(defmacro allowing-conditions (condition-types &body body)
+  `(call-asserting-conditions ',condition-types (lambda () ,@body)))
+
+
+(defun foo (G)
+  (allowing-conditions (warning info db-timeout-error)
+    (funcall G)))
 
 ;; (defmethod print-object ((c SB-KERNEL:PARSE-UNKNOWN-TYPE) stream)
 ;;   (print-unreadable-object (c stream :type t :identity nil)
