@@ -1331,7 +1331,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
 
 
 (defun theta (n &key verbose)
-  (let ((theta (1+ (floor (log (1- n) 2))))
+  (let ((theta (ceiling (log (1- n) 2)))
         direction
         (iterations 1))
     (flet ((e2 (theta)
@@ -1380,7 +1380,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
               (1+ (floor (log (1- n) 2)))
               theta n
               (- theta (1+ (floor (log (1- n) 2))))))
-    (values (1- iterations) direction theta)))
+    (values theta (1- iterations) direction)))
 
 (defun power-diff (n)
   (- (expt 2 (expt 2 n))
@@ -1390,16 +1390,12 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
   (let ((theta (floor (log n 2))))
     (- (power-diff theta)
        (expt 2 (- n theta 1)))))
-    
-
-
-
 
 (defun find-theta (limit &key verbose)
   (let ((hash-iterations (make-hash-table))
         (hash-directions (make-hash-table)))
     (loop for n from 2 to limit
-          do (multiple-value-bind (iterations direction theta) (theta n :verbose verbose)
+          do (multiple-value-bind (theta iterations direction) (theta n :verbose verbose)
                (declare (type (member upward downward) direction)
                         (ignore theta))
                (incf (gethash iterations hash-iterations 0))
@@ -1410,7 +1406,6 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
     (maphash (lambda (key value)
                (format t "direction=~A occurances=~D~%" key value))
              hash-directions)))
-    
 
 (defun estim (n nterms)
   (labels ((rec (l i accum)
@@ -1428,6 +1423,12 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                      (car tail)))
                seq))))
 
-
+(defun robdd-size (n)
+  (let* ((theta (theta n))
+         (robdd-size (+ (1- (expt 2 (- n theta)))
+                        (expt 2 (expt 2 theta))))
+         (bdd-size (1- (expt 2 (1+ n)))))
+    (list :n n :theta theta :robdd robdd-size :bdd bdd-size :compression (/ (+ 1.0 robdd-size) bdd-size))))
+          
 #|
 |#
