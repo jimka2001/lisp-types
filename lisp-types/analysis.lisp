@@ -1347,57 +1347,50 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
           do (terpri))))
 
 
-(defun theta (n &key verbose)
-  (let ((theta (ceiling (log (1- n) 2)))
-        direction
-        (iterations 1))
-    (flet ((e2 (theta)
-             (- (expt 2 (expt 2 theta))
-                (expt 2 (expt 2 (1- theta)))))
-           (e1 (theta)
-             (expt 2 (- n theta 1))))
-      (cond
-        ((<= (e1 theta)
-             (e2 theta))
-         (setf direction 'downward)
-         (when verbose
-           (format t "n=~3D downward ~4A <= ~10A "
-                   n
-                   (log (e1 theta) 2)
-                   (log (e2 theta) 2)))
-         (decf theta)
-         (incf iterations)
-         (loop while (<= (e1 theta)
-                         (e2 theta))
-               do (decf theta)
-               do (incf iterations)))
-        (t
-         (setf direction 'upward)
-         (when verbose
-           (format t "n=~3D upward   ~4A >  ~10A "
-                   n (log (e1 theta) 2)
-                   (log (e2 theta) 2) ))
-         (incf theta)
-         (incf iterations)
-         (loop while (< (e2 theta)
-                        (e1 theta))
-               do (incf theta)
-               do (incf iterations))
-         (decf theta)))
-      (assert (and (>= (e2 (1+ theta)) (e1 (1+ theta)))
-                   (< (e2 theta) (e1 theta)))
-              (theta)
-              "theta=~D expecting e2(~D)=~A >= e1(~D)=~A e2(~D)=~A < e1(~D)=~A"
-              theta
-              (1+ theta) (e2 (1+ theta)) (1+ theta) (e1 (1+ theta))
-              theta (e2 theta) theta (e1 theta)))
-    (when verbose
-      (format t "iterations=~D  init=~D theta=~D = 1+log_2(~D-1)+~D~%"
-              (1- iterations)
-              (1+ (floor (log (1- n) 2)))
-              theta n
-              (- theta (1+ (floor (log (1- n) 2))))))
-    (values theta (1- iterations) direction)))
+(defun delta (i n)
+  (labels ((e2 (i)
+             (- (expt 2 (expt 2 (1+ (- n i))))
+                (expt 2 (expt 2 (- n i)))))
+           (e1 (i)
+             (expt 2 (1- i)))
+           (delta-bar (i)
+             (- (e2 i) (e1 i))))
+    (format t "     n=~A e1=~A   e2=~A~%" n (e1 (- n 1)) (e2 (- n 1)))
+    (delta-bar (- n i))))
+
+(defun delta-print-table (n)
+  (let ((d -1)
+        (i 0))
+
+    (loop :while  (< d 0)
+          :do (setf d (delta i n))
+          :do (format t "i=~A  delta= ~A~%" i d)
+          :do (incf i)
+          :finally (format t "n = ~A theta=~A~%" n (1- i)))
+    ))
+
+
+(defun theta-bounds (n)
+  (list
+   (if (< (log n 2) (1- n))
+       (ceiling (log (- n (log n 2) 1) 2))
+       0)
+   (floor (log n 2))))
+
+
+(defun theta (n)
+  (case n
+    ((1 2) (values 0 1))
+    (t
+     (destructuring-bind (min max) (theta-bounds n)
+       (labels ((good-theta (theta &aux (i (- n theta)))
+                  (<= (row-r n  i)
+                      (row-RR n i))))
+         (loop :for theta :downfrom max :downto min
+               :for iterations :from 1
+               :do (unless (good-theta theta)
+                     (return-from theta (values (1+ theta) iterations t)))
+               :finally (return-from theta (values theta iterations nil))))))))
 
 (defun power-diff (n)
   (- (expt 2 (expt 2 n))
@@ -1408,21 +1401,36 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
     (- (power-diff theta)
        (expt 2 (- n theta 1)))))
 
-(defun find-theta (limit &key verbose)
-  (let ((hash-iterations (make-hash-table))
-        (hash-directions (make-hash-table)))
+(defun row-r (n i)
+  (declare (ignore n))
+  (expt 2 (1- i)))
+
+(assert (= 2 (row-r 3 2)) ())
+(assert (= 4 (row-r 3 3)) ())
+(assert (= 1 (row-r 2 1)) ())
+
+
+
+(defun row-RR (n i)
+  (- (expt 2 (expt 2 (+ n (- i) 1)))
+     (expt 2 (expt 2 (+ n (- i))))))
+
+(assert (= 12 (row-RR 3 2)) ())
+(assert (= 2 (row-RR 3 3)) ())
+(assert (= 12 (row-RR 2 1)) ())
+(assert (= 2 (row-RR 2 2)) ())
+
+
+
+(defun find-theta (limit)
+  (let ((hash-iterations (make-hash-table)))
     (loop for n from 2 to limit
-          do (multiple-value-bind (theta iterations direction) (theta n :verbose verbose)
-               (declare (type (member upward downward) direction)
-                        (ignore theta))
-               (incf (gethash iterations hash-iterations 0))
-               (incf (gethash direction hash-directions 0))))
+          do (multiple-value-bind (theta iterations) (theta n)
+               (declare (ignore theta))
+               (incf (gethash iterations hash-iterations 0))))
     (maphash (lambda (key value)
                (format t "iterations=~D occurances=~D~%" key value))
-             hash-iterations)
-    (maphash (lambda (key value)
-               (format t "direction=~A occurances=~D~%" key value))
-             hash-directions)))
+             hash-iterations)))
 
 (defun estim (n nterms)
   (labels ((rec (l i accum)
@@ -1446,6 +1454,43 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                         (expt 2 (expt 2 theta))))
          (bdd-size (1- (expt 2 (1+ n)))))
     (list :n n :theta theta :robdd robdd-size :bdd bdd-size :compression (/ (+ 1.0 robdd-size) bdd-size))))
-          
-#|
-|#
+
+(defun theta-latex-table (n-min n-max) ;; normally 1 21
+  (flet ((log2 (n) (log n 2))
+         (2^ (n)
+           (expt 2 n)))
+    (format t "$~A$ & $~A$ & $~A$ & $~A$ & $~A$ & $~A$ & $~A$ & $~A$ & $~A$\\\\~%"
+            "\\numvars"
+            "\\lceil \\log_2(\\numvars - log_2\\numvars - 1)\\rceil"
+            "\\theta"
+            "\\lfloor \\log_2\\numvars \\rfloor"
+            "2^{\\numvars -\\theta}-1"
+            "2^{2^\\theta}"
+            "|ROBDD_{\\numvars}|"
+            "|UOBDD_{\\numvars}|"
+            "\\frac{|ROBDD_{\\numvars}|}{|UOBDD_{\\numvars}|}"
+            )
+    (loop :for n :from n-min :to n-max
+          :do (let* ((theta (theta n))
+                     (theta-min (case n
+                                  ((1 2) 0)
+                                  (t (ceiling (log2 (- n (log2 n) 1))))))
+                     (theta-max (case n
+                                  ((1 2) 0)
+                                  (t (floor (log2 n)))))
+                     (|ROBDD_n| (+ (1- (2^ (- n theta)))
+                                   (2^ (2^ theta))))
+                     (|UOBDD_n| (1- (2^ (1+ n))))
+                     (compression (/ (float |ROBDD_n|)
+                                     |UOBDD_n|)))
+                (format t "~A & ~A & ~A & ~A & ~A & ~A & ~A & ~A & ~6,3f\\\\~%"
+                        n
+                        theta-min
+                        theta
+                        theta-max
+                        (1- (2^ (- n theta)))
+                        (2^ (2^ theta))
+                        |ROBDD_n|
+                        |UOBDD_n|
+                        (* 100 compression))))))
+                           
