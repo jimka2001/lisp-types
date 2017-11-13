@@ -1378,23 +1378,14 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
    (floor (log n 2))))
 
 
-(defun theta (n)
-  (case n
-    ((1 2) (values 0 1))
-    (t
-     (destructuring-bind (min max) (theta-bounds n)
-       (labels ((good-theta (theta &aux (i (- n theta)))
-                  (<= (row-r n  i)
-                      (row-RR n i))))
-         (loop :for theta :downfrom max :downto min
-               :for iterations :from 1
-               :do (unless (good-theta theta)
-                     (return-from theta (values (1+ theta) iterations t)))
-               :finally (return-from theta (values theta iterations nil))))))))
+
+
+(defun 2^ (n) (expt 2 n))
+(defun 2^^ (n) (2^ (2^ n)))
 
 (defun power-diff (n)
-  (- (expt 2 (expt 2 n))
-     (expt 2 (expt 2 (1- n)))))
+  (- (2^^ n)
+     (2^^ (1- n))))
 
 (defun cmp-power-diff (n)
   (let ((theta (floor (log n 2))))
@@ -1403,7 +1394,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
 
 (defun row-r (n i)
   (declare (ignore n))
-  (expt 2 (1- i)))
+  (2^ (1- i)))
 
 (assert (= 2 (row-r 3 2)) ())
 (assert (= 4 (row-r 3 3)) ())
@@ -1412,15 +1403,36 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
 
 
 (defun row-RR (n i)
-  (- (expt 2 (expt 2 (+ n (- i) 1)))
-     (expt 2 (expt 2 (+ n (- i))))))
+  (- (2^^ (+ n (- i) 1))
+     (2^^ (- n i))))
 
 (assert (= 12 (row-RR 3 2)) ())
 (assert (= 2 (row-RR 3 3)) ())
 (assert (= 12 (row-RR 2 1)) ())
 (assert (= 2 (row-RR 2 2)) ())
 
+(defun log2 (n)
+  (log n 2))
 
+(defun theta (n)
+  (let ((max (floor (log2 n))))
+    ;;(format t "log=~A~%" max)
+    (case max
+      ((0)
+       (values 0 0))
+      (t
+       (loop :for theta :downfrom max :downto 0
+             :for r = (row-r n (- n theta))
+             :for RR = (row-RR n (- n theta))
+             :for iterations = 1 :then (1+ iterations)
+             ;; :do (format t "n=~A theta=~A n-theta=~A r<=R?  ~A ~A ~A?~%"
+             ;;             n theta (- n theta) r
+             ;;             (cond ((< r RR) "<")
+             ;;                   ((= r RR) "=")
+             ;;                   (t ">"))
+             ;;             RR)
+             :do (when (>= r RR)
+                   (return-from theta (values (1+ theta) iterations))))))))
 
 (defun find-theta (limit)
   (let ((hash-iterations (make-hash-table)))
@@ -1450,47 +1462,69 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
 
 (defun robdd-size (n)
   (let* ((theta (theta n))
-         (robdd-size (+ (1- (expt 2 (- n theta)))
-                        (expt 2 (expt 2 theta))))
-         (bdd-size (1- (expt 2 (1+ n)))))
-    (list :n n :theta theta :robdd robdd-size :bdd bdd-size :compression (/ (+ 1.0 robdd-size) bdd-size))))
+         (robdd-size (+ (1- (2^ (- n theta)))
+                        (2^^ theta)))
+         (bdd-size (1- (2^ (1+ n)))))
+    (list :n n :theta theta :robdd robdd-size :bdd bdd-size :compression (float (/ (+ 1d0 robdd-size) bdd-size) 1.0))))
+
+(defun log-based-compression (min max)
+  (loop :for n :from min :to max
+        :collect (list n (let ((theta (float (log n 2))))
+                           (/ (+ (expt 2d0 (expt 2d0 theta)) (expt 2d0 (- n theta)) -1)
+                              (1- (expt 2d0 (1+ (float n) ))))))))
+  
+
+(defun robdd-compressions (min max)
+  (loop :for n :from min :to max
+        :collect (destructuring-bind (&key compression &allow-other-keys) (robdd-size n)
+                   (list n compression))))
+
+
 
 (defun theta-latex-table (n-min n-max) ;; normally 1 21
-  (flet ((log2 (n) (log n 2))
-         (2^ (n)
-           (expt 2 n)))
-    (format t "$~A$ & $~A$ & $~A$ & $~A$ & $~A$ & $~A$ & $~A$ & $~A$ & $~A$\\\\~%"
-            "\\numvars"
-            "\\lceil \\log_2(\\numvars - log_2\\numvars - 1)\\rceil"
-            "\\theta"
-            "\\lfloor \\log_2\\numvars \\rfloor"
-            "2^{\\numvars -\\theta}-1"
-            "2^{2^\\theta}"
-            "|ROBDD_{\\numvars}|"
-            "|UOBDD_{\\numvars}|"
-            "\\frac{|ROBDD_{\\numvars}|}{|UOBDD_{\\numvars}|}"
-            )
-    (loop :for n :from n-min :to n-max
-          :do (let* ((theta (theta n))
-                     (theta-min (case n
-                                  ((1 2) 0)
-                                  (t (ceiling (log2 (- n (log2 n) 1))))))
-                     (theta-max (case n
-                                  ((1 2) 0)
-                                  (t (floor (log2 n)))))
-                     (|ROBDD_n| (+ (1- (2^ (- n theta)))
-                                   (2^ (2^ theta))))
-                     (|UOBDD_n| (1- (2^ (1+ n))))
-                     (compression (/ (float |ROBDD_n|)
-                                     |UOBDD_n|)))
-                (format t "~A & ~A & ~A & ~A & ~A & ~A & ~A & ~A & ~6,3f\\\\~%"
-                        n
-                        theta-min
-                        theta
-                        theta-max
-                        (1- (2^ (- n theta)))
-                        (2^ (2^ theta))
-                        |ROBDD_n|
-                        |UOBDD_n|
-                        (* 100 compression))))))
+  (format t "$~A$ & $~A$ & $~A$ & $~A$ & $~A$ & $~A$ & $~A$\\\\~%"
+          "\\numvars"
+          "\\lfloor \\log_2\\numvars \\rfloor"
+          "\\theta"
+          "2^{\\numvars -\\theta}-1"
+          "2^{2^\\theta}"
+          "|ROBDD_{\\numvars}|"
+          "\\frac{|ROBDD_{\\numvars}|}{|UOBDD_{\\numvars}|}"
+          )
+  (loop :for n :from n-min :to n-max
+        :do (let* ((theta (theta n))
+                   (theta-max (floor (log2 n)))
+                   (|ROBDD_n| (+ (1- (2^ (- n theta)))
+                                 (2^ (2^ theta))))
+                   (|UOBDD_n| (1- (2^ (1+ n))))
+                   (compression (/ (float |ROBDD_n|)
+                                   |UOBDD_n|)))
+              (format t "~A & ~A & ~A & ~A & ~A & ~A & ~6,3f\\%\\\\~%"
+                      n
+                      theta-max
+                      theta
+                      (1- (2^ (- n theta)))
+                      (2^ (2^ theta))
+                      |ROBDD_n|
+                      (* 100 compression)))))
                            
+(defun compression (n)
+  (let ((theta (theta n)))
+    (format t "theta = ~A~%" theta)
+    (format t "(2^^~A + 2^(~A - ~A) - 1) / (2^~A - 1)~%" theta n theta (1+ n))
+    (format t "= (2^~A + 2^(~A - ~A) - 1) / (2^~A - 1)~%" (2^ theta) n theta (1+ n))
+    (format t " = (~A + ~A - 1) / (~A - 1)~%" (2^^ theta) (2^ (- n theta)) (2^ (1+ n)))
+    (format t " = ~A / ~A~%" (+ (2^^ theta) (2^ (- n theta)) -1) (1- (2^ (1+ n))))
+    (format t " = ~A~%" (/ (+ (2^^ (float theta)) (2^ (- n (float theta))) -1) (1- (2^ (1+ (float n))))))))
+
+(defun graph-theta (n-min n-max)
+  (loop :for n :from n-min :to n-max
+        :for theta = (theta n)
+        :do (format t "(~A, ~A)~%" n theta))
+  (format t "~%")
+  (loop :for n :from n-min :to n-max
+        :do (format t "(~A, ~A)~%" n (log2 n)))
+  (format t "~%")
+
+  (loop :for n :from n-min :to n-max
+        :do (format t "(~A, ~A)~%" n (- (log2 (- n 2 (log2 n))) 2))))
