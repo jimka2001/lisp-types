@@ -167,29 +167,32 @@
       (%bdd-node label *bdd-true* *bdd-false*)
       (error "invalid type specifier: ~A" label)))
 
+(defgeneric bdd-list-to-bdd (head tail))
+
+(defmethod bdd-list-to-bdd ((head (eql 'and)) tail)
+  (reduce #'bdd-and (mapcar #'bdd tail) :initial-value *bdd-true*))
+
+(defmethod bdd-list-to-bdd ((head (eql 'or)) tail)
+  (reduce #'bdd-or (mapcar #'bdd tail) :initial-value *bdd-false*))
+
+(defmethod bdd-list-to-bdd ((head (eql 'not)) tail)
+  ;; (assert (null (cdr tail)) ()
+  ;;         "NOT takes exactly one argument: cannot convert ~A to a BDD" expr)
+  (bdd-and-not *bdd-true* (bdd (car tail))))
+
+(defmethod bdd-list-to-bdd ((head (eql 'and-not)) tail)
+  ;; (assert (<= 2 (length tail)) ()
+  ;;         "AND-NOT takes at least two arguments: cannot convert ~A to a BDD" expr)
+  (destructuring-bind (bdd-head &rest bdd-tail) (mapcar #'bdd tail)
+    (reduce #'bdd-and-not bdd-tail :initial-value bdd-head)))
+
+(defmethod bdd-list-to-bdd (head tail &aux (expr (cons head tail)))
+  (if (valid-type-p expr)
+      (%bdd-node expr *bdd-true* *bdd-false*)
+      (error "invalid type specifier: ~A" expr)))
+
 (defmethod bdd ((expr list))
-  (declare (optimize (speed 3) (debug 0) (compilation-speed 0) (space 0)))
-  (destructuring-bind (head &rest tail) expr
-    (flet ((bdd-tail ()
-             (mapcar #'bdd tail)))
-      (case head
-        ((and)
-         (reduce #'bdd-and (bdd-tail) :initial-value *bdd-true* ))
-        ((or)
-         (reduce #'bdd-or (bdd-tail) :initial-value *bdd-false*))
-        ((not)
-         ;; (assert (null (cdr tail)) ()
-         ;;         "NOT takes exactly one argument: cannot convert ~A to a BDD" expr)
-         (bdd-and-not *bdd-true* (bdd (car tail))))
-        ((and-not)
-         ;; (assert (<= 2 (length tail)) ()
-         ;;         "AND-NOT takes at least two arguments: cannot convert ~A to a BDD" expr)
-         (destructuring-bind (bdd-head &rest bdd-tail) (bdd-tail)
-           (reduce #'bdd-and-not bdd-tail :initial-value bdd-head)))
-        (t
-         (if (valid-type-p expr)
-             (%bdd-node expr *bdd-true* *bdd-false*)
-             (error "invalid type specifier: ~A" expr)))))))
+  (bdd-list-to-bdd (car expr) (cdr expr)))
 
 (defmethod bdd ((label (eql nil)))
   *bdd-false*)
@@ -261,57 +264,62 @@
             (bdd-and-not *bdd-true* (bdd-right b))))
 
 (defun bdd-cmp (t1 t2)
-  (cond
-    ((equal t1 t2)
-     '=)
-    ((null t1)
-     '<)
-    ((null t2)
-     '>)
-    ((not (eql (class-of t1) (class-of t2))) 
-     (bdd-cmp (class-name (class-of t1)) (class-name (class-of t2))))
-    (t
-     ;; thus they are the same type, but they are not equal
-     (typecase t1
-       (list
-        (let (value)
-          (while (and t1
-                      t2
-                      (eq '= (setf value (bdd-cmp (car t1) (car t2)))))
-            (pop t1)
-            (pop t2))
-          (cond
-            ((and t1 t2)
-             value)
-            (t1    '>)
-            (t2    '<)
-            (t     '=))))
-       (symbol
-        (cond
-          ((not (eql (symbol-package t1) (symbol-package t2)))
-           ;; call bdd-cmp because symbol-package might return nil
-           ;;  don't call string= directly
-           (bdd-cmp (symbol-package t1) (symbol-package t2)))
-          ((string< t1 t2) ;; same package
-           '<)
-          (t
-           '>)))
-       (package
-        (bdd-cmp (package-name t1) (package-name t2)))
-       (string
-        ;; know they're not equal, thus not string=
-        (cond
-          ((string< t1 t2)
-           '<)
-          (t
-           '>)))
-       (number
-        (cond ((< t1 t2)
-               '<)
-              (t
-               '>)))
-       (t
-        (error "cannot compare a ~A with a ~A" (class-of t1) (class-of t2)))))))
+  (the (member < > =)
+       (cond
+         ((equal t1 t2)
+          '=)
+         ((null t1)
+          '<)
+         ((null t2)
+          '>)
+         ((not (eql (class-of t1) (class-of t2))) 
+          (bdd-cmp (class-name (class-of t1)) (class-name (class-of t2))))
+         (t
+          ;; thus they are the same type, but they are not equal
+          (typecase t1
+            (list
+             (let (value)
+               (while (and t1
+                           t2
+                           (eq '= (setf value (bdd-cmp (car t1) (car t2)))))
+                 (pop t1)
+                 (pop t2))
+               (cond
+                 ((and t1 t2)
+                  value)
+                 (t1    '>)
+                 (t2    '<)
+                 (t     '=))))
+            (symbol
+             (cond
+               ((not (eql (symbol-package t1) (symbol-package t2)))
+                ;; call bdd-cmp because symbol-package might return nil
+                ;;  don't call string= directly
+                (bdd-cmp (symbol-package t1) (symbol-package t2)))
+               ((string< t1 t2) ;; same package
+                '<)
+               (t
+                '>)))
+            (package
+             (bdd-cmp (package-name t1) (package-name t2)))
+            (string
+             ;; know they're not equal, thus not string=
+             (cond
+               ((string< t1 t2)
+                '<)
+               (t
+                '>)))
+            (number
+             (cond ((< t1 t2)
+                    '<)
+                   (t
+                    '>)))
+            (t
+             (error "cannot compare a ~A with a ~A" (class-of t1) (class-of t2))))))))
+
+(defgeneric bdd-cmp-bdd (bdd1 bdd2))
+(defmethod bdd-cmp-bdd ((bdd1 bdd-node) (bdd2 bdd-node))
+  (bdd-cmp (bdd-label bdd1) (bdd-label bdd2)))
 
 (flet ((bdd-op (op b1 b2)
          (declare (type bdd b1 b2))
@@ -322,7 +330,7 @@
                (c2 (bdd-left b2))
                (d2 (bdd-right b2)))
            (declare (type bdd c1 c2 d1 d2))
-           (ecase (bdd-cmp a1 a2)
+           (ecase (bdd-cmp-bdd b1 b2)
              ((=)
               (%bdd-node a1 (funcall op c1 c2) (funcall op d1 d2)))
              ((<)

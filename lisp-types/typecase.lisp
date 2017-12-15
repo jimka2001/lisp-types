@@ -294,4 +294,3 @@ heuristic function.  Semantics of the typecase is preserved."
           `(typecase ,obj ,@min-clauses))))))
 
 
-		       
