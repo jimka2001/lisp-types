@@ -22,7 +22,19 @@
 (in-package :lisp-types)
 
 (defclass bdd-typecase-node (bdd-node)
-  ())
+  ((unknown)))
+
+(defmethod slot-unbound (class (bdd bdd-typecase-node) (slot-name (eql 'unknown)))
+  (setf (slot-value bdd 'unknown)
+        (gensym "unknown")))
+
+(defmethod slot-unbound (class (bdd bdd-typecase-node) (slot-name (eql 'dnf)))
+  (setf (slot-value bdd 'dnf)
+        `(satisfies ,(slot-value bdd 'unknown))))
+
+(defmethod slot-unbound (class (bdd bdd-typecase-node) (slot-name (eql 'expr)))
+  (setf (slot-value bdd 'expr)
+        `(satisfies ,(slot-value bdd 'unknown))))
 
 (defmethod print-object ((bdd bdd-typecase-node) stream)
   (print-unreadable-object (bdd stream :type t :identity nil)
@@ -40,10 +52,36 @@
   (bdd-cmp (bdd-label bdd1) (bdd-label bdd2)))
 
 (defmethod bdd-find-reduction (label (bdd bdd-typecase-node) reduction-rules)
-  nil)
+  bdd)
 
 (defmethod bdd-reduce-allocated ((bdd bdd-typecase-node) new-left new-right)
   bdd)
+
+(defmethod bdd-reduce-allocated ((bdd bdd-node) (new-left bdd-typecase-node) (new-right bdd-typecase-node))
+  bdd)
+
+(defmethod bdd-reduce-allocated ((bdd bdd-node) (new-left bdd-node) (new-right bdd-typecase-node))
+  (cond
+    ((bdd-type-equal bdd new-left)
+     new-left)
+    ((smarter-subtypep (bdd-to-expr bdd) nil)
+     *bdd-false*)
+    ((smarter-subtypep t (bdd-to-expr bdd))
+     *bdd-true*)
+    (t
+     bdd)))
+
+(defmethod bdd-reduce-allocated ((bdd bdd-node) (new-left bdd-typecase-node) (new-right bdd-node))
+  (cond
+    ((bdd-type-equal bdd new-right)
+     new-right)
+    ((smarter-subtypep (bdd-to-expr bdd) nil)
+     *bdd-false*)
+    ((smarter-subtypep t (bdd-to-expr bdd))
+     *bdd-true*)
+    (t
+     bdd)))
+
 
 (defmethod bdd-list-to-bdd ((head (eql :typecase-form)) tail)
   (%bdd-node tail *bdd-true* *bdd-false* :bdd-node-class 'bdd-typecase-node))
@@ -55,7 +93,7 @@
                `(or ,@(mapcar #'build-one-clause clauses)))
              (build-one-clause (clause &aux (type-spec (car clause)) (clause-body (cdr clause)))
                `(and ,type-spec (:typecase-form (return-from ,return (progn ,@clause-body))))))
-;;      (cl-user::print-vals (build-bdd-from-typecase-clauses clauses))
+      (cl-user::print-vals (build-bdd-from-typecase-clauses clauses))
       (let* ((bdd-arg (build-bdd-from-typecase-clauses clauses))
             (bdd (bdd bdd-arg)))
         (cl-user::print-vals bdd-arg)

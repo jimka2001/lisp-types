@@ -26,10 +26,20 @@
   (bdd '(:TYPECASE-FORM (RETURN-FROM #:|return654| (PROGN 300))))
   (bdd '(OR
          (:TYPECASE-FORM (RETURN-FROM #:|return654| (PROGN 300)))))
+  (bdd-or *bdd-true*
+          (bdd '(:TYPECASE-FORM (RETURN-FROM #:|return654| (PROGN 300)))))
+  (bdd-or *bdd-false*
+          (bdd '(:TYPECASE-FORM (RETURN-FROM #:|return654| (PROGN 300)))))
+  (bdd-or (bdd '(:TYPECASE-FORM (RETURN-FROM #:|return654| (PROGN 300))))
+          *bdd-true*)
+  (bdd-or (bdd '(:TYPECASE-FORM (RETURN-FROM #:|return654| (PROGN 300))))
+          *bdd-false*)
+  (bdd-or (bdd 'float)
+          (bdd '(:TYPECASE-FORM (RETURN-FROM #:|return654| (PROGN 300)))))
   (bdd '(OR
          float
-          (:TYPECASE-FORM (RETURN-FROM #:|return654| (PROGN 300))))))
-    (bdd '(OR
+         (:TYPECASE-FORM (RETURN-FROM #:|return654| (PROGN 300)))))
+  (bdd '(OR
          (AND (AND FLOAT (NOT (EQL 3.14)))
           (:TYPECASE-FORM (RETURN-FROM #:|return654| (PROGN 300))))))
   (bdd '(OR
@@ -39,8 +49,19 @@
           (:TYPECASE-FORM (RETURN-FROM #:|return654| (PROGN 200))))
          (AND (AND FLOAT (NOT (EQL 3.14)))
           (:TYPECASE-FORM (RETURN-FROM #:|return654| (PROGN 300))))))
+  (bdd '(OR
+         (AND (AND FLOAT (NOT (EQL 3.14)))
+          (:TYPECASE-FORM (RETURN-FROM #:|return652| (PROGN 300))))))
+
 
   (dolist (obj '(t 1 1.0 "hello"))
+    (bdd-typecase obj
+                  ((and float number) 100))
+    (bdd-typecase obj
+                  ((and float (not (eql 3.14)))  300))
+    (bdd-typecase obj
+                  ((and float number) 100)
+                  ((and float (not (eql 3.14)))  300))
     (bdd-typecase obj
                   ((and float number) 100)
                   ((or string bignum) 200)
