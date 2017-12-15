@@ -93,28 +93,90 @@
                                          (- iteration min))))
                 (remaining-seconds (/ (- finish now) internal-time-units-per-second)))
            (funcall announce iteration (coerce remaining-seconds 'double-float))))))))
-        
+
+(defun calc-plist (histogram num-vars randomp)
+  (declare (type cons histogram)
+           (type fixnum num-vars))
+  ;; histogram is a list of pairs, each pair is (sample occurances)
+  (flet ((sqr (x) (* x x)))
+    (let* ((num-samples (reduce (lambda (sum this)
+                                  (declare (type integer sum)
+                                           (type (cons integer (cons integer)) this))
+                                  (destructuring-bind (sample occurances) this
+                                    (declare (ignore sample))
+                                    (+ sum occurances)))
+                                histogram
+                                :initial-value 0))
+           (normalized-histogram (mapcar (lambda (pair)
+                                           (destructuring-bind (sample count) pair
+                                             (list sample (/ count num-samples))))
+                                         histogram))
+           (mean (reduce (lambda (sum this)
+                           (destructuring-bind (sample probability) this
+                             (+ sum (* probability sample))))
+                         normalized-histogram
+                         :initial-value 0))
+           (stdev (sqrt (reduce (lambda (sum this)
+                                  (destructuring-bind (sample probability) this
+                                    (+ sum (* probability (sqr (- sample mean))))))
+                                normalized-histogram :initial-value 0.0)))
+           (ffff (1- (expt 2 (expt 2 num-vars))))
+           (density (/ num-samples (1+ ffff))))
+
+      (let (sum average-size median)
+        (declare #+sbcl (notinline sort))
+        (setf sum (reduce #'+ histogram :initial-value 0 :key #'cadr))
+        (setf average-size (/ (reduce (lambda (old item)
+                                        (destructuring-bind (sample occurances) item
+                                          (+ old (* sample occurances)))) histogram :initial-value 0) sum))
+        (setf median (median-a-list histogram))
+        (list :sum sum
+              :num-samples num-samples
+              :randomp randomp
+              :num-vars num-vars
+              :density density
+              :average-size mean
+              :sigma stdev
+              :median median
+              :possible-sizes (mapcar #'car histogram)
+              :normalized-histogram normalized-histogram
+              :counts (mapcar (lambda (pair)
+                                (declare (type (cons integer (cons integer)) pair))
+                                (list (car pair) ;; a bdd size
+                                      (float (/ (cadr pair) sum)) ;; normalized number of bdds of this size as a fraction of total sample
+                                      (cadr pair) ;; number of bdds of this size in sample
+                                      ;; extrapolation
+                                      (truncate (cadr pair) density) ;; estimated number of unique bdds of this size
+                                      ))
+                              histogram))))))
+
+(defun gen-random-samples (min max num-samples)
+  (declare (type unsigned-byte min max num-samples))
+  (cond
+    ((> (- max min) num-samples)
+     (let ((hash (make-hash-table :test #'eql)))
+       (dotimes (_ num-samples)
+         (setf (gethash (+ min (random (- max min))) hash) t))
+       (loop while (< (hash-table-count hash) num-samples)
+             do (setf (gethash (+ min (random (- max min))) hash) t))
+       (sort (loop for k being the hash-keys of hash
+                   collect k)
+             #'<)))
+    (t
+     (loop for k from min to max
+           collect k))))
 
 (defun measure-bdd-size (vars num-samples)
   (let* ((hash (make-hash-table))
          (ffff (1- (expt 2 (expt 2 (length vars)))))
-         (density (/ num-samples (1+ ffff)))
          (randomp (< num-samples (1+ ffff))))
-    (format t "generating ~D " num-samples)
-    (when randomp (format t "randomly chosen "))
-    (format t "BDDs of possible ~D with ~D variables ~A~%"  (1+ ffff) (length vars) vars)
-    (flet ((measure (try randomp)
-               (garbage-collect)
-               (bdd-with-new-hash (&aux (boolean-combo (if randomp
-                                                           (random-boolean-combination vars)
-                                                           (int-to-boolean-expression try vars)))
-                                        (bdd (bdd boolean-combo))
-                                        (node-count (bdd-count-nodes bdd)))
-                 (incf (gethash node-count hash 0)))))
+    (flet ((measure (try)
+             (garbage-collect)
+             (bdd-with-new-hash (&aux (boolean-combo (int-to-boolean-expression try vars))
+                                      (bdd (bdd boolean-combo))
+                                      (node-count (bdd-count-nodes bdd)))
+               (incf (gethash node-count hash 0)))))
 
-      (measure 0 nil)
-      (measure 1 nil)
-      (measure ffff nil)
       (let ((announcer (make-announcement-timer
                         2 (1- num-samples) 2
                         (lambda (try remaining-seconds)
@@ -127,46 +189,25 @@
                               (format t " = ~D minutes" (truncate minutes)))
                             (when (> hours 1)
                               (format t " = ~D hours" (truncate hours)))
-                            (format t "~%"))))))
-        (loop for try from 2 below num-samples
-              do (progn (measure try randomp)
-                        (funcall announcer try)))))
-    (let (a-list sum average-size median)
+                            (format t "~%")))))
+            (samples (gen-random-samples 0 ffff num-samples)))
+        (pushnew 0 samples)
+        (pushnew 1 samples)
+        (pushnew ffff samples)
+        (format t "generating ~D " (length samples))
+        (when randomp (format t "randomly chosen "))
+        (format t "BDDs of possible ~D with ~D variables ~A~%"  (1+ ffff) (length vars) vars)
+
+        (dolist (try samples)
+          (measure try)
+          (funcall announcer try))))
+    (let (histogram)
       (declare #+sbcl (notinline sort))
       (maphash (lambda (&rest args)
-                 (push args a-list))
+                 (push args histogram))
                hash)
-      (setf a-list (sort a-list #'< :key #'car))
-      (setf sum (reduce #'+ a-list :initial-value 0 :key #'cadr))
-      (setf average-size (/ (reduce (lambda (old item)
-                                      (destructuring-bind (size occurances) item
-                                        (+ old (* size occurances)))) a-list :initial-value 0) sum))
-      (setf median (median-a-list a-list))      
-      (labels ((sqr (x) (* x x))
-               (stdev (count mean a-list)
-                 (sqrt (/ (reduce (lambda (sum this)
-                                    (destructuring-bind (size occurances) this
-                                      (+ sum (* occurances (sqr (- size mean))))))
-                                  a-list :initial-value 0.0)
-                          count))))
-        ;;
-        (list :sum sum
-              :num-samples num-samples
-              :randomp randomp
-              :num-vars (length vars)
-              :density density
-              :average-size average-size
-              :sigma (stdev num-samples average-size a-list)
-              :median median
-              :counts (mapcar (lambda (pair)
-                                (declare (type (cons integer (cons integer)) pair))
-                                (list (car pair)
-                                      (float (/ (cadr pair) sum))
-                                      (cadr pair)
-                                      ;; extrapolation
-                                      (truncate (cadr pair) density)
-                                      ))
-                              a-list))))))
+      (setf histogram (sort histogram #'< :key #'car))
+      (calc-plist histogram (length vars) randomp))))
 
 (defun measure-bdd-sizes (vars num-samples min max)
   (mapcon (lambda (vars)
@@ -210,13 +251,17 @@
             (pop item))
           (format stream "  )~%"))))))
 
-(defun read-data (prefix &key (min 1) (max 8))
+(defun read-data (prefix &key (min 1) (max 8) vars)
   (loop for var from min to max
         for data-file = (format nil "~A/bdd-distribution-data-~D.sexp" prefix var)
         nconc (with-open-file (stream data-file
-                                      :direction :input :if-does-not-exist nil )
-                (when stream
-                  (list (read stream))))))
+                                      :direction :input :if-does-not-exist nil)
+                (let* ((plist (read stream))
+                       (histogram (mapcar (lambda (this &aux (sample (car this)) (occurances (caddr this)))
+                                            (list sample occurances))
+                                          (getf plist :counts))))
+                  (when stream
+                    (list (calc-plist histogram (getf plist :num-vars) (getf plist :randomp))))))))
 
 (defun latex-measure-bdd-sizes (prefix vars num-samples &key (min 1) (max (length vars)) (re-run t))
   (declare (type string prefix)
@@ -225,11 +270,12 @@
            #+sbcl (notinline sort))
   (ensure-directories-exist prefix)
   ;; prefix = "/Users/jnewton/newton.16.edtchs/src"
-  (let (legend
-        (colors '("red" "goldenrod" "olive" "blue" "lavender" "greeny" "dark-cyan" "color-7" "color-8"))
-        (data (if re-run
-                  (sort (measure-bdd-sizes vars num-samples min max) #'< :key (getter :num-vars))
-                  (read-data prefix))))
+  (let* (legend
+         (colors '("red" "goldenrod" "olive" "blue" "lavender" "greeny" "dark-cyan" "color-7" "color-8"))
+         (data (if re-run
+                   (sort (measure-bdd-sizes vars num-samples min max) #'< :key (getter :num-vars))
+                   (read-data prefix :vars vars))))
+    (cl-user::print-vals data)
     (when re-run
       (write-data data prefix))
 
@@ -249,7 +295,7 @@
            (format stream "\\end{tikzpicture}~%"))
          (sigma-plot (stream)
            (format stream "\\begin{tikzpicture}~%")
-           (format stream "\\begin{axis}[~% ymajorgrids,~% yminorgrids,~% xmajorgrids,~% xlabel=Number of variables,~% ylabel=Standard deviation,~% legend style={anchor=west,font=\tiny},")
+           (format stream "\\begin{axis}[~% ymajorgrids,~% xmin=0,~% ymin=0,~% yminorgrids,~% xmajorgrids,~% xlabel=Number of variables,~% ylabel=Standard deviation,~% legend style={anchor=west,font=\tiny},")
            (format stream "xtick={1")
            (loop for xtick from 2
                    to (reduce (lambda (max item)
@@ -269,8 +315,8 @@
            (format stream "\\end{tikzpicture}~%"))             
          (average-plot (stream)
            (format stream "\\begin{tikzpicture}~%")
-           (format stream "\\begin{axis}[~% ymajorgrids,~% yminorgrids,~% xmajorgrids,~% xlabel=Number of variables,~% ylabel=ROBDD size,~% legend style={at={(0,1)},anchor=north west,font=\tiny},~%")
-           (format stream "xtick={1")
+           (format stream "\\begin{axis}[~% ymin=0,~% ymajorgrids,~% yminorgrids,~% xmajorgrids,~% xlabel=Number of variables,~% ylabel=ROBDD size,~% legend style={at={(0,1)},anchor=north west,font=\tiny},~%")
+           (format stream " xtick={0,1")
            (loop for xtick from 2
                    to (reduce (lambda (max item)
                                 (max max (getf item :num-vars)))
