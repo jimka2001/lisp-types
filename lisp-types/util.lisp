@@ -37,8 +37,8 @@
   #+allegro (excl:gc t)
 )
 
-(defvar *verbose-caching* t)
-(defvar *caching-thresh* 1000)
+(defvar *verbose-caching* nil)
+(defvar *caching-thresh* 2048)
 
 (defun caching-call (thunk key hash fun-name access increment)
   "Helper function used by the expansion of DEF-CACHE-FUN.  This function
