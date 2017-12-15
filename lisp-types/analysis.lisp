@@ -55,7 +55,9 @@
       (when (and (valid-type-p sym)
                  (subtypep sym super))
 	(push sym all-types)))
-    all-types))
+    (remove-duplicates all-types :test (lambda (t1 t2)
+                                         (and (subtypep t1 t2)
+                                              (subtypep t2 t1))))))
 
 
 
@@ -101,9 +103,26 @@
          (prog1 (progn ,@body)
            (when ,conditions
              (let ((n 0))
-               (format t "Conditions singled while evaluating: ~A~%" ',body)
+               (format t "Conditions signalled while evaluating: ~A~%" ',body)
                (dolist (condition (nreverse ,conditions))
                  (format t "~D: ~S~%" (incf n) condition)))))))))
+
+(defun call-asserting-conditions (thunk condition-types)
+  (handler-bind ((t #'(lambda (condition)
+                        (assert (member-if (lambda (c-type)
+                                             (typep condition c-type))
+                                           condition-types)
+                                ()
+                                "Evaluating expression raised invalid condition: ~A" condition))))
+    (funcall thunk)))
+
+(defmacro allowing-conditions (condition-types &body body)
+  `(call-asserting-conditions ',condition-types (lambda () ,@body)))
+
+
+(defun foo (G)
+  (allowing-conditions (warning info db-timeout-error)
+    (funcall G)))
 
 ;; (defmethod print-object ((c SB-KERNEL:PARSE-UNKNOWN-TYPE) stream)
 ;;   (print-unreadable-object (c stream :type t :identity nil)
@@ -262,11 +281,39 @@
                                            (min (/ c len)
                                                 (/ (- time-out-time (get-universal-time)) suite-time-out))))
               (funcall (pop delayed))))))
-      (gc)
+      (garbage-collect)
       (log-data)))
   t)
 
 
+
+
+(defun best-time (num-tries thunk)
+  "returns a plist with the fields :wall-time :run-time :value"
+  (declare (type (and fixnum unsigned-byte) num-tries)
+           (type (function () t) thunk))
+  (let (result)
+    (dotimes (try num-tries)
+      (let* ((run-time-t1 (get-internal-run-time))
+             (start-real-time (get-internal-real-time))
+             (s2 (funcall thunk))
+             (run-time-t2 (get-internal-run-time))
+             (wall-time (/ (- (get-internal-real-time) start-real-time) internal-time-units-per-second))
+             (run-time (/ (- run-time-t2 run-time-t1) internal-time-units-per-second)))
+        (setf result
+              (cond
+                ((not result) ; if first time through dotime/try loop
+                 (list :wall-time (the real wall-time)
+                       :run-time run-time
+                       :value s2))
+                ((< run-time (the real (getf result :run-time)))
+                 (format t "[try ~D] found faster ~A < ~A~%" try run-time (getf result :run-time))
+                 (list :wall-time wall-time
+                       :run-time run-time
+                       :value s2))
+                (t
+                 result)))))
+    result))
 
 (defun call-with-timeout (time-out thunk num-tries)
   "TIME-OUT, integer, the wall-time allowed to call the function THUNK.
@@ -280,10 +327,36 @@
  Returns a plist, one of the following:
  (:wall-time rational :run-time rational :time-out integer) or
  (:wall-time rational :run-time rational :value X)"
+  (declare (type (or null (and fixnum unsigned-byte)) time-out)
+           (type (function () t) thunk)
+           (type (and fixnum unsigned-byte) num-tries))
+  (if (not time-out)
+      (best-time num-tries thunk)
+      (%call-with-timeout time-out thunk num-tries)))
+
+#+allegro
+(defun %call-with-timeout (time-out thunk num-tries)
+  (declare (type (and fixnum unsigned-byte) time-out num-tries)
+           (type (function () t) thunk))
+  (let ((start-run-time (get-internal-run-time))
+        (start-real-time (get-internal-real-time)))
+    (sys:with-timeout (time-out (let ((run-time (get-internal-run-time))
+                                      (real-time (get-internal-real-time)))
+                                  (list :wall-time (/ (- real-time start-real-time) internal-time-units-per-second)
+                                        :run-time  (/ (- run-time start-run-time) internal-time-units-per-second)
+                                        :time-out time-out)))
+      (best-time num-tries thunk))))
+
+
+#+sbcl 
+(defun %call-with-timeout (time-out thunk num-tries)
+  (declare (type (and fixnum unsigned-byte) time-out num-tries)
+           (type (function () t) thunk))
   (let (th-worker th-observer th-worker-join-failed th-observer-join-failed th-worker-destroyed-observer time-it-error result1 result2
                   (start-run-time (get-internal-run-time))
                   (start-real-time (get-internal-real-time)))
     (flet ((time-it ()
+             ;; evaluate THUNK several times (according to NUM-TRIES)
              (handler-bind ((error (lambda (e)
                                      ;; this handler explicitly declines to handle the error
                                      ;; thus the variable TIME-IT-ERROR will be set as a side
@@ -294,59 +367,38 @@
                                      (when th-observer
                                        (warn "killing thread ~A because of error ~A" th-observer e)
                                        (ignore-errors (bordeaux-threads:destroy-thread th-observer))))))
-               (dotimes (try num-tries)
-                 (let* ((run-time-t1 (get-internal-run-time))
-                        (start-real-time (get-internal-real-time))
-                        (s2 (funcall thunk))
-                        (run-time-t2 (get-internal-run-time))
-                        (wall-time (/ (- (get-internal-real-time) start-real-time) internal-time-units-per-second))
-                        (run-time (/ (- run-time-t2 run-time-t1) internal-time-units-per-second)))
-                   (setf result1
-                         (cond
-                           ((not result1)
-                            (list :wall-time (the real wall-time)
-                                  :run-time run-time
-                                  :value s2))
-                           ((< run-time (the real (getf result1 :run-time)))
-                            (format t "[try ~D] found faster ~A < ~A~%" try run-time (getf result1 :run-time))
-                            (list :wall-time wall-time
-                                  :run-time run-time
-                                  :value s2))
-                           (t
-                            result1)))))
+               (setf result1 (best-time num-tries thunk))
                (when th-observer
+                 ;; if we reach this line, that means the THUNK evaluated NUM-TRIES no of times before
+                 ;;   TH-OBSERVER finshed.  So we need to kill TH-OBSERVER
                  (setf th-worker-destroyed-observer
                        (bordeaux-threads:destroy-thread th-observer))))))
-      (cond
-        (time-out
-         (setf th-observer
-               (bordeaux-threads:make-thread
-                (lambda (&aux elapsed (real-time (get-internal-real-time)) (run-time (get-internal-run-time)))
-                  (block waiting
-                    (dotimes (i time-out)
-                      (setf run-time (get-internal-run-time))
-                      (setf real-time (get-internal-real-time))
-                      (when (plusp (setf elapsed (/ (- real-time start-real-time) internal-time-units-per-second)))
-                        (when (> elapsed time-out)
-                          (return-from waiting)))
-                      (sleep 2)))
-                  (setf result2 (list :wall-time (/ (- real-time start-real-time) internal-time-units-per-second)
-                                      :run-time  (/ (- run-time start-run-time) internal-time-units-per-second)
-                                      :time-out time-out))
-                  (format t "killing thread ~A~%" th-worker)
-                  (bordeaux-threads:destroy-thread th-worker))
-                :name "th-observer stop-watch"))
-         (setf th-worker (bordeaux-threads:make-thread #'time-it :name "th-handle thunk"))
-         (handler-case (bordeaux-threads:join-thread th-worker)
-           #+sbcl(SB-THREAD:JOIN-THREAD-ERROR (e)
-             (setf th-worker-join-failed e)
-             nil))
-         (handler-case (bordeaux-threads:join-thread th-observer)
-           #+sbcl(SB-THREAD:JOIN-THREAD-ERROR (e)
-             (setf th-observer-join-failed e)
-             nil)))
-      (t
-       (time-it))))
+      (setf th-observer
+            (bordeaux-threads:make-thread
+             (lambda (&aux elapsed (real-time (get-internal-real-time)) (run-time (get-internal-run-time)))
+               (block waiting
+                 (dotimes (i time-out)
+                   (setf run-time (get-internal-run-time))
+                   (setf real-time (get-internal-real-time))
+                   (when (plusp (setf elapsed (/ (- real-time start-real-time) internal-time-units-per-second)))
+                     (when (> elapsed time-out)
+                       (return-from waiting)))
+                   (sleep 2)))
+               (setf result2 (list :wall-time (/ (- real-time start-real-time) internal-time-units-per-second)
+                                   :run-time  (/ (- run-time start-run-time) internal-time-units-per-second)
+                                   :time-out time-out))
+               (format t "killing thread ~A~%" th-worker)
+               (bordeaux-threads:destroy-thread th-worker))
+             :name "th-observer stop-watch"))
+      (setf th-worker (bordeaux-threads:make-thread #'time-it :name "th-handle thunk"))
+      (handler-case (cl-user::print-conditions (bordeaux-threads:join-thread th-worker))
+        #+sbcl(SB-THREAD:JOIN-THREAD-ERROR (e)
+                (setf th-worker-join-failed e)
+                nil))
+      (handler-case (bordeaux-threads:join-thread th-observer)
+        #+sbcl(SB-THREAD:JOIN-THREAD-ERROR (e)
+                (setf th-observer-join-failed e)
+                nil)))
     (assert (typep (or result1 result2) 'cons)
             (th-worker th-observer th-worker-destroyed-observer time-it-error th-worker-join-failed th-observer-join-failed result1 result2 time-out))
     (the cons (or result1 result2))))
@@ -366,7 +418,7 @@
      (format t "skipping duplicate ~A ~A~%" decompose types)
      nil)
     (t
-     (gc)
+     (garbage-collect)
      (let ((result (call-with-timeout time-out
                                       (lambda ()
                                         (funcall f types))
@@ -434,10 +486,10 @@
                   (string-equal name (symbol-name f))))
               *decomposition-function-descriptors*))))
 
-(defun find-decomposition-discrepancy (&optional (type-specs '(array-rank array-total-size bignum bit
-                                                               complex fixnum float float-digits
-                                                               float-radix integer number ratio rational real
-                                                               char-code ;; char-int
+(defun find-decomposition-discrepancy (&optional (type-specs '(test-array-rank test-array-total-size bignum bit
+                                                               complex fixnum float test-float-digits
+                                                               test-float-radix integer number ratio rational real
+                                                               test-char-code ;; char-int
                                                                double-float ;; long-float
                                                                unsigned-byte)))
   (labels ((recure ( type-specs)
@@ -464,9 +516,9 @@
                        (when (subtypep com spec)
                          (format t " ~A <: ~A~%" com spec)))))
                  (format t "checking calculated bdd types~%")
-                 (lisp-types::check-decomposition type-specs bdd-types)
+                 (check-decomposition type-specs bdd-types)
                  (format t "checking calculated def types~%")
-                 (lisp-types::check-decomposition type-specs def-types)
+                 (check-decomposition type-specs def-types)
                  (return-from find-decomposition-discrepancy nil)
                  ))))
     (recure type-specs)))
@@ -490,12 +542,12 @@
   ;;  in different types being calculated
   (labels ((equiv-type-sets (set1 set2)
              (and (= (length set1) (length set2))
-                  (bdd-call-with-new-hash
-                   (lambda () (or (null (set-exclusive-or set1 set2 :test #'%equal))
-                                  (let ((bdd-set1 (bdd `(or ,@set1)))
-                                        (bdd-set2 (bdd `(or ,@set2))))
-                                  (and (eq *bdd-false* (bdd-and-not bdd-set1 bdd-set2))
-                                       (eq *bdd-false* (bdd-and-not bdd-set2 bdd-set1)))))))))
+                  (bdd-with-new-hash ()
+                    (or (null (set-exclusive-or set1 set2 :test #'%equal))
+                        (let ((bdd-set1 (bdd `(or ,@set1)))
+                              (bdd-set2 (bdd `(or ,@set2))))
+                          (and (eq *bdd-false* (bdd-and-not bdd-set1 bdd-set2))
+                               (eq *bdd-false* (bdd-and-not bdd-set2 bdd-set1))))))))
            (%equal (t1 t2)
              (or (bdd-type-equal (bdd t1) (bdd t2))
                  (equivalent-types-p t1 t2)))
@@ -585,9 +637,8 @@
                             (bdd-to-dnf (bdd-and-not bdd-given bdd-calc)))))))))
     (when good-results
       (let ((res1 (car good-results)))
-        (bdd-call-with-new-hash
-         (lambda ()
-           (check-1 (getf res1 :types) (getf res1 :value) (getf res1 :decompose)))))
+        (bdd-with-new-hash ()
+          (check-1 (getf res1 :types) (getf res1 :value) (getf res1 :decompose))))
       
       (dolist (res (cdr good-results))
         (compare (car good-results) res)))))
@@ -655,7 +706,7 @@
         (unless normalize
           (format stream "set logscale xy~%"))
         (labels ((xys (curve)
-                   (declare (notinline sort))
+                   (declare #+sbcl (notinline sort))
                    (destructuring-bind (&key xys &allow-other-keys) curve
                      (remove-duplicates (sort (copy-list xys)
                                               (lambda (a b)
@@ -834,7 +885,7 @@ the list of xys need not be already ordered."
 
 
 (defun sort-results (in out &rest options)
-  (declare (notinline sort))
+  (declare #+sbcl (notinline sort))
   (cond
     ((typep in '(or pathname string))
      (with-open-file (stream in :direction :input)
@@ -1120,7 +1171,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
 
 
 (defun analysis (file-names)
-  (declare (notinline sort))
+  (declare #+sbcl (notinline sort))
   (let* ((measures '(:recursive :inner-loop :sort-strategy :do-break-sub :do-break-loop))
         (table (make-hash-table :test #'eq))
         (data (sort (mapcan (lambda (file-name)
@@ -1271,10 +1322,209 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                                               bdd-decompose-types
                                               decompose-types-rtev2
                                               decompose-types-graph)))
+(defun display-theta (n theta)
+  (flet ((e2 (theta)
+           (- (expt 2 (expt 2 theta))
+              (expt 2 (expt 2 (1- theta)))))
+         (e1 (theta)
+           (expt 2 (- n theta 1)))
+         (pr (n fn)
+           (format t " ~A=" fn)
+           (if (< (log n) 10)
+               (format t "~D" n)
+               (format t "2^~A" (log n 2)))))
+    (loop for i from (1- theta) to (1+ theta)
+          do (format t "n=~D log_2(~D)=~D theta=~D" n n (floor (log n 2)) i)
+          do (pr (e2 i) "e2")
+          do (format t " ~A"
+                     (cond
+                       ((< (e2 i) (e1 i))
+                        "<")
+                       ((= (e2 i) (e1 i))
+                        "=")
+                       (t ">")))
+          do (pr (e1 i) "e1")
+          do (terpri))))
+
+
+(defun delta (i n)
+  (labels ((e2 (i)
+             (- (expt 2 (expt 2 (1+ (- n i))))
+                (expt 2 (expt 2 (- n i)))))
+           (e1 (i)
+             (expt 2 (1- i)))
+           (delta-bar (i)
+             (- (e2 i) (e1 i))))
+    (format t "     n=~A e1=~A   e2=~A~%" n (e1 (- n 1)) (e2 (- n 1)))
+    (delta-bar (- n i))))
+
+(defun delta-print-table (n)
+  (let ((d -1)
+        (i 0))
+
+    (loop :while  (< d 0)
+          :do (setf d (delta i n))
+          :do (format t "i=~A  delta= ~A~%" i d)
+          :do (incf i)
+          :finally (format t "n = ~A theta=~A~%" n (1- i)))
+    ))
+
+
+(defun theta-bounds (n)
+  (list
+   (if (< (log n 2) (1- n))
+       (ceiling (log (- n (log n 2) 1) 2))
+       0)
+   (floor (log n 2))))
 
 
 
 
+(defun 2^ (n) (expt 2 n))
+(defun 2^^ (n) (2^ (2^ n)))
 
-#|
-|#
+(defun power-diff (n)
+  (- (2^^ n)
+     (2^^ (1- n))))
+
+(defun cmp-power-diff (n)
+  (let ((theta (floor (log n 2))))
+    (- (power-diff theta)
+       (expt 2 (- n theta 1)))))
+
+(defun row-r (n i)
+  (declare (ignore n))
+  (2^ (1- i)))
+
+(assert (= 2 (row-r 3 2)) ())
+(assert (= 4 (row-r 3 3)) ())
+(assert (= 1 (row-r 2 1)) ())
+
+
+
+(defun row-RR (n i)
+  (- (2^^ (+ n (- i) 1))
+     (2^^ (- n i))))
+
+(assert (= 12 (row-RR 3 2)) ())
+(assert (= 2 (row-RR 3 3)) ())
+(assert (= 12 (row-RR 2 1)) ())
+(assert (= 2 (row-RR 2 2)) ())
+
+(defun log2 (n)
+  (log n 2))
+
+(defun theta (n)
+  (let ((max (floor (log2 n))))
+    ;;(format t "log=~A~%" max)
+    (case max
+      ((0)
+       (values 0 0))
+      (t
+       (loop :for theta :downfrom max :downto 0
+             :for r = (row-r n (- n theta))
+             :for RR = (row-RR n (- n theta))
+             :for iterations = 1 :then (1+ iterations)
+             ;; :do (format t "n=~A theta=~A n-theta=~A r<=R?  ~A ~A ~A?~%"
+             ;;             n theta (- n theta) r
+             ;;             (cond ((< r RR) "<")
+             ;;                   ((= r RR) "=")
+             ;;                   (t ">"))
+             ;;             RR)
+             :do (when (>= r RR)
+                   (return-from theta (values (1+ theta) iterations))))))))
+
+(defun find-theta (limit)
+  (let ((hash-iterations (make-hash-table)))
+    (loop for n from 2 to limit
+          do (multiple-value-bind (theta iterations) (theta n)
+               (declare (ignore theta))
+               (incf (gethash iterations hash-iterations 0))))
+    (maphash (lambda (key value)
+               (format t "iterations=~D occurances=~D~%" key value))
+             hash-iterations)))
+
+(defun estim (n nterms)
+  (labels ((rec (l i accum)
+             (if (zerop i)
+                 accum
+                 (rec (log (- n l) 2) (1- i) (cons l accum)))))
+    (let ((seq (nreverse (rec (log n 2) nterms nil))))
+      (maplist (lambda (tail)
+                 (if (cdr tail)
+                     (destructuring-bind (a b &rest ignored) tail
+                       (declare (ignore ignored))
+                       (list a (cond ((< a b) 1)
+                                     ((= a b) 0)
+                                     (t -1)) (- a b)))
+                     (car tail)))
+               seq))))
+
+(defun robdd-size (n)
+  (let* ((theta (theta n))
+         (robdd-size (+ (1- (2^ (- n theta)))
+                        (2^^ theta)))
+         (bdd-size (1- (2^ (1+ n)))))
+    (list :n n :theta theta :robdd robdd-size :bdd bdd-size :compression (float (/ (+ 1d0 robdd-size) bdd-size) 1.0))))
+
+(defun log-based-compression (min max)
+  (loop :for n :from min :to max
+        :collect (list n (let ((theta (float (log n 2))))
+                           (/ (+ (expt 2d0 (expt 2d0 theta)) (expt 2d0 (- n theta)) -1)
+                              (1- (expt 2d0 (1+ (float n) ))))))))
+  
+
+(defun robdd-compressions (min max)
+  (loop :for n :from min :to max
+        :collect (destructuring-bind (&key compression &allow-other-keys) (robdd-size n)
+                   (list n compression))))
+
+
+
+(defun theta-latex-table (n-min n-max) ;; normally 1 21
+  (format t "$~A$ & $~A$ & $~A$ & $~A$ & $~A$ & $~A$ & $~A$\\\\~%"
+          "\\numvars"
+          "\\lfloor \\log_2\\numvars \\rfloor"
+          "\\theta"
+          "2^{\\numvars -\\theta}-1"
+          "2^{2^\\theta}"
+          "|ROBDD_{\\numvars}|"
+          "\\frac{|ROBDD_{\\numvars}|}{|UOBDD_{\\numvars}|}"
+          )
+  (loop :for n :from n-min :to n-max
+        :do (let* ((theta (theta n))
+                   (theta-max (floor (log2 n)))
+                   (|ROBDD_n| (+ (1- (2^ (- n theta)))
+                                 (2^ (2^ theta))))
+                   (|UOBDD_n| (1- (2^ (1+ n))))
+                   (compression (/ (float |ROBDD_n|)
+                                   |UOBDD_n|)))
+              (format t "~A & ~A & ~A & ~A & ~A & ~A & ~6,3f\\%\\\\~%"
+                      n
+                      theta-max
+                      theta
+                      (1- (2^ (- n theta)))
+                      (2^ (2^ theta))
+                      |ROBDD_n|
+                      (* 100 compression)))))
+                           
+(defun compression (n)
+  (let ((theta (theta n)))
+    (format t "theta = ~A~%" theta)
+    (format t "(2^^~A + 2^(~A - ~A) - 1) / (2^~A - 1)~%" theta n theta (1+ n))
+    (format t "= (2^~A + 2^(~A - ~A) - 1) / (2^~A - 1)~%" (2^ theta) n theta (1+ n))
+    (format t " = (~A + ~A - 1) / (~A - 1)~%" (2^^ theta) (2^ (- n theta)) (2^ (1+ n)))
+    (format t " = ~A / ~A~%" (+ (2^^ theta) (2^ (- n theta)) -1) (1- (2^ (1+ n))))
+    (format t " = ~A~%" (/ (+ (2^^ (float theta)) (2^ (- n (float theta))) -1) (1- (2^ (1+ (float n))))))))
+
+(defun graph-theta (n-min n-max)
+  (loop :for n :from n-min :to n-max
+        :for theta = (theta n)
+        :do (format t "(~A, ~A)~%" n theta))
+  (format t "~%")
+  (loop :for n :from n-min :to n-max
+        :do (format t "(~A, ~A)~%" n (log2 n)))
+  (format t "~%")
+
+  (loop :for n :from n-min :to n-max
+        :do (format t "(~A, ~A)~%" n (- (log2 (- n 2 (log2 n))) 2))))

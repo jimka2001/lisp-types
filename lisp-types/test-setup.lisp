@@ -20,25 +20,29 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-(asdf:defsystem :lisp-types-test
-  :depends-on (:lisp-types
-               :bordeaux-threads
-               :closer-mop
-	       (:version :lisp-unit "0.9.0"))
-  :components
-  ((:module "lisp-types"
-    :components
-    ((:file "test-setup")
-     (:file "test-lisp-types")
-     (:file "test-util")
-     (:file "test-perf" :depends-on ("analysis"))
-     (:file "test-typecase" :depends-on ("test-lisp-types"))
-     (:file "test-sat" :depends-on ("test-lisp-types" "test-perf"))
-     (:file "test-graph" :depends-on ("test-lisp-types" "test-perf"))
-     (:file "analysis" :depends-on ("test-lisp-types")) ;; valid-subtypes
-     (:file "test-bdd" :depends-on ("analysis" "test-lisp-types" "test-perf"))
-     (:file "test-bdd-reduce-17")
-     (:file "test-dnf")
-     (:file "test-analysis" :depends-on ("analysis"))
-     (:file "test-reduce-lisp-type-once")
-     ))))
+(defpackage :lisp-types.test
+  (:shadowing-import-from :lisp-types "TEST" "A")
+  ;;(:shadowing-import-from :closer-mop "STANDARD-GENERIC-FUNCTION" "DEFMETHOD" "DEFGENERIC")
+  (:use :cl :lisp-types :lisp-unit ;;:closer-mop
+   #+sbcl :sb-pcl
+   #+allegro :aclmop
+        ))
+
+
+(in-package :lisp-types.test)
+
+(let ((lisp-types-test (find-package  :lisp-types.test))
+      (lisp-types (find-package  :lisp-types)))
+  (do-symbols (name :lisp-types)
+    (when (and (eq lisp-types (symbol-package name))
+               (not (find-symbol (symbol-name name) lisp-types-test)))
+      (format t "4 importing name=~A into  :lisp-types.test~%" name)
+      (shadowing-import name :lisp-types.test))))
+
+;; configuration for lisp-unit
+(setf lisp-unit:*print-summary* t
+      lisp-unit:*print-failures* t
+      lisp-unit:*print-errors* t
+      )
+
+(lisp-unit:use-debugger t)

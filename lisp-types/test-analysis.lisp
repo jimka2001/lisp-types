@@ -1,4 +1,4 @@
-;; Copyright (c) 2016 EPITA Research and Development Laboratory
+;; Copyright (c) 2017 EPITA Research and Development Laboratory
 ;;
 ;; Permission is hereby granted, free of charge, to any person obtaining
 ;; a copy of this software and associated documentation
@@ -19,26 +19,11 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+(in-package :lisp-types.test)
 
-(asdf:defsystem :lisp-types-test
-  :depends-on (:lisp-types
-               :bordeaux-threads
-               :closer-mop
-	       (:version :lisp-unit "0.9.0"))
-  :components
-  ((:module "lisp-types"
-    :components
-    ((:file "test-setup")
-     (:file "test-lisp-types")
-     (:file "test-util")
-     (:file "test-perf" :depends-on ("analysis"))
-     (:file "test-typecase" :depends-on ("test-lisp-types"))
-     (:file "test-sat" :depends-on ("test-lisp-types" "test-perf"))
-     (:file "test-graph" :depends-on ("test-lisp-types" "test-perf"))
-     (:file "analysis" :depends-on ("test-lisp-types")) ;; valid-subtypes
-     (:file "test-bdd" :depends-on ("analysis" "test-lisp-types" "test-perf"))
-     (:file "test-bdd-reduce-17")
-     (:file "test-dnf")
-     (:file "test-analysis" :depends-on ("analysis"))
-     (:file "test-reduce-lisp-type-once")
-     ))))
+(define-test analysis/call-with-timeout
+  (assert-true (numberp (getf (call-with-timeout 2 (lambda () (sleep 10)) 1)
+                              :time-out)))
+  (assert-true (eql 42 (getf (call-with-timeout 20 (lambda () 42) 2)
+                             :value))))
+  

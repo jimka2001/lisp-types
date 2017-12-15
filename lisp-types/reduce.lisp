@@ -63,7 +63,7 @@
 ;;   --> (or (and A B) E F)
 (defun reduce-absorption (operands)
   (declare (type list operands)
-	   (notinline member)
+	   #+sbcl (notinline member)
 	   (optimize (speed 3) (compilation-speed 0)))
   (dolist (operand operands)
     (setf operands (remove-if (lambda (op)
@@ -81,6 +81,155 @@
 				       (set-subsetp (cdr operand) (cdr op)))))
 			      operands)))
   operands)
+
+(defun reduce-member-type (type-spec)
+  (declare (optimize (speed 3) (compilation-speed 0) (debug 0)))
+  (cond
+    ((and (consp type-spec)
+          (eq 'AND (car type-spec)))
+     ;; is it of the form (AND ... (MEMBER ...) ...)
+     ;; or (AND ... (EQL ...) ...)
+     (let ((hit (find-if (lambda (t2)
+                           (and (consp t2)
+                                (or (eq 'MEMBER (car t2))
+                                    (eq 'EQL (car t2)))))
+                         (cdr type-spec))))
+       ;; found the (MEMBER ...) or (EQL ...)
+       (if hit ;; now remove all the elements of the (MEMBER ...) or (EQL ...) which fail to match the type
+           `(member ,@(remove-if-not (lambda (obj)
+                                       (typep obj type-spec))
+                                     (cdr hit)))
+           type-spec)))
+    (t
+     type-spec)))
+
+
+(defun type-to-dnf (type)
+  (declare (optimize (speed 3) (debug 0) (compilation-speed 0) (space 0)))
+  (labels ((and? (obj)
+             (and (consp obj)
+                  (eq 'and (car obj))))
+           (or? (obj)
+             (and (consp obj)
+                  (eq 'or (car obj))))
+           (not? (obj)
+             (and (consp obj)
+                  (eq 'not (car obj))))
+           (flatten (f type)
+             ;; (X a (X b c) d) --> (X a b c d)
+             (cons (car type) (mapcan (lambda (t1)
+                                        (if (funcall f t1)
+                                            (copy-list (cdr t1))
+                                            (list t1))) (cdr type))))
+           (again (type)
+             (cond
+               ((atom type) type)
+               ((member (car type) '(or and no))
+                (cons (car type)
+                      (mapcar #'type-to-dnf (cdr type))))
+               (t
+                type)))
+           (to-dnf (type)
+             (declare (type (or list symbol) type))
+             (when (and? type)
+               (setf type (reduce-member-type type)))
+             (when (and? type)
+               ;; (and a b NIL c d) --> NIL
+               (when (member nil (cdr type) :test #'eq)
+                 (setf type nil)))
+             (when (and? type)
+               ;; (and a b nil c d) --> (and a b c d)
+               (when (member t (cdr type) :test #'eq)
+                 (setf type (cons 'and (remove t (cdr type) :test #'eq)))))
+             (when (and? type)
+               ;; (and) --> t
+               (when (null (cdr type))
+                 (setf type t)))
+             (when (and? type)
+               ;; (and a (and B C) d) --> (and a B C d)
+               (while (some #'and? (cdr type))
+                 (setf type (flatten #'and? type))) )
+             (when (and? type)
+               ;; (and a (or B C) d) -- (or (and a B d) (and a C d))
+               (let ((hit (find-if #'or? (cdr type))))
+                 (when hit
+                   (setf type
+                         (cons 'or
+                               (mapcar (lambda (t1)
+                                         (cons 'and (mapcar (lambda (t2)
+                                                              (if (eq t2 hit)
+                                                                  t1
+                                                                  t2))
+                                                            (cdr type))))
+                                       (cdr hit)))))))
+             (when (and? type)
+               ;; (and a b (not b) c) --> nil
+               (when (exists t1 (cdr type)
+                       (and (not? t1)
+                            (member (cadr t1) (cdr type) :test #'equal)))
+                 (setf type nil)))
+             (when (and? type)
+               (setf type (cons 'and (remove-duplicates (cdr type) :test #'equal))))
+             (when (and? type)
+               ;; (and a) --> a
+               (when (and (cdr type)
+                          (null (cddr type)))
+                 (setf type (cadr type))))
+             (when (or? type)
+               ;; (or a b T c d) --> T
+               (when (member t (cdr type) :test #'eq)
+                 (setf type t)))
+             (when (or? type)
+               ;; (or a b nil c d) --> (or a b c d)
+               (when (member nil (cdr type) :test #'eq)
+                 (setf type (cons 'or (remove nil (cdr type) :test #'eq)))))
+             (when (or? type)
+               ;; (or) --> nil
+               (when (null (cdr type))
+                 (setf type nil)))
+             (when (or? type)
+               ;; (or a (or b c) d) --> (or a b c d)
+               (while (some #'or? (cdr type))
+                 (setf type (flatten #'or? type))))
+             (when (or? type)
+               ;; (or a b (not b) c) --> t
+               (when (exists t1 (cdr type)
+                       (and (not? t1)
+                            (member (cadr t1) (cdr type) :test #'equal)))
+                 (setf type t)))
+             (when (or? type)
+               (setf type (cons 'or (remove-duplicates (cdr type) :test #'equal))))
+             (when (or? type)
+               ;; (or a) --> a
+               (when (and (cdr type)
+                          (null (cddr type)))
+                 (setf type (cadr type))))
+             (when (equal type '(not t))
+               ;; (not t) --> nil
+               (setf type nil))
+             (when (equal type '(not nil))
+               ;; (not nil) --> t
+               (setf type t))
+               
+             (when (not? type)
+               ;; (not (not a)) --> a
+               (while (and (not? type)
+                           (not? (cadr type)))
+                 (setf type (cadr (cadr type)))))
+             (when (not? type)
+               ;; (not (and a b)) --> (or (not a) (not b))
+               (when (and? (cadr type))
+                 (setf type (cons 'or (mapcar (lambda (t1)
+                                                (list 'not t1)) (cdr (cadr type)))))))
+             (when (not? type)
+               ;; (not (or a b))  --> (and (not a) (not b))
+               (when (or? (cadr type))
+                 (setf type (cons 'and (mapcar (lambda (t1)
+                                                 (list 'not t1)) (cdr (cadr type)))))))
+             (again type)))
+    (fixed-point #'to-dnf
+                 (alphabetize-type type)
+                 :test #'equal)))
 
 (defvar *compound-type-specifier-names*
   '(
@@ -123,6 +272,42 @@ If a type is found in this list that it treated as a declaration of to things:
 Applications are free to push entries onto this list to notify REDUCE-LISP-TYPE of how
 to reduce a type defined by DEFTYPE.")
 
+(defun dnf-type-p (type)
+  "Function useful for debugging to test whether a given type specifier is in DNF form."
+  (labels ((unique-p (list)
+             (= (length list)
+                (length (remove-duplicates list :test #'equal))))
+           (and-term-p (term)
+             (and (consp term)
+                  (eq 'and (car term))
+                  (cddr term)
+                  (unique-p (cdr term))
+                  (forall t2 (cdr term)
+                    (or (other-term-p t2)
+                        (not-term-p t2)))))
+           (or-term-p (term)
+             (and (consp term)
+                  (eq 'or (car term))
+                  (cddr term)
+                  (unique-p (cdr term))
+                  (forall t2 (cdr term)
+                    (or (and-term-p t2)
+                        (not-term-p t2)
+                        (other-term-p t2)))))
+           (not-term-p (term)
+             (and (consp term)
+                  (eq 'not (car term))
+                  (cdr term)
+                  (null (cddr term))
+                  (other-term-p (cadr term))))
+           (other-term-p (term)
+             (or (atom term)
+                 (not (member (car term) '(and or not))))))
+    (or (and-term-p type)
+        (not-term-p type)
+        (or-term-p type)
+        (other-term-p type))))
+
 (defun reduce-lisp-type-once (type &key (full t) &aux it)
   "Given a lisp type designator, make one pass at reducing it, removing redundant information such as
 repeated or contradictory type designators. 
@@ -131,6 +316,7 @@ If :full nil is given, then an incomplete but fast reduction is done.  No step i
 a call to subtypep or friends."
   (declare (optimize (speed 3) (compilation-speed 0))
 	   (inline sub-super reduce-absorption reduce-redundancy remove-supers remove-subs))
+
   (labels ((build (op zero args)
              (cond ((null args)
                     zero)
@@ -175,7 +361,7 @@ a call to subtypep or friends."
 	     (and (consp obj)
 		  (eq 'values (car obj))))
 	   (reducable-compound? (obj)
-	     (declare (notinline assoc))
+	     (declare #+sbcl (notinline assoc))
 	     (and (consp obj)
 		  (assoc (car obj) *compound-type-specifier-names*)))
 	   ;; (cons? (obj)
@@ -269,7 +455,7 @@ a call to subtypep or friends."
 		    (when key-tail
 		      (tconc type-conc (car key-tail))
 		      (dolist (keyword-spec (cdr key-tail))
-			(declare (notinline length))
+			(declare #+sbcl (notinline length))
 			(assert (= 2 (length keyword-spec)) ()
 				"Invalid &key ~S portion of ~S" keyword-spec arg-typespec)
 			(destructuring-bind (keyword spec) keyword-spec
@@ -277,7 +463,7 @@ a call to subtypep or friends."
 						 (reduce-lisp-type-once spec :full full))))))
 		    (car type-conc))))
 
-	   (declare (notinline length))
+	   (declare #+sbcl (notinline length))
 	   (case (length type)
 	     ((1)			; (function)
 	      'function)
@@ -343,11 +529,12 @@ a call to subtypep or friends."
 
        (destructuring-bind (operator &rest operands &aux remove-me) type
 	 (declare (type (member and or not) operator)
-		  (notinline remove-supers remove-subs reduce-absorption reduce-redundancy)
+		  #+sbcl (notinline remove-supers remove-subs reduce-absorption reduce-redundancy)
 		  (type list operands))
 	 (ecase operator
 	   ((and)			; REDUCE AND
-	    (setf operands (remove-supers operands)) ; (and float number) --> (and float)
+	    (when full
+              (setf operands (remove-supers operands))) ; (and float number) --> (and float)
 	    (while (some #'and? operands)
 					; (and (and A B) X Y) --> (and A B X Y)
 	      (setf operands (mapcan #'(lambda (operand)
@@ -360,7 +547,7 @@ a call to subtypep or friends."
 					; (and A t B) --> (and A B)
 	      (setf operands (remove t operands)))
 
-
+            (setf type (cons 'and operands))
 	    (rule-case type
 	      ((null operands)		; (and) --> t
 	       t)
@@ -373,13 +560,14 @@ a call to subtypep or friends."
 		      (and-operands (remove match operands :test #'eq)))
 		 (make-or
 		       (loop :for or-operand :in (cdr match)
-			     :collect (make-and (cons or-operand and-operands))))))
+			     :collect (reduce-lisp-type-once (make-and (cons or-operand and-operands))
+                                                             :full full)))))
 	      ((some #'eql-or-member? operands)
 	       ;; (and (member a b 2 3) symbol) --> (member a b)
 	       ;; (and (member a 2) symbol) --> (eql a)
 	       ;; (and (member a b) fixnum) --> nil
 	       (let ((objects (remove-if-not (lambda (e)
-					       (declare (notinline typep))
+					       (declare #+sbcl (notinline typep))
 					       (typep e type)) (cdr (find-if #'eql-or-member? operands)))))
 		 (make-member objects)))		     
 	      ((< 1 (count-if #'not-eql-or-member? operands)) ;; if multiple not-eql-or-member?
@@ -387,8 +575,8 @@ a call to subtypep or friends."
 	       ;;   --> (and A B (not (member 1 2 3 4 a b)))
 	       (multiple-value-bind (not-matches others) (partition-by-predicate #'not-eql-or-member? operands)
 		 (let ((not-common (cdr (cadr (car not-matches)))))
-		   (declare (notinline union)
-			    (notinline set-difference))
+		   (declare #+sbcl (notinline union)
+			    #+sbcl (notinline set-difference))
 		   (dolist (not-match (cdr not-matches))
 		     (setq not-common (union not-common (cdr (cadr not-match)))))
 		   `(and (not (member ,@not-common))
@@ -435,44 +623,45 @@ a call to subtypep or friends."
 	      (t
 	       (make-and operands))))
 	   ((or)					  ; REDUCE OR
-	    (setf operands (remove-subs operands)) ; (or float number) --> (or number)
-	    (setf operands (reduce-absorption operands))
-	    (when (some #'and? operands)
-	      (setf operands (reduce-redundancy operands)))
+	    (when full
+              (setf operands (remove-subs operands)) ; (or float number) --> (or number)
+              (setf operands (reduce-absorption operands))
+              (when (some #'and? operands)
+                (setf operands (reduce-redundancy operands)))
 
-	    ;; consensus theorem
-	    ;; AB + A!C + BC = AB + A!C
-	    ;; ABU + A!CU + BCU = ABU + A!CU
-	    (labels ((find-potential-consensus-tail (and1 and2)
-		       (declare (type (cons symbol list) and1 and2))
-		       ;; exists? x in and1 where x! is in and2?
-		       (let ((t1 (find-if (lambda (t1)
-					    (member `(not ,t1) (cdr and2) :test #'equal))
-					  (cdr and1))))
-			 (declare (notinline union))
-			 (when t1
-			   (union (remove t1 (cdr and1) :test #'equal)
-				  (remove `(not ,t1) (cdr and2) :test #'equal)
-				  :test #'equal))))
-		     (pair-consensus (t1 t2 &aux (tail (find-potential-consensus-tail t1 t2)))
-		       (find-if #'(lambda (t4) (and (and? t4)
-						    (set-equalp tail (cdr t4))))
-				operands))
-		     (find-consensus-term (&aux consensus)
-		       (dolist (t1 operands)
-			 (when (and? t1)
-			   (dolist (t2 operands)
-			     (cond
-			       ((null (and? t2)))
-			       ((equal t1 t2))
-			       (t
-				(setf consensus (or (pair-consensus t1 t2)
-						    (pair-consensus t2 t1)))
-				(when consensus
-				  (return-from find-consensus-term consensus)))))))))
-	      (let (consensus-term)
-		(loop :while (setf consensus-term (find-consensus-term))
-		      :do (setf operands (remove consensus-term operands :test #'equal)))))
+              ;; consensus theorem
+              ;; AB + A!C + BC = AB + A!C
+              ;; ABU + A!CU + BCU = ABU + A!CU
+              (labels ((find-potential-consensus-tail (and1 and2)
+                         (declare (type (cons symbol list) and1 and2))
+                         ;; exists? x in and1 where x! is in and2?
+                         (let ((t1 (find-if (lambda (t1)
+                                              (member `(not ,t1) (cdr and2) :test #'equal))
+                                            (cdr and1))))
+                           (declare (notinline union))
+                           (when t1
+                             (union (remove t1 (cdr and1) :test #'equal)
+                                    (remove `(not ,t1) (cdr and2) :test #'equal)
+                                    :test #'equal))))
+                       (pair-consensus (t1 t2 &aux (tail (find-potential-consensus-tail t1 t2)))
+                         (find-if #'(lambda (t4) (and (and? t4)
+                                                      (set-equalp tail (cdr t4))))
+                                  operands))
+                       (find-consensus-term (&aux consensus)
+                         (dolist (t1 operands)
+                           (when (and? t1)
+                             (dolist (t2 operands)
+                               (cond
+                                 ((null (and? t2)))
+                                 ((equal t1 t2))
+                                 (t
+                                  (setf consensus (or (pair-consensus t1 t2)
+                                                      (pair-consensus t2 t1)))
+                                  (when consensus
+                                    (return-from find-consensus-term consensus)))))))))
+                (let (consensus-term)
+                  (loop :while (setf consensus-term (find-consensus-term))
+                        :do (setf operands (remove consensus-term operands :test #'equal))))))
 	    (while (some #'or? operands) ; (or A (or U V) (or X Y) B C) --> (or A U V X Y B C)
 	      (setf operands (mapcan #'(lambda (operand)
                                          (if (or? operand)
@@ -480,7 +669,9 @@ a call to subtypep or friends."
                                              (list operand)))
                                      operands)))
             (setf operands (remove-duplicates operands :test #'equal))
-	    (rule-case type
+            (setf type (cons 'or operands))
+
+            (rule-case type
 	      ((null operands)		; (or) --> nil
 	       nil)
 	      ((null (cdr operands))	; (or A) --> A
@@ -560,7 +751,7 @@ a call to subtypep or friends."
 				       (loop :for operand :in args
 					     :collect `(not ,operand)))))
 		  (t
-		   type)))))))))
+		   `(not ,(reduce-lisp-type-once (car operands) :full full)))))))))))
 
 (defun reduce-lisp-type (type &key (full t))
     "Given a common lisp type designator such as (AND A (or (not B) C)), apply some
@@ -574,9 +765,12 @@ be even simpler in cases such as (OR A B), or (AND A B).  A few restrictions app
 
 If :full nil is given, then a fast but incomplete reduction is done, i.e., a 
 reduction which does not involve calls to subtypep."
-  (alphabetize-type
-   (fixed-point (lambda (ty) (reduce-lisp-type-once ty :full full))
-		type :test #'equal)))
+  (fixed-point (lambda (ty) (alphabetize-type (reduce-lisp-type-once ty :full full)))
+               ;; alphabetize-type before calling fixed point, this
+               ;; will increase the chance of finding duplicate
+               ;; arguments of and/or making the type more quickly
+               ;; reducable
+               (alphabetize-type type) :test #'equal))
 
 (defun reduce-lisp-type-full (type)
   (reduce-lisp-type type :full t))

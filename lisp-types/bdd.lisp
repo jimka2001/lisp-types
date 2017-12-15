@@ -34,7 +34,8 @@
 (defvar *bdd-count* 1)
 (defclass bdd ()
   ((ident ;; :reader bdd-ident
-          :initarg :ident :initform (incf *bdd-count*))
+    :type unsigned-byte
+    :initarg :ident :initform (incf *bdd-count*))
    (label ;; :reader bdd-label
     :initarg :label)
    (dnf)
@@ -76,10 +77,13 @@
     c))
 
 (defun bdd-new-hash ()
-  (make-hash-table :test #'equal))
+  (make-hash-table :test #'equal
+                   #+sbcl :weakness #+sbcl :value
+                   #+allegro :values #+allegro :weak))
 
 (defvar *bdd-hash* (bdd-new-hash))
 (defvar *bdd-verbose* nil)
+
 
 (defmacro bdd-with-new-hash (vars &body body)
   `(bdd-call-with-new-hash (lambda ,vars ,@body)))
@@ -94,18 +98,17 @@
     ;;                   (and array sequence (not vector))
     ;;                   (and (not float) (not integer) (not ratio) real)
     ;;                   (and (not bignum) (not fixnum) unsigned-byte)))))
-    (call-with-subtypep-cache
-     (lambda ()
-       (prog1 (funcall thunk)
-         (when verbose
-           (format t "finished with ~A~%" *bdd-hash*)))))))
+    (caching-types
+     (prog1 (funcall thunk)
+       (when verbose
+         (format t "finished with ~A~%" *bdd-hash*))))))
   
 (defun bdd-make-key (label left right)
   (list left right label))
 
 (defun bdd-find-int-int (hash label left right)
   (declare (type fixnum left right)
-           (optimize (speed 3) (safety 0)))
+           (optimize (speed 3)))
   (gethash (bdd-make-key label left right) hash))
 
 (defun bdd-find (hash label left-bdd right-bdd)
@@ -165,7 +168,7 @@
       (error "invalid type specifier: ~A" label)))
 
 (defmethod bdd ((expr list))
-  (declare (optimize (speed 3) (safety 0) (debug 0) (compilation-speed 0) (space 0)))
+  (declare (optimize (speed 3) (debug 0) (compilation-speed 0) (space 0)))
   (destructuring-bind (head &rest tail) expr
     (flet ((bdd-tail ()
              (mapcar #'bdd tail)))
