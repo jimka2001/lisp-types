@@ -87,13 +87,16 @@
 
 (define-test types/graph2
   (declare (notinline set-difference))
-  (let ((all-numbers (set-difference (valid-subtypes 'number)
-                                     ;; redundante types
-                                     '(nil single-float signed-byte double-float test-char-int))))
-    (caching-types
-      (assert-false (set-exclusive-or (decompose-types-rtev2 all-numbers)
-                                      (decompose-types-graph all-numbers)
-                                      :test #'equivalent-types-p)))))
+  (let ((all-numbers (remove nil (valid-subtypes 'number))))
+    ;; (decompose-types-rtev2 (valid-subtypes 'number))
+    
+    (let ((types1 (decompose-types-rtev2 all-numbers))
+          (types2 (decompose-types-graph all-numbers)))
+      (cl-user::print-vals types1 types2)
+      (caching-types
+        (assert-false (set-exclusive-or types1
+                                        types2
+                                        :test #'equivalent-types-p))))))
 
 (define-test type/graph-7
   (let ((types '( UNSIGNED-BYTE BIGNUM TEST-ARRAY-RANK RATIONAL)))
