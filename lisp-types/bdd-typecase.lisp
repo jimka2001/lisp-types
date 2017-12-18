@@ -128,6 +128,7 @@
                      (destructuring-bind (acc-type leading-types) acc
                        (let ((f (gensym "f")))
                          (push f *satisfies-symbols*)
+                         (setf (get f :clause-body) clause-body)
                          (setf (symbol-function f) #'(lambda (obj)
                                                        (typep obj type)))
                          (list `(or ,acc-type
@@ -137,40 +138,122 @@
                                (cons type leading-types))))))
                  type-case-body :initial-value '(nil nil))))
 
+(defun bdd-to-if-then-else-5 (bdd obj)
+  "expand into linear size code as LABELS, whose runtime is logrithmic and code size is linear"
+  (let (bdd->name-mapping
+        (label 0))
+    (labels ((walk-bdd (bdd)
+               (typecase bdd
+                 (bdd-false)
+                 (bdd-true)
+                 (bdd-node
+                  (unless (assoc bdd bdd->name-mapping)
+                    (incf label)
+                    (push (list bdd label) bdd->name-mapping)
+                    (walk-bdd (bdd-left bdd))
+                    (walk-bdd (bdd-right bdd))))))
+             (branch (bdd)
+               (typecase bdd
+                 (bdd-false nil)
+                 (bdd-true t)
+                 (bdd-node
+                  (list (cadr (assoc bdd bdd->name-mapping))))))
+             (label-function (bdd)
+               (cl-user::print-vals (type-of bdd) (bdd-label bdd) *satisfies-symbols*
+
+                                    (typep (bdd-label bdd) '(cons (eql satisfies)))
+                                    (when (typep (bdd-label bdd) '(cons (eql satisfies)))
+                                      (member (cadr (bdd-label bdd)) *satisfies-symbols*))
+                                    (when (and (typep (bdd-label bdd) '(cons (eql satisfies)))
+                                               (member (cadr (bdd-label bdd)) *satisfies-symbols*))
+                                      (get (cadr (bdd-label bdd)) :clause-body)
+                                    ))
+               (typecase bdd
+                 (bdd-node
+                  (if (and (typep (bdd-label bdd) '(cons (eql satisfies)))
+                           (member (cadr (bdd-label bdd)) *satisfies-symbols*))
+                      `(,(cadr (assoc bdd bdd->name-mapping)) ()
+                        ,@(get (cadr (bdd-label bdd)) :clause-body))
+                      `(,(cadr (assoc bdd bdd->name-mapping)) ()
+                        (if (typep ,obj ',(bdd-label bdd))
+                            ,(branch (bdd-left bdd))
+                            ,(branch (bdd-right
+                                      bdd)))))))))
+      (walk-bdd bdd)
+      `(lambda (,obj)
+         (labels ,(mapcar #'label-function (mapcar #'car bdd->name-mapping))
+             ,(branch bdd))))))
+
+;; (bdd-to-if-then-else-3 (bdd '(or (and sequence (not array))
+;;                                      number
+;;                               (and (not sequence) array))) 'X)
+      
+      
+
+(defun bdd-to-if-then-else-6 (bdd obj)
+  "expand into linear size code as TAGBODY/GO, whose runtime is logrithmic and code size is linear"
+  (let (bdd->name-mapping (num 0))
+    (labels ((walk-bdd (bdd)
+               (typecase bdd
+                 (bdd-false)
+                 (bdd-true)
+                 (bdd-node
+                  (unless (assoc bdd bdd->name-mapping)
+                    (push (list bdd (incf num)) bdd->name-mapping)
+                    (walk-bdd (bdd-left bdd))
+                    (walk-bdd (bdd-right bdd))))))
+             (branch (bdd)
+               (typecase bdd
+                 (bdd-false `(return nil))
+                 (bdd-true `(return t))
+                 (bdd-node
+                  `(go ,(cadr (assoc bdd bdd->name-mapping))))))
+             (label-function (bdd)
+               (typecase bdd
+                 (bdd-node
+                  (if (and (typep (bdd-label bdd) '(cons (eql satisfies)))
+                           (member (cadr (bdd-label bdd)) *satisfies-symbols*))
+                      `(,(cadr (assoc bdd bdd->name-mapping))
+                        (return (progn ,@(get (cadr (bdd-label bdd)) :clause-body))))
+                      `(,(cadr (assoc bdd bdd->name-mapping))
+                        (if (typep ,obj ',(bdd-label bdd))
+                            ,(branch (bdd-left bdd))
+                            ,(branch (bdd-right bdd)))))))))
+      (walk-bdd bdd)
+      `(lambda (,obj)
+         (block nil
+           (tagbody 
+              ,@(mapcan #'label-function
+                        (mapcar #'car (reverse bdd->name-mapping)))))))))
+
+(defun bdd-typecase-cmp (t1 t2)
+  (if (and (typep t1 '(cons (eql satisfies)))
+           (typep t2 '(cons (eql satisfies))))
+      (let ((f1 (cadr t1))
+            (f2 (cadr t2)))
+        (cond
+          ((eql f1 f2)
+           '=)
+          ((and (member f1 *satisfies-symbols*)
+                (member f2 *satisfies-symbols*))
+           (if (member f1 (cdr (member f2 *satisfies-symbols*)))
+               '<
+               '>))
+          ((member f1 *satisfies-symbols*)
+           '>)
+          ((member f2 *satisfies-symbols*)
+           '<)
+          (t
+           (%bdd-cmp t1 t2))))
+      (%bdd-cmp t1 t2)))
 
 (defmacro bdd-typecase (obj &rest clauses)
-  ;; bdd-cmp
-
   (let ((*satisfies-symbols* nil)
-        (return (gensym "return"))
         (var (gensym "obj")))
-    (labels ((bdd-typecase-cmp (t1 t2)
-               (if (and (typep t1 '(cons (eql satisfies))
-                        (typep t2 '(cons (eql satisfies)))))
-                   (let ((f1 (cadr t1))
-                         (f2 (cadr t2)))
-                     (cond
-                       ((eql f1 f2)
-                        '=)
-                       ((and (member f1 *satisfies-symbols*)
-                             (member f2 *satisfies-symbols*))
-                        (member f1 (cdr (member f2 *satisfies-symbols*))))
-                       ((member f1 *satisfies-symbols*)
-                        '>)
-                       ((member f2 *satisfies-symbols*)
-                        '<)
-                       (t
-                        (%bdd-cmp t1 t2))))
-                   (%bdd-cmp t1 t2)))
-             (build-bdd-from-typecase-clauses (clauses)
-               `(or ,@(mapcar #'build-one-clause clauses)))
-             (build-one-clause (clause &aux (type-spec (car clause)) (clause-body (cdr clause)))
-               `(and ,type-spec (:typecase-form (return-from ,return (progn ,@clause-body))))))
-      
-  
-      (let* ((*bdd-cmp-function* #'bdd-typecase-cmp)
-             (bdd-arg (build-bdd-from-typecase-clauses clauses))
-             (bdd (bdd bdd-arg)))
-        `(,(bdd-to-if-then-else-4 bdd var)
-          ,obj)))))
-
+    (let* ((*bdd-cmp-function* #'bdd-typecase-cmp)
+           (bdd-arg (build-bdd-arg-from-typecase-body clauses))
+           (bdd (bdd bdd-arg)))
+      ;; to make the output more human readable, using LABELS, rather than GO
+      ;;  use bdd-to-if-then-else-5 rather than bdd-to-if-then-else-6
+      `(,(bdd-to-if-then-else-6 bdd var)
+        ,obj))))
