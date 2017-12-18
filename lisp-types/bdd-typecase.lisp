@@ -157,15 +157,6 @@
                  (bdd-node
                   (list (cadr (assoc bdd bdd->name-mapping))))))
              (label-function (bdd)
-               (cl-user::print-vals (type-of bdd) (bdd-label bdd) *satisfies-symbols*
-
-                                    (typep (bdd-label bdd) '(cons (eql satisfies)))
-                                    (when (typep (bdd-label bdd) '(cons (eql satisfies)))
-                                      (member (cadr (bdd-label bdd)) *satisfies-symbols*))
-                                    (when (and (typep (bdd-label bdd) '(cons (eql satisfies)))
-                                               (member (cadr (bdd-label bdd)) *satisfies-symbols*))
-                                      (get (cadr (bdd-label bdd)) :clause-body)
-                                    ))
                (typecase bdd
                  (bdd-node
                   (if (and (typep (bdd-label bdd) '(cons (eql satisfies)))
