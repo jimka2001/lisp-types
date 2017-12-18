@@ -264,59 +264,71 @@
             (bdd-and-not *bdd-true* (bdd-right b))
             :bdd-node-class (class-of b)))
 
+
+(defun %bdd-cmp (t1 t2)
+  (cond
+    ((equal t1 t2)
+     '=)
+    ((null t1)
+     '<)
+    ((null t2)
+     '>)
+    ((and (listp t1)
+          (not (listp t2)))
+     '>)
+    ((and (listp t2)
+          (not (listp t1)))
+     '<)
+    ((not (eql (class-of t1) (class-of t2))) 
+     (bdd-cmp (class-name (class-of t1)) (class-name (class-of t2))))
+    (t
+     ;; thus they are the same type, but they are not equal
+     (typecase t1
+       (list
+        (let (value)
+          (while (and t1
+                      t2
+                      (eq '= (setf value (bdd-cmp (car t1) (car t2)))))
+            (pop t1)
+            (pop t2))
+          (cond
+            ((and t1 t2)
+             value)
+            (t1    '>)
+            (t2    '<)
+            (t     '=))))
+       (symbol
+        (cond
+          ((not (eql (symbol-package t1) (symbol-package t2)))
+           ;; call bdd-cmp because symbol-package might return nil
+           ;;  don't call string= directly
+           (bdd-cmp (symbol-package t1) (symbol-package t2)))
+          ((string< t1 t2) ;; same package
+           '<)
+          (t
+           '>)))
+       (package
+        (bdd-cmp (package-name t1) (package-name t2)))
+       (string
+        ;; know they're not equal, thus not string=
+        (cond
+          ((string< t1 t2)
+           '<)
+          (t
+           '>)))
+       (number
+        (cond ((< t1 t2)
+               '<)
+              (t
+               '>)))
+       (t
+        (error "cannot compare a ~A with a ~A" (class-of t1) (class-of t2)))))))
+
+(defvar *bdd-cmp-function* #'%bdd-cmp)
+
 (defun bdd-cmp (t1 t2)
   (the (member < > =)
-       (cond
-         ((equal t1 t2)
-          '=)
-         ((null t1)
-          '<)
-         ((null t2)
-          '>)
-         ((not (eql (class-of t1) (class-of t2))) 
-          (bdd-cmp (class-name (class-of t1)) (class-name (class-of t2))))
-         (t
-          ;; thus they are the same type, but they are not equal
-          (typecase t1
-            (list
-             (let (value)
-               (while (and t1
-                           t2
-                           (eq '= (setf value (bdd-cmp (car t1) (car t2)))))
-                 (pop t1)
-                 (pop t2))
-               (cond
-                 ((and t1 t2)
-                  value)
-                 (t1    '>)
-                 (t2    '<)
-                 (t     '=))))
-            (symbol
-             (cond
-               ((not (eql (symbol-package t1) (symbol-package t2)))
-                ;; call bdd-cmp because symbol-package might return nil
-                ;;  don't call string= directly
-                (bdd-cmp (symbol-package t1) (symbol-package t2)))
-               ((string< t1 t2) ;; same package
-                '<)
-               (t
-                '>)))
-            (package
-             (bdd-cmp (package-name t1) (package-name t2)))
-            (string
-             ;; know they're not equal, thus not string=
-             (cond
-               ((string< t1 t2)
-                '<)
-               (t
-                '>)))
-            (number
-             (cond ((< t1 t2)
-                    '<)
-                   (t
-                    '>)))
-            (t
-             (error "cannot compare a ~A with a ~A" (class-of t1) (class-of t2))))))))
+       (funcall *bdd-cmp-function* t1 t2)))
 
 (defgeneric bdd-cmp-bdd (bdd1 bdd2))
 (defmethod bdd-cmp-bdd ((bdd1 bdd-node) (bdd2 bdd-node))
@@ -331,7 +343,6 @@
                (c2 (bdd-left b2))
                (d2 (bdd-right b2)))
            (declare (type bdd c1 c2 d1 d2))
-           (cl-user::print-vals a1 a2 (bdd-cmp-bdd b1 b2))
            (ecase (bdd-cmp-bdd b1 b2)
              ((=)
               (%bdd-node a1 (funcall op c1 c2) (funcall op d1 d2) :bdd-node-class (class-of b1)))

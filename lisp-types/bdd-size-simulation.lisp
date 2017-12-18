@@ -275,7 +275,6 @@
          (data (if re-run
                    (sort (measure-bdd-sizes vars num-samples min max) #'< :key (getter :num-vars))
                    (read-data prefix :vars vars))))
-    (cl-user::print-vals data)
     (when re-run
       (write-data data prefix))
 

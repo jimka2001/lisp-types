@@ -89,7 +89,6 @@
                       (bdd-reduce-allocated bdd new-left new-right)))))))))))
 
 (defmethod bdd-reduce-allocated ((bdd bdd-node) new-left new-right)
-  (cl-user::print-vals bdd new-left new-right)
   (cond
     ;; check (bdd-and-not bdd new-left)
     ;;   vs  (bdd-and-not new-left bdd)

@@ -92,7 +92,6 @@
     
     (let ((types1 (decompose-types-rtev2 all-numbers))
           (types2 (decompose-types-graph all-numbers)))
-      (cl-user::print-vals types1 types2)
       (caching-types
         (assert-false (set-exclusive-or types1
                                         types2

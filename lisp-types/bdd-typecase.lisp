@@ -119,12 +119,15 @@
                    :satisfies satisfies 
                    :label typecase-form)))
 
+(defvar *satisfies-symbols* t
+  "The initial value is t so there will be an error if a function tries to push onto it without rebinding with dynamic extent.")
 (defun build-bdd-arg-from-typecase-body (type-case-body)
   (apply #'values
          (reduce (lambda (acc clause)
                    (destructuring-bind (type &rest clause-body) clause
                      (destructuring-bind (acc-type leading-types) acc
                        (let ((f (gensym "f")))
+                         (push f *satisfies-symbols*)
                          (setf (symbol-function f) #'(lambda (obj)
                                                        (typep obj type)))
                          (list `(or ,acc-type
@@ -136,15 +139,37 @@
 
 
 (defmacro bdd-typecase (obj &rest clauses)
-  (let ((return (gensym "return"))
+  ;; bdd-cmp
+
+  (let ((*satisfies-symbols* nil)
+        (return (gensym "return"))
         (var (gensym "obj")))
-    (labels ((build-bdd-from-typecase-clauses (clauses)
+    (labels ((bdd-typecase-cmp (t1 t2)
+               (if (and (typep t1 '(cons (eql satisfies))
+                        (typep t2 '(cons (eql satisfies)))))
+                   (let ((f1 (cadr t1))
+                         (f2 (cadr t2)))
+                     (cond
+                       ((eql f1 f2)
+                        '=)
+                       ((and (member f1 *satisfies-symbols*)
+                             (member f2 *satisfies-symbols*))
+                        (member f1 (cdr (member f2 *satisfies-symbols*))))
+                       ((member f1 *satisfies-symbols*)
+                        '>)
+                       ((member f2 *satisfies-symbols*)
+                        '<)
+                       (t
+                        (%bdd-cmp t1 t2))))
+                   (%bdd-cmp t1 t2)))
+             (build-bdd-from-typecase-clauses (clauses)
                `(or ,@(mapcar #'build-one-clause clauses)))
              (build-one-clause (clause &aux (type-spec (car clause)) (clause-body (cdr clause)))
                `(and ,type-spec (:typecase-form (return-from ,return (progn ,@clause-body))))))
       
   
-      (let* ((bdd-arg (build-bdd-from-typecase-clauses clauses))
+      (let* ((*bdd-cmp-function* #'bdd-typecase-cmp)
+             (bdd-arg (build-bdd-from-typecase-clauses clauses))
              (bdd (bdd bdd-arg)))
         `(,(bdd-to-if-then-else-4 bdd var)
           ,obj)))))
