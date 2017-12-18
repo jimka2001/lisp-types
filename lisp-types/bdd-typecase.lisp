@@ -239,6 +239,7 @@
 
 (defun bdd-typecase-expander (obj clauses if-then-else)
   (let ((*satisfies-symbols* nil)
+        (*reduce-member-type* nil)
         (var (gensym "obj")))
     (let* ((*bdd-cmp-function* #'bdd-typecase-cmp)
            (bdd-arg (build-bdd-arg-from-typecase-body clauses))
