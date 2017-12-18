@@ -140,16 +140,14 @@
 
 (defun bdd-to-if-then-else-labels (bdd obj)
   "expand into linear size code as LABELS, whose runtime is logrithmic and code size is linear"
-  (let (bdd->name-mapping
-        (label 0))
+  (let (bdd->name-mapping)
     (labels ((walk-bdd (bdd)
                (typecase bdd
                  (bdd-false)
                  (bdd-true)
                  (bdd-node
                   (unless (assoc bdd bdd->name-mapping)
-                    (incf label)
-                    (push (list bdd label) bdd->name-mapping)
+                    (push (list bdd (gensym "L")) bdd->name-mapping)
                     (walk-bdd (bdd-left bdd))
                     (walk-bdd (bdd-right bdd))))))
              (branch (bdd)
@@ -192,20 +190,21 @@
 
 (defun bdd-to-if-then-else-tagbody/go (bdd obj)
   "expand into linear size code as TAGBODY/GO, whose runtime is logrithmic and code size is linear"
-  (let (bdd->name-mapping (num 0))
+  (let (bdd->name-mapping
+        (block-name (gensym "block")))
     (labels ((walk-bdd (bdd)
                (typecase bdd
                  (bdd-false)
                  (bdd-true)
                  (bdd-node
                   (unless (assoc bdd bdd->name-mapping)
-                    (push (list bdd (incf num)) bdd->name-mapping)
+                    (push (list bdd (gensym "L")) bdd->name-mapping)
                     (walk-bdd (bdd-left bdd))
                     (walk-bdd (bdd-right bdd))))))
              (branch (bdd)
                (typecase bdd
-                 (bdd-false `(return nil))
-                 (bdd-true `(return t))
+                 (bdd-false `(return-from ,block-name nil))
+                 (bdd-true `(return-from ,block-name t))
                  (bdd-node
                   `(go ,(cadr (assoc bdd bdd->name-mapping))))))
              (label-function (bdd)
@@ -214,14 +213,14 @@
                   (if (and (typep (bdd-label bdd) '(cons (eql satisfies)))
                            (member (cadr (bdd-label bdd)) *satisfies-symbols*))
                       `(,(cadr (assoc bdd bdd->name-mapping))
-                        (return (progn ,@(get (cadr (bdd-label bdd)) :clause-body))))
+                        (return-from ,block-name (progn ,@(get (cadr (bdd-label bdd)) :clause-body))))
                       `(,(cadr (assoc bdd bdd->name-mapping))
                         (if (typep ,obj ',(bdd-label bdd))
                             ,(branch (bdd-left bdd))
                             ,(branch (bdd-right bdd)))))))))
       (walk-bdd bdd)
       `(lambda (,obj)
-         (block nil
+         (block ,block-name
            (tagbody 
               ,@(mapcan #'label-function
                         (mapcar #'car (reverse bdd->name-mapping)))))))))
