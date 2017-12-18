@@ -237,7 +237,7 @@
            (%bdd-cmp t1 t2))))
       (%bdd-cmp t1 t2)))
 
-(defmacro bdd-typecase (obj &rest clauses)
+(defun bdd-typecase-expander (obj clauses if-then-else)
   (let ((*satisfies-symbols* nil)
         (var (gensym "obj")))
     (let* ((*bdd-cmp-function* #'bdd-typecase-cmp)
@@ -252,4 +252,4 @@
 (defmacro bdd-typecase (obj &rest clauses)
   ;; to make the output more human readable, using LABELS, rather than GO
   ;;  use bdd-to-if-then-else-labels rather than bdd-to-if-then-else-tagbody/go
-  (bdd-typecase-expander obj clauses #'bdd-to-if-then-else-labels))
+  (bdd-typecase-expander obj clauses #'bdd-to-if-then-else-tagbody/go))
