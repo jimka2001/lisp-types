@@ -21,48 +21,56 @@
 
 (in-package :lisp-types.test)
 
+(let ((lisp-types-test (find-package  :lisp-types.test))
+      (lisp-types (find-package  :lisp-types)))
+  (do-symbols (name :lisp-types)
+    (when (and (eq lisp-types (symbol-package name))
+               (not (find-symbol (symbol-name name) lisp-types-test)))
+      (format t "3 importing name=~A into  :lisp-types.test~%" name)
+      (shadowing-import name :lisp-types.test))))
+
+(define-test lisp-types/build-bdd-arg-from-typecase-body
+  (assert-test (equal nil
+                      (build-bdd-arg-from-typecase-body 
+                       '( ;; typecase obj
+                         ))))
+  
+  (assert-test (equal
+                '(OR NIL (AND (NOT (OR)) FLOAT (:TYPECASE-FORM 100)))
+                (build-bdd-arg-from-typecase-body 
+                 '( ;; typecase obj
+                   (float 100)
+                   ))))
+
+  (assert-test (equal
+                '(OR (OR NIL (AND (NOT (OR)) FLOAT (:TYPECASE-FORM 100)))
+                  (AND (NOT (OR FLOAT)) NUMBER (:TYPECASE-FORM 200)))
+                (build-bdd-arg-from-typecase-body 
+                 '( ;; typecase obj          ;
+                   (float 100)
+                   (number 200)))))
+  (assert-test (equal
+                '(OR
+                  (OR
+                   (OR (OR NIL (AND (NOT (OR)) FLOAT (:TYPECASE-FORM 100)))
+                    (AND (NOT (OR FLOAT)) NUMBER (:TYPECASE-FORM 200)))
+                   (AND (NOT (OR NUMBER FLOAT)) STRING (:TYPECASE-FORM 300)))
+                  (AND (NOT (OR STRING NUMBER FLOAT)) ARRAY (:TYPECASE-FORM 400)))
+                (build-bdd-arg-from-typecase-body 
+                 '( ;; typecase obj          ;
+                   (float 100)
+                   (number 200)
+                   (string 300)
+                   (array 400))))))
 
 (define-test lisp-types/reduced-typecase
-  (bdd '(:TYPECASE-FORM (RETURN-FROM #:|return654| (PROGN 300))))
+  (bdd nil)
+  (bdd '(OR NIL (AND (NOT (OR)) FLOAT (:TYPECASE-FORM 100))))
+  (bdd '(OR (OR NIL (AND (NOT (OR)) FLOAT (:TYPECASE-FORM 100)))
+         (AND (NOT (OR FLOAT)) NUMBER (:TYPECASE-FORM 200))))
   (bdd '(OR
-         (:TYPECASE-FORM (RETURN-FROM #:|return654| (PROGN 300)))))
-  (bdd-or *bdd-true*
-          (bdd '(:TYPECASE-FORM (RETURN-FROM #:|return654| (PROGN 300)))))
-  (bdd-or *bdd-false*
-          (bdd '(:TYPECASE-FORM (RETURN-FROM #:|return654| (PROGN 300)))))
-  (bdd-or (bdd '(:TYPECASE-FORM (RETURN-FROM #:|return654| (PROGN 300))))
-          *bdd-true*)
-  (bdd-or (bdd '(:TYPECASE-FORM (RETURN-FROM #:|return654| (PROGN 300))))
-          *bdd-false*)
-  (bdd-or (bdd 'float)
-          (bdd '(:TYPECASE-FORM (RETURN-FROM #:|return654| (PROGN 300)))))
-  (bdd '(OR
-         float
-         (:TYPECASE-FORM (RETURN-FROM #:|return654| (PROGN 300)))))
-  (bdd '(OR
-         (AND (AND FLOAT (NOT (EQL 3.14)))
-          (:TYPECASE-FORM (RETURN-FROM #:|return654| (PROGN 300))))))
-  (bdd '(OR
-         (AND (AND FLOAT NUMBER)
-          (:TYPECASE-FORM (RETURN-FROM #:|return654| (PROGN 100))))
-         (AND (OR STRING BIGNUM)
-          (:TYPECASE-FORM (RETURN-FROM #:|return654| (PROGN 200))))
-         (AND (AND FLOAT (NOT (EQL 3.14)))
-          (:TYPECASE-FORM (RETURN-FROM #:|return654| (PROGN 300))))))
-  (bdd '(OR
-         (AND (AND FLOAT (NOT (EQL 3.14)))
-          (:TYPECASE-FORM (RETURN-FROM #:|return652| (PROGN 300))))))
-
-
-  (dolist (obj '(t 1 1.0 "hello"))
-    (bdd-typecase obj
-                  ((and float number) 100))
-    (bdd-typecase obj
-                  ((and float (not (eql 3.14)))  300))
-    (bdd-typecase obj
-                  ((and float number) 100)
-                  ((and float (not (eql 3.14)))  300))
-    (bdd-typecase obj
-                  ((and float number) 100)
-                  ((or string bignum) 200)
-                  ((and float (not (eql 3.14)))  300))))
+         (OR
+          (OR (OR NIL (AND (NOT (OR)) FLOAT (:TYPECASE-FORM 100)))
+           (AND (NOT (OR FLOAT)) NUMBER (:TYPECASE-FORM 200)))
+          (AND (NOT (OR NUMBER FLOAT)) STRING (:TYPECASE-FORM 300)))
+         (AND (NOT (OR STRING NUMBER FLOAT)) ARRAY (:TYPECASE-FORM 400)))))

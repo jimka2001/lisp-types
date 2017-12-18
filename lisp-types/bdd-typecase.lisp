@@ -21,26 +21,56 @@
 
 (in-package :lisp-types)
 
-(defclass bdd-typecase-node (bdd-node)
-  ((unknown)))
+(defclass bdd-typecase-node (bdd-leaf)
+  ((satisfies :initarg :satisfies)
+   (proxy :accessor bdd-proxy)))
 
-(defmethod slot-unbound (class (bdd bdd-typecase-node) (slot-name (eql 'unknown)))
-  (setf (slot-value bdd 'unknown)
-        (gensym "unknown")))
+(defmethod slot-unbound (class (obj bdd-typecase-node) (slot-name (eql 'proxy)))
+  (setf (slot-value obj 'proxy) (%bdd-node (bdd-serialize obj) *bdd-true* *bdd-false*)))
 
-(defmethod slot-unbound (class (bdd bdd-typecase-node) (slot-name (eql 'dnf)))
-  (setf (slot-value bdd 'dnf)
-        `(satisfies ,(slot-value bdd 'unknown))))
+(defmethod slot-unbound (class (obj bdd-typecase-node) (slot-name (eql 'dnf)))
+  (setf (slot-value obj 'dnf) (bdd-serialize obj)))
 
-(defmethod slot-unbound (class (bdd bdd-typecase-node) (slot-name (eql 'expr)))
-  (setf (slot-value bdd 'expr)
-        `(satisfies ,(slot-value bdd 'unknown))))
+(defmethod slot-unbound (class (obj bdd-typecase-node) (slot-name (eql 'expr)))
+  (setf (slot-value obj 'expr) (bdd-serialize obj)))
+
+(defmethod bdd-serialize ((leaf bdd-typecase-node))
+  `(satisfies ,(slot-value leaf 'satisfies)))
 
 (defmethod print-object ((bdd bdd-typecase-node) stream)
   (print-unreadable-object (bdd stream :type t :identity nil)
     (when (slot-boundp bdd 'ident)
       (format stream "[~D]" (slot-value bdd 'ident)))
     (format stream "~S" (bdd-label bdd))))
+
+(defmethod bdd-and ((bdd1 bdd-node) (leaf bdd-typecase-node))
+  (bdd-and bdd1 (bdd-proxy leaf)))
+
+(defmethod bdd-and ((leaf bdd-typecase-node) (bdd1 bdd-node))
+  (bdd-and (bdd-proxy leaf) bdd1))
+
+(defmethod bdd-and ((leaf1 bdd-typecase-node) (leaf2 bdd-typecase-node))
+  (bdd-and (bdd-proxy leaf1) (bdd-proxy leaf2)))
+
+
+(defmethod bdd-or ((bdd1 bdd-node) (leaf bdd-typecase-node))
+  (bdd-or bdd1 (bdd-proxy leaf)))
+
+(defmethod bdd-or ((leaf bdd-typecase-node) (bdd1 bdd-node))
+  (bdd-or (bdd-proxy leaf) bdd1))
+
+(defmethod bdd-or ((leaf1 bdd-typecase-node) (leaf2 bdd-typecase-node))
+  (bdd-or (bdd-proxy leaf1) (bdd-proxy leaf2)))
+
+
+(defmethod bdd-and-not ((bdd1 bdd-node) (leaf bdd-typecase-node))
+  (bdd-and-not bdd1 (bdd-proxy leaf)))
+
+(defmethod bdd-and-not ((leaf bdd-typecase-node) (bdd1 bdd-node))
+  (bdd-and-not (bdd-proxy leaf) bdd1))
+
+(defmethod bdd-and-not ((leaf1 bdd-typecase-node) (leaf2 bdd-typecase-node))
+  (bdd-and-not (bdd-proxy leaf1) (bdd-proxy leaf2)))
 
 (defmethod bdd-cmp-bdd ((bdd1 bdd-typecase-node) (bdd2 bdd-node))
   '>)
@@ -84,7 +114,26 @@
 
 
 (defmethod bdd-list-to-bdd ((head (eql :typecase-form)) tail)
-  (%bdd-node tail *bdd-true* *bdd-false* :bdd-node-class 'bdd-typecase-node))
+  (destructuring-bind (&key typecase-form satisfies) (cons head tail)
+    (make-instance 'bdd-typecase-node
+                   :satisfies satisfies 
+                   :label typecase-form)))
+
+(defun build-bdd-arg-from-typecase-body (type-case-body)
+  (apply #'values
+         (reduce (lambda (acc clause)
+                   (destructuring-bind (type &rest clause-body) clause
+                     (destructuring-bind (acc-type leading-types) acc
+                       (let ((f (gensym "f")))
+                         (setf (symbol-function f) #'(lambda (obj)
+                                                       (typep obj type)))
+                         (list `(or ,acc-type
+                                    (and (not (or ,@leading-types)) ,type
+                                         (:typecase-form ,clause-body
+                                          :satisfies ,f )))
+                               (cons type leading-types))))))
+                 type-case-body :initial-value '(nil nil))))
+
 
 (defmacro bdd-typecase (obj &rest clauses)
   (let ((return (gensym "return"))
@@ -93,10 +142,10 @@
                `(or ,@(mapcar #'build-one-clause clauses)))
              (build-one-clause (clause &aux (type-spec (car clause)) (clause-body (cdr clause)))
                `(and ,type-spec (:typecase-form (return-from ,return (progn ,@clause-body))))))
-      (cl-user::print-vals (build-bdd-from-typecase-clauses clauses))
+      
+  
       (let* ((bdd-arg (build-bdd-from-typecase-clauses clauses))
-            (bdd (bdd bdd-arg)))
-        (cl-user::print-vals bdd-arg)
+             (bdd (bdd bdd-arg)))
         `(,(bdd-to-if-then-else-4 bdd var)
           ,obj)))))
 
