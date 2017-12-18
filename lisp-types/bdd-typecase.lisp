@@ -138,7 +138,7 @@
                                (cons type leading-types))))))
                  type-case-body :initial-value '(nil nil))))
 
-(defun bdd-to-if-then-else-5 (bdd obj)
+(defun bdd-to-if-then-else-labels (bdd obj)
   "expand into linear size code as LABELS, whose runtime is logrithmic and code size is linear"
   (let (bdd->name-mapping
         (label 0))
@@ -190,7 +190,7 @@
       
       
 
-(defun bdd-to-if-then-else-6 (bdd obj)
+(defun bdd-to-if-then-else-tagbody/go (bdd obj)
   "expand into linear size code as TAGBODY/GO, whose runtime is logrithmic and code size is linear"
   (let (bdd->name-mapping (num 0))
     (labels ((walk-bdd (bdd)
@@ -254,6 +254,12 @@
            (bdd-arg (build-bdd-arg-from-typecase-body clauses))
            (bdd (bdd bdd-arg)))
       ;; to make the output more human readable, using LABELS, rather than GO
-      ;;  use bdd-to-if-then-else-5 rather than bdd-to-if-then-else-6
-      `(,(bdd-to-if-then-else-6 bdd var)
+      ;;  use bdd-to-if-then-else-5 rather than bdd-to-if-then-else-tagbody/go
+      `(,(funcall if-then-else bdd var)
         ,obj))))
+
+
+(defmacro bdd-typecase (obj &rest clauses)
+  ;; to make the output more human readable, using LABELS, rather than GO
+  ;;  use bdd-to-if-then-else-labels rather than bdd-to-if-then-else-tagbody/go
+  (bdd-typecase-expander obj clauses #'bdd-to-if-then-else-labels))
