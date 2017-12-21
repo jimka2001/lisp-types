@@ -25,16 +25,21 @@
 (defvar *satisfies-symbols* t
   "The initial value is t so there will be an error if a function tries to push onto it without rebinding with dynamic extent.")
 
+(defun define-type-predicate (type-specifier)
+  (let ((function-name (gensym "f")))
+    (setf (symbol-function function-name)
+          #'(lambda (obj)
+              (typep obj type-specifier)))
+    function-name))
+
 (defun build-bdd-arg-from-typecase-body (type-case-body)
   (apply #'values
          (reduce (lambda (acc clause)
                    (destructuring-bind (type &rest clause-body) clause
                      (destructuring-bind (acc-type leading-types) acc
-                       (let ((f (gensym "f")))
+                       (let ((f (define-type-predicate type)))
                          (push f *satisfies-symbols*)
                          (setf (get f :clause-body) clause-body)
-                         (setf (symbol-function f) #'(lambda (obj)
-                                                       (typep obj type)))
                          (list `(or ,acc-type
                                     (and (not (or ,@leading-types)) ,type
                                          (satisfies ,f)))
