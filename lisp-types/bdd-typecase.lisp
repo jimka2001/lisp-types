@@ -119,35 +119,33 @@
                         (mapcar #'car (reverse bdd->name-mapping)))))))))
 
 (defun bdd-typecase-cmp (t1 t2)
-  (if (and (typep t1 '(cons (eql satisfies)))
-           (typep t2 '(cons (eql satisfies))))
-      (let ((f1 (cadr t1))
-            (f2 (cadr t2)))
-        (cond
-          ((eql f1 f2)
-           '=)
-          ((and (member f1 *satisfies-symbols*)
-                (member f2 *satisfies-symbols*))
-           (if (member f1 (cdr (member f2 *satisfies-symbols*)))
-               '<
-               '>))
-          ((member f1 *satisfies-symbols*)
-           '>)
-          ((member f2 *satisfies-symbols*)
-           '<)
-          (t
-           (%bdd-cmp t1 t2))))
-      (%bdd-cmp t1 t2)))
+  (cond
+    ((eql t1 t2)
+     '=)
+    ((and (typep t1 '(cons (eql satisfies)))
+          (typep t2 '(cons (eql satisfies))))
+     (let ((f1 (cadr t1))
+           (f2 (cadr t2)))
+       (cond
+         ((and (member f1 *satisfies-symbols*)
+               (member f2 *satisfies-symbols*))
+          (%bdd-cmp t1 t2))
+         ((member f1 *satisfies-symbols*)
+          '>)
+         ((member f2 *satisfies-symbols*)
+          '<)
+         (t
+          (%bdd-cmp t1 t2)))))
+    (t
+     (%bdd-cmp t1 t2))))
 
 (defun bdd-typecase-expander (obj clauses if-then-else)
   (let ((*satisfies-symbols* nil)
         (*reduce-member-type* nil)
         (var (gensym "obj")))
     (let* ((*bdd-cmp-function* #'bdd-typecase-cmp)
-           (bdd-arg (build-bdd-arg-from-typecase-body clauses))
+           (bdd-arg (typecase-to-type clauses))
            (bdd (bdd bdd-arg)))
-      ;; to make the output more human readable, using LABELS, rather than GO
-      ;;  use bdd-to-if-then-else-5 rather than bdd-to-if-then-else-tagbody/go
       `(,(funcall if-then-else bdd var)
         ,obj))))
 
@@ -155,4 +153,6 @@
 (defmacro bdd-typecase (obj &rest clauses)
   ;; to make the output more human readable, using LABELS, rather than GO
   ;;  use bdd-to-if-then-else-labels rather than bdd-to-if-then-else-tagbody/go
-  (bdd-typecase-expander obj clauses #'bdd-to-if-then-else-tagbody/go))
+  (bdd-typecase-expander obj clauses #'bdd-to-if-then-else-tagbody/go)
+  ;; (bdd-typecase-expander obj clauses #'bdd-to-if-then-else-labels)
+  )
