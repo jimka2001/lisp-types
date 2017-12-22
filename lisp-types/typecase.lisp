@@ -126,46 +126,19 @@ type-specifier."
           :key #'(lambda (clause)
                    (type-specifier-complexity-heuristic (car clause)))))))
 
-(defun expand-disjoint-typecase (obj clauses &key (reorder nil))
+(defun make-disjoint-clauses (typecase-clauses)
+  (let (complements)
+    (loop :for clause :in typecase-clauses
+          :collect (let* ((t2 (car clause))
+                          (t3 (reduce-lisp-type `(and ,t2 ,@complements))))
+                     (push `(not ,t2) complements)
+                     (cons t3 (cdr clause))))))
+
+(defun expand-disjoint-typecase (obj clauses)
   "Returns a TYPECASE form given its first argument, OBJ, and list of CLAUSES.
-The clauses appear in the same order, but the tests of each may have been
-(non-destructively) modified so that the caller is free to re-order the clauses."
-  (labels ((transform-clauses (clauses)
-	     (let (complements)
-	       (loop :for clause :in clauses
-		     :collect (let* ((t2 (car clause))
-				     (t3 (reduce-lisp-type `(and ,t2 ,@complements))))
-				(push `(not ,t2) complements)
-				(cons t3 (cdr clause))))))
-	   (complexity (obj)
-	     (cond ((listp obj) ; nil==>0 non-nil list ==> >1
-		    (apply #'+ (length obj) (mapcar #'complexity obj)))
-		   (t 1)))
-	   (cmp (a b)
-	     (cond ((equal a b)
-		    t)
-		   ((null a)		; nil moves to the end
-		    nil)
-		   ((null b)		; keep nil at end
-		    t)
-		   ((and (symbolp a)
-			 (symbolp b)) ; leave symbols in the same order for stability
-		    t)
-		   ((symbolp a) ; keep symbols at beginning
-		    t)
-		   ((symbolp b) ; move symbol to beginning
-		    nil)
-		   ((and (listp a)
-			 (listp b)) ; more complex goes to end
-		    (<= (complexity a)
-			(complexity b)))
-		   (t
-		    (error "cannot compare objects ~A vs ~A" (class-of a) (class-of b))))))
-		    
-    (let ((new-clauses (transform-clauses clauses)))
-      `(typecase ,obj ,@(if reorder
-			    (stable-sort new-clauses #'cmp :key #'car)
-			    new-clauses)))))
+ The clauses appear in the same order, but the tests of each may have been
+ (non-destructively) modified so that the caller is free to re-order the clauses."
+  `(typecase ,obj ,@(make-disjoint-clauses clauses)))
 
 (defmacro disjoint-typecase (obj &rest clauses)
   "Syntactically similar to TYPECASE. Expands to a call to TYPECASE but
@@ -189,7 +162,8 @@ compiler may issue warnings about removing unreachable code."
   (expand-disjoint-typecase obj clauses))
 
 (defun expand-optimized-typecase (obj clauses)
-  `(reduced-typecase ,@(cdr (expand-disjoint-typecase obj clauses :reorder t))))
+  (transform-decreasing-complexity
+   (expand-disjoint-typecase obj clauses)))
 
 (defmacro optimized-typecase (obj &rest clauses)
   "Syntactically similar to TYPECASE. Expands to a call to TYPECASE but
