@@ -29,48 +29,50 @@
       (format t "3 importing name=~A into  :lisp-types.test~%" name)
       (shadowing-import name :lisp-types.test))))
 
+(defun cmp-equal (obj1 obj2)
+  (typecase obj1
+    (atom
+     (equal obj1 obj2))
+    ((cons (eql SATISFIES))
+     (typep obj2 '(cons (eql SATISFIES))))
+    (t
+     (and (= (length obj1) (length obj2))
+          (cmp-equal (car obj1) (car obj2))
+          (cmp-equal (cdr obj1) (cdr obj2))))))
+
 (define-test lisp-types/typecase-to-type
-  (assert-test (equal nil
-                      (typecase-to-type 
-                       '( ;; typecase obj
-                         ))))
+  (let ((*satisfies-symbols* nil))
+    (assert-test (cmp-equal nil
+                            (typecase-to-type 
+                             '( ;; typecase obj
+                               ))))
   
-  (assert-test (equal
-                '(OR NIL (AND (NOT (OR)) FLOAT (:TYPECASE-FORM 100)))
-                (typecase-to-type 
-                 '( ;; typecase obj
-                   (float 100)
-                   ))))
+    (assert-test (cmp-equal
+                  '(OR NIL (AND (NOT (OR)) FLOAT (SATISFIES 100)))
+                  (typecase-to-type 
+                   '( ;; typecase obj
+                     (float 100)
+                     ))))
 
-  (assert-test (equal
-                '(OR (OR NIL (AND (NOT (OR)) FLOAT (:TYPECASE-FORM 100)))
-                  (AND (NOT (OR FLOAT)) NUMBER (:TYPECASE-FORM 200)))
-                (typecase-to-type 
-                 '( ;; typecase obj          ;
-                   (float 100)
-                   (number 200)))))
-  (assert-test (equal
-                '(OR
-                  (OR
-                   (OR (OR NIL (AND (NOT (OR)) FLOAT (:TYPECASE-FORM 100)))
-                    (AND (NOT (OR FLOAT)) NUMBER (:TYPECASE-FORM 200)))
-                   (AND (NOT (OR NUMBER FLOAT)) STRING (:TYPECASE-FORM 300)))
-                  (AND (NOT (OR STRING NUMBER FLOAT)) ARRAY (:TYPECASE-FORM 400)))
-                (typecase-to-type 
-                 '( ;; typecase obj          ;
-                   (float 100)
-                   (number 200)
-                   (string 300)
-                   (array 400))))))
+    (assert-test (cmp-equal
+                  '(OR (OR NIL (AND (NOT (OR)) FLOAT (SATISFIES 100)))
+                    (AND (NOT (OR FLOAT)) NUMBER (SATISFIES 200)))
+                  (typecase-to-type 
+                   '( ;; typecase obj          ;
+                     (float 100)
+                     (number 200)))))
 
-(define-test lisp-types/reduced-typecase
-  (bdd nil)
-  (bdd '(OR NIL (AND (NOT (OR)) FLOAT (:TYPECASE-FORM 100))))
-  (bdd '(OR (OR NIL (AND (NOT (OR)) FLOAT (:TYPECASE-FORM 100)))
-         (AND (NOT (OR FLOAT)) NUMBER (:TYPECASE-FORM 200))))
-  (bdd '(OR
-         (OR
-          (OR (OR NIL (AND (NOT (OR)) FLOAT (:TYPECASE-FORM 100)))
-           (AND (NOT (OR FLOAT)) NUMBER (:TYPECASE-FORM 200)))
-          (AND (NOT (OR NUMBER FLOAT)) STRING (:TYPECASE-FORM 300)))
-         (AND (NOT (OR STRING NUMBER FLOAT)) ARRAY (:TYPECASE-FORM 400)))))
+    (assert-test (cmp-equal
+                  '(OR
+                    (OR
+                     (OR (OR NIL (AND (NOT (OR)) FLOAT (SATISFIES 100)))
+                      (AND (NOT (OR FLOAT)) NUMBER (SATISFIES 200)))
+                     (AND (NOT (OR NUMBER FLOAT)) STRING (SATISFIES 300)))
+                    (AND (NOT (OR STRING NUMBER FLOAT)) ARRAY (SATISFIES 400)))
+                  (typecase-to-type 
+                   '( ;; typecase obj          ;
+                     (float 100)
+                     (number 200)
+                     (string 300)
+                     (array 400)))))))
+

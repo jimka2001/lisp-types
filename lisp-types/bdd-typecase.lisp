@@ -25,15 +25,20 @@
 (defvar *satisfies-symbols* t
   "The initial value is t so there will be an error if a function tries to push onto it without rebinding with dynamic extent.")
 
-(defun define-type-predicate (type-specifier &key suggestion)
+(defun define-type-predicate (type-specifier &key suggestion clause-body)
   (let ((function-name (gensym (typecase suggestion
                                  ((cons symbol)
                                   (concatenate 'string
                                                (symbol-name (car suggestion)) "-"))
                                  (t "f")))))
+
     (setf (symbol-function function-name)
           #'(lambda (obj)
               (typep obj type-specifier)))
+    (assert (listp *satisfies-symbols*) ()
+            "define-type-predicate only works in the dynamic extent of *satisfies-symbols* rebinding to list")
+    (push function-name *satisfies-symbols*)
+    (setf (get function-name :clause-body) clause-body)
     function-name))
 
 (defun typecase-to-type (type-case-body)
@@ -41,9 +46,7 @@
    (reduce (lambda (acc clause)
              (destructuring-bind (type &rest clause-body) clause
                (destructuring-bind (acc-type leading-types) acc
-                 (let ((f (define-type-predicate type :suggestion (car (last clause-body)))))
-                   (push f *satisfies-symbols*)
-                   (setf (get f :clause-body) clause-body)
+                 (let ((f (define-type-predicate type :clause-body clause-body :suggestion (car (last clause-body)))))
                    (list `(or ,acc-type
                               (and (not (or ,@leading-types)) ,type
                                    (satisfies ,f)))
