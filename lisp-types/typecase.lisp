@@ -117,15 +117,6 @@ type-specifier."
           :then (1- weight)
         :summing (* weight (type-specifier-complexity-heuristic (car clause)))))
 
-
-
-(defun transform-decreasing-complexity (typecase-form)
-  (destructuring-bind (typecase obj &rest clauses) typecase-form
-    `(,typecase ,obj
-       ,@(stable-sort (copy-list clauses) #'<
-          :key #'(lambda (clause)
-                   (type-specifier-complexity-heuristic (car clause)))))))
-
 (defun make-disjoint-clauses (typecase-clauses)
   (let (complements)
     (loop :for clause :in typecase-clauses
@@ -161,16 +152,6 @@ There may be cases when a type specifier reduces to nil, in which case the
 compiler may issue warnings about removing unreachable code."
   (expand-disjoint-typecase obj clauses))
 
-(defun expand-optimized-typecase (obj clauses)
-  (transform-decreasing-complexity
-   (expand-disjoint-typecase obj clauses)))
-
-(defmacro optimized-typecase (obj &rest clauses)
-  "Syntactically similar to TYPECASE. Expands to a call to TYPECASE but
-with the types reduced as if by DISJOINT-TYPECASE, then sorting the clauses
-by increasing complexity, and finally REDUCED-TYPECASE."
-  (expand-optimized-typecase obj clauses))
-  
 (defun map-permutations (visit data)
   "call the given unary VISITOR function once for each permutation of the given list DATA"
   (declare (type list data)
