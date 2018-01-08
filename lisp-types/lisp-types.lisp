@@ -105,7 +105,8 @@ If N > (length of data) then a permutation of DATA is returned"
 (defun slow-smarter-subtypep (t1 t2)
   (declare (optimize (speed 3) (compilation-speed 0)))
   (cond
-    ((typep t1 '(cons (member eql member))) ; (eql obj) or (member obj1 ...)
+    ((and *reduce-member-type*
+          (typep t1 '(cons (member eql member)))) ; (eql obj) or (member obj1 ...)
      (list (every #'(lambda (obj)
                       (declare #+sbcl (notinline typep))
                       (ignore-errors (typep obj t2)))

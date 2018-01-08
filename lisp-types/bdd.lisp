@@ -405,5 +405,3 @@
           (t
            `(or (and ,(bdd-label bdd) ,(bdd-to-expr (bdd-left bdd)))
                 (and (not ,(bdd-label bdd)) ,(bdd-to-expr (bdd-right bdd))))))))
-
-

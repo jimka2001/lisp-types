@@ -25,61 +25,73 @@
 (defvar *satisfies-symbols* t
   "The initial value is t so there will be an error if a function tries to push onto it without rebinding with dynamic extent.")
 
-(defun define-type-predicate (type-specifier)
-  (let ((function-name (gensym "f")))
+(defun define-type-predicate (type-specifier &key suggestion)
+  (let ((function-name (gensym (typecase suggestion
+                                 ((cons symbol)
+                                  (concatenate 'string
+                                               (symbol-name (car suggestion)) "-"))
+                                 (t "f")))))
     (setf (symbol-function function-name)
           #'(lambda (obj)
               (typep obj type-specifier)))
     function-name))
 
-(defun build-bdd-arg-from-typecase-body (type-case-body)
-  (apply #'values
-         (reduce (lambda (acc clause)
-                   (destructuring-bind (type &rest clause-body) clause
-                     (destructuring-bind (acc-type leading-types) acc
-                       (let ((f (define-type-predicate type)))
-                         (push f *satisfies-symbols*)
-                         (setf (get f :clause-body) clause-body)
-                         (list `(or ,acc-type
-                                    (and (not (or ,@leading-types)) ,type
-                                         (satisfies ,f)))
-                               (cons type leading-types))))))
-                 type-case-body :initial-value '(nil nil))))
+(defun typecase-to-type (type-case-body)
+  (car
+   (reduce (lambda (acc clause)
+             (destructuring-bind (type &rest clause-body) clause
+               (destructuring-bind (acc-type leading-types) acc
+                 (let ((f (define-type-predicate type :suggestion (car (last clause-body)))))
+                   (push f *satisfies-symbols*)
+                   (setf (get f :clause-body) clause-body)
+                   (list `(or ,acc-type
+                              (and (not (or ,@leading-types)) ,type
+                                   (satisfies ,f)))
+                         (cons type leading-types))))))
+           type-case-body :initial-value '(nil nil))))
 
 (defun bdd-to-if-then-else-labels (bdd obj)
   "expand into linear size code as LABELS, whose runtime is logrithmic and code size is linear"
-  (let (bdd->name-mapping)
-    (labels ((walk-bdd (bdd)
-               (typecase bdd
-                 (bdd-false)
-                 (bdd-true)
-                 (bdd-node
-                  (unless (assoc bdd bdd->name-mapping)
-                    (push (list bdd (gensym "L")) bdd->name-mapping)
-                    (walk-bdd (bdd-left bdd))
-                    (walk-bdd (bdd-right bdd))))))
-             (branch (bdd)
-               (typecase bdd
-                 (bdd-false nil)
-                 (bdd-true t)
-                 (bdd-node
-                  (list (cadr (assoc bdd bdd->name-mapping))))))
-             (label-function (bdd)
-               (typecase bdd
-                 (bdd-node
-                  (if (and (typep (bdd-label bdd) '(cons (eql satisfies)))
-                           (member (cadr (bdd-label bdd)) *satisfies-symbols*))
-                      `(,(cadr (assoc bdd bdd->name-mapping)) ()
-                        ,@(get (cadr (bdd-label bdd)) :clause-body))
-                      `(,(cadr (assoc bdd bdd->name-mapping)) ()
-                        (if (typep ,obj ',(bdd-label bdd))
-                            ,(branch (bdd-left bdd))
-                            ,(branch (bdd-right
-                                      bdd)))))))))
+  (let (used mapping)
+    (labels
+        ((walk-bdd (bdd)
+           (typecase bdd
+             (bdd-false)
+             (bdd-true)
+             (bdd-node
+              (unless (assoc bdd mapping)
+                (push (list bdd (gensym "L")) mapping)
+                (walk-bdd (bdd-left bdd))
+                (walk-bdd (bdd-right bdd))))))
+         (branch (bdd)
+           (typecase bdd
+             (bdd-false nil)
+             (bdd-true t)
+             (bdd-node
+              (list (cadr (assoc bdd mapping))))))
+         (label-function (bdd)
+           (typecase bdd
+             (bdd-node
+              (cond
+                ((and (typep (bdd-label bdd) '(cons (eql satisfies)))
+                      (member (cadr (bdd-label bdd)) *satisfies-symbols*))
+                 (pushnew (cadr (bdd-label bdd)) used)
+                 `(,(cadr (assoc bdd mapping)) ()
+                   ,@(get (cadr (bdd-label bdd)) :clause-body)))
+                (t
+                 `(,(cadr (assoc bdd mapping)) ()
+                   (if (typep ,obj ',(bdd-label bdd))
+                       ,(branch (bdd-left bdd))
+                       ,(branch (bdd-right
+                                 bdd))))))))))
       (walk-bdd bdd)
-      `(lambda (,obj)
-         (labels ,(mapcar #'label-function (mapcar #'car bdd->name-mapping))
-             ,(branch bdd))))))
+      (values
+       `(lambda (,obj)
+          (labels ,(mapcar #'label-function (mapcar #'car mapping))
+            ,(branch bdd)))
+       (loop :for f :in *satisfies-symbols*
+             :unless (member f used)
+               :collect (get f :clause-body))))))
 
 (defun bdd-to-if-then-else-tagbody/go (bdd obj)
   "expand into linear size code as TAGBODY/GO, whose runtime is logrithmic and code size is linear"
@@ -154,5 +166,5 @@
   ;; to make the output more human readable, using LABELS, rather than GO
   ;;  use bdd-to-if-then-else-labels rather than bdd-to-if-then-else-tagbody/go
   (bdd-typecase-expander obj clauses #'bdd-to-if-then-else-tagbody/go)
-  ;; (bdd-typecase-expander obj clauses #'bdd-to-if-then-else-labels)
+  ;;(bdd-typecase-expander obj clauses #'bdd-to-if-then-else-labels)
   )

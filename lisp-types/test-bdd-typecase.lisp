@@ -29,15 +29,15 @@
       (format t "3 importing name=~A into  :lisp-types.test~%" name)
       (shadowing-import name :lisp-types.test))))
 
-(define-test lisp-types/build-bdd-arg-from-typecase-body
+(define-test lisp-types/typecase-to-type
   (assert-test (equal nil
-                      (build-bdd-arg-from-typecase-body 
+                      (typecase-to-type 
                        '( ;; typecase obj
                          ))))
   
   (assert-test (equal
                 '(OR NIL (AND (NOT (OR)) FLOAT (:TYPECASE-FORM 100)))
-                (build-bdd-arg-from-typecase-body 
+                (typecase-to-type 
                  '( ;; typecase obj
                    (float 100)
                    ))))
@@ -45,7 +45,7 @@
   (assert-test (equal
                 '(OR (OR NIL (AND (NOT (OR)) FLOAT (:TYPECASE-FORM 100)))
                   (AND (NOT (OR FLOAT)) NUMBER (:TYPECASE-FORM 200)))
-                (build-bdd-arg-from-typecase-body 
+                (typecase-to-type 
                  '( ;; typecase obj          ;
                    (float 100)
                    (number 200)))))
@@ -56,7 +56,7 @@
                     (AND (NOT (OR FLOAT)) NUMBER (:TYPECASE-FORM 200)))
                    (AND (NOT (OR NUMBER FLOAT)) STRING (:TYPECASE-FORM 300)))
                   (AND (NOT (OR STRING NUMBER FLOAT)) ARRAY (:TYPECASE-FORM 400)))
-                (build-bdd-arg-from-typecase-body 
+                (typecase-to-type 
                  '( ;; typecase obj          ;
                    (float 100)
                    (number 200)
