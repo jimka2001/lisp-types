@@ -167,29 +167,32 @@
       (%bdd-node label *bdd-true* *bdd-false*)
       (error "invalid type specifier: ~A" label)))
 
+(defgeneric bdd-list-to-bdd (head tail))
+
+(defmethod bdd-list-to-bdd ((head (eql 'and)) tail)
+  (reduce #'bdd-and (mapcar #'bdd tail) :initial-value *bdd-true*))
+
+(defmethod bdd-list-to-bdd ((head (eql 'or)) tail)
+  (reduce #'bdd-or (mapcar #'bdd tail) :initial-value *bdd-false*))
+
+(defmethod bdd-list-to-bdd ((head (eql 'not)) tail)
+  ;; (assert (null (cdr tail)) ()
+  ;;         "NOT takes exactly one argument: cannot convert ~A to a BDD" expr)
+  (bdd-and-not *bdd-true* (bdd (car tail))))
+
+(defmethod bdd-list-to-bdd ((head (eql 'and-not)) tail)
+  ;; (assert (<= 2 (length tail)) ()
+  ;;         "AND-NOT takes at least two arguments: cannot convert ~A to a BDD" expr)
+  (destructuring-bind (bdd-head &rest bdd-tail) (mapcar #'bdd tail)
+    (reduce #'bdd-and-not bdd-tail :initial-value bdd-head)))
+
+(defmethod bdd-list-to-bdd (head tail &aux (expr (cons head tail)))
+  (if (valid-type-p expr)
+      (%bdd-node expr *bdd-true* *bdd-false*)
+      (error "invalid type specifier: ~A" expr)))
+
 (defmethod bdd ((expr list))
-  (declare (optimize (speed 3) (debug 0) (compilation-speed 0) (space 0)))
-  (destructuring-bind (head &rest tail) expr
-    (flet ((bdd-tail ()
-             (mapcar #'bdd tail)))
-      (case head
-        ((and)
-         (reduce #'bdd-and (bdd-tail) :initial-value *bdd-true* ))
-        ((or)
-         (reduce #'bdd-or (bdd-tail) :initial-value *bdd-false*))
-        ((not)
-         ;; (assert (null (cdr tail)) ()
-         ;;         "NOT takes exactly one argument: cannot convert ~A to a BDD" expr)
-         (bdd-and-not *bdd-true* (bdd (car tail))))
-        ((and-not)
-         ;; (assert (<= 2 (length tail)) ()
-         ;;         "AND-NOT takes at least two arguments: cannot convert ~A to a BDD" expr)
-         (destructuring-bind (bdd-head &rest bdd-tail) (bdd-tail)
-           (reduce #'bdd-and-not bdd-tail :initial-value bdd-head)))
-        (t
-         (if (valid-type-p expr)
-             (%bdd-node expr *bdd-true* *bdd-false*)
-             (error "invalid type specifier: ~A" expr)))))))
+  (bdd-list-to-bdd (car expr) (cdr expr)))
 
 (defmethod bdd ((label (eql nil)))
   *bdd-false*)
@@ -258,9 +261,11 @@
 (defmethod bdd-and-not ((true bdd-true) (b bdd))
   (%bdd-node (bdd-label b)
             (bdd-and-not *bdd-true* (bdd-left b))
-            (bdd-and-not *bdd-true* (bdd-right b))))
+            (bdd-and-not *bdd-true* (bdd-right b))
+            :bdd-node-class (class-of b)))
 
-(defun bdd-cmp (t1 t2)
+
+(defun %bdd-cmp (t1 t2)
   (cond
     ((equal t1 t2)
      '=)
@@ -268,6 +273,12 @@
      '<)
     ((null t2)
      '>)
+    ((and (listp t1)
+          (not (listp t2)))
+     '>)
+    ((and (listp t2)
+          (not (listp t1)))
+     '<)
     ((not (eql (class-of t1) (class-of t2))) 
      (bdd-cmp (class-name (class-of t1)) (class-name (class-of t2))))
     (t
@@ -313,6 +324,16 @@
        (t
         (error "cannot compare a ~A with a ~A" (class-of t1) (class-of t2)))))))
 
+(defvar *bdd-cmp-function* #'%bdd-cmp)
+
+(defun bdd-cmp (t1 t2)
+  (the (member < > =)
+       (funcall *bdd-cmp-function* t1 t2)))
+
+(defgeneric bdd-cmp-bdd (bdd1 bdd2))
+(defmethod bdd-cmp-bdd ((bdd1 bdd-node) (bdd2 bdd-node))
+  (bdd-cmp (bdd-label bdd1) (bdd-label bdd2)))
+
 (flet ((bdd-op (op b1 b2)
          (declare (type bdd b1 b2))
          (let ((a1 (bdd-label b1))
@@ -322,13 +343,13 @@
                (c2 (bdd-left b2))
                (d2 (bdd-right b2)))
            (declare (type bdd c1 c2 d1 d2))
-           (ecase (bdd-cmp a1 a2)
+           (ecase (bdd-cmp-bdd b1 b2)
              ((=)
-              (%bdd-node a1 (funcall op c1 c2) (funcall op d1 d2)))
+              (%bdd-node a1 (funcall op c1 c2) (funcall op d1 d2) :bdd-node-class (class-of b1)))
              ((<)
-              (%bdd-node a1 (funcall op c1 b2) (funcall op d1 b2)))
+              (%bdd-node a1 (funcall op c1 b2) (funcall op d1 b2) :bdd-node-class (class-of b1)))
              ((>)
-              (%bdd-node a2 (funcall op b1 c2) (funcall op b1 d2)))))))
+              (%bdd-node a2 (funcall op b1 c2) (funcall op b1 d2) :bdd-node-class (class-of b2)))))))
 
   (defmethod bdd-or ((b1 bdd-node) (b2 bdd-node))
     (if (eq b1 b2)
@@ -384,5 +405,3 @@
           (t
            `(or (and ,(bdd-label bdd) ,(bdd-to-expr (bdd-left bdd)))
                 (and (not ,(bdd-label bdd)) ,(bdd-to-expr (bdd-right bdd))))))))
-
-

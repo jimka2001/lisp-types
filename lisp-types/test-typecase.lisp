@@ -114,52 +114,8 @@
   )
 
 
-(define-test rte/optimized-typecase
-  (assert-true (equal (macroexpand-1 (macroexpand-1 '(lisp-types::optimized-typecase fred
-						      (integer 42)
-						      (bignum 43)
-						      (number 44)
-						      (string 45)
-						      ((or string float) 46)
-						      ((or string number) 47))))
-		      '(TYPECASE FRED
-			(STRING 45)
-			(INTEGER 42)
-			(NUMBER 44)
-			(NIL 47)
-			(NIL 46)
-			(NIL 43))))
-
-  (assert-true (equal (macroexpand-1 (macroexpand-1 '(lisp-types::optimized-typecase fred
-						      (integer 42)
-						      ((and number (not integer)) 43)
-						      ((and number (not bignum)) 44))))
-		      '(TYPECASE FRED
-			(INTEGER 42)
-			(NUMBER 43)
-			(NIL 44)))))
 
 
-(define-test rte/optimized-typecase2
-  (assert-true (equal (lisp-types:optimized-typecase 1
-					      (null 2)
-					      (t 3))
-		      3))
-  (assert-true (equal (lisp-types:optimized-typecase nil
-					      (null 2)
-					      (t 3))
-		      2))
-  (assert-true (equal (lisp-types:optimized-typecase 1
-					      (t 2))
-		      2))
-
-  (assert-true (equal (lisp-types:optimized-typecase 1
-					      (null 2))
-		      nil))
-  (assert-true (equal (lisp-types:optimized-typecase nil
-					      (null 2))
-		      2))
-  )
 
 (define-test lisp-types/auto-permute-typecase
   (dolist (obj '(1 "hello" 3.4 nil :x))

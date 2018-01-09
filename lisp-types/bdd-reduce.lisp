@@ -65,7 +65,7 @@
          (right-reductions (mapcar #'cddddr (setof r reductions
                                               (eq :right (getf r :child))))))
 
-    (defun %bdd-node (label left-bdd right-bdd)
+    (defun %bdd-node (label left-bdd right-bdd &key (bdd-node-class 'bdd-node))
       (cond
         ((eq left-bdd right-bdd) ;; 26%
          left-bdd)
@@ -78,7 +78,7 @@
               new-left)
              ((bdd-find *bdd-hash* label new-left new-right)) ;;7%
              (t
-              (let* ((bdd (make-instance 'bdd-node
+              (let* ((bdd (make-instance bdd-node-class
                                          :label label
                                          :left  new-left
                                          :right new-right))
@@ -86,35 +86,38 @@
                 (incr-hash)
                 (setf (gethash key *bdd-hash*) bdd)
                 (setf (gethash key *bdd-hash*)
-                      (cond
-                        ;; check (bdd-and-not bdd new-left)
-                        ;;   vs  (bdd-and-not new-left bdd)
-                        ((bdd-type-equal bdd new-left) ;; 0.006%   ;; TODO perhaps it is more interesting to check equivalance first to the 'smaller' of new-left and new-right, not sure because checking for smaller might be slow, and making a new slot to store the size might expand memory enough to also make the program slower?
-                         new-left)
-                        ;; check (bdd-and-not bdd new-right)
-                        ;;   vs  (bdd-and-not new-right bdd)
-                        ((bdd-type-equal bdd new-right) ;; 0.5%
-                         new-right)
-                        ;; the next two clauses, which use CL:SUBTYPEP are necessary
-                        ;; because the CL type system contains lots of identities
-                        ;; which are difficult to encode.  such as
-                        ;;   (nil = (and (not integer) (not ration) rational))
-                        ;;  and several more.  Even if we could encode all these relationships,
-                        ;;  there are more potential relationships every time a user's deftype
-                        ;;  is evaluated.  For example, it might be that
-                        ;;  (nil = (and user-type (not (cons string))))
-                        ;;  but we can't find that out as there's no way to iterate
-                        ;;  through all the user's type definitions and their expansions.
-                        ((smarter-subtypep (bdd-to-expr bdd) nil) ;; 0.03%
-                         *bdd-false*)
-                        ((smarter-subtypep t (bdd-to-expr bdd))
-                         *bdd-true*)
-                        (t ;; 1.7%
-                         bdd))))))))))))
+                      (bdd-reduce-allocated bdd new-left new-right)))))))))))
 
-(defun bdd-find-reduction (label bdd reduction-rules)
-  (declare (type bdd bdd)
-           (type list reduction-rules)
+(defmethod bdd-reduce-allocated ((bdd bdd-node) new-left new-right)
+  (cond
+    ;; check (bdd-and-not bdd new-left)
+    ;;   vs  (bdd-and-not new-left bdd)
+    ((bdd-type-equal bdd new-left) ;; 0.006%   ;; TODO perhaps it is more interesting to check equivalance first to the 'smaller' of new-left and new-right, not sure because checking for smaller might be slow, and making a new slot to store the size might expand memory enough to also make the program slower?
+     new-left)
+    ;; check (bdd-and-not bdd new-right)
+    ;;   vs  (bdd-and-not new-right bdd)
+    ((bdd-type-equal bdd new-right) ;; 0.5%
+     new-right)
+    ;; the next two clauses, which use CL:SUBTYPEP are necessary
+    ;; because the CL type system contains lots of identities
+    ;; which are difficult to encode.  such as
+    ;;   (nil = (and (not integer) (not ration) rational))
+    ;;  and several more.  Even if we could encode all these relationships,
+    ;;  there are more potential relationships every time a user's deftype
+    ;;  is evaluated.  For example, it might be that
+    ;;  (nil = (and user-type (not (cons string))))
+    ;;  but we can't find that out as there's no way to iterate
+    ;;  through all the user's type definitions and their expansions.
+    ((smarter-subtypep (bdd-to-expr bdd) nil) ;; 0.03%
+     *bdd-false*)
+    ((smarter-subtypep t (bdd-to-expr bdd))
+     *bdd-true*)
+    (t ;; 1.7%
+     bdd)))
+
+
+(defmethod bdd-find-reduction (label (bdd bdd) reduction-rules)
+  (declare (type list reduction-rules)
            (optimize (speed 3)))
   "Apply each of the REDUCTION-RULES to BDD.  Some of the reduction rules may
 result in reducing the BDD to a simpler form.   If no reduction rule applies
@@ -136,7 +139,7 @@ Each element of REDUCTION-RULES is a plist having at least the keys
     (if (eq bdd reduced)
         nil
         reduced)))
-      
+
 (defun bdd-reduce (label bdd search)
   "This recursive function starts at a BDD whose bdd-label is LABEL, but during the
 recursive descent, LEVEL remains fixed, while BDD walks the BDD dag.  At each step,
@@ -152,7 +155,8 @@ according to the LABEL which is now the label of some parent in its lineage."
                (t
                 (%bdd-node (bdd-label bdd)
                            (recure (bdd-left bdd))
-                           (recure (bdd-right bdd)))))))
+                           (recure (bdd-right bdd))
+                           :bdd-node-class (class-of bdd))))))
     (recure bdd)))
 
 (defun check-table ()
@@ -550,10 +554,10 @@ of min-terms, this function returns a list of the min-terms."
                 nil)
                (bdd-node
                 (nconc (mapcar (lambda (left)
-                                 (%bdd-node (bdd-label term) left *bdd-false*))
+                                 (%bdd-node (bdd-label term) left *bdd-false* :bdd-node-class (class-of term)))
                                (recure (bdd-left term)))
                        (mapcar (lambda (right)
-                                 (%bdd-node (bdd-label term) *bdd-false* right))
+                                 (%bdd-node (bdd-label term) *bdd-false* right :bdd-node-class (class-of term)))
                                (recure (bdd-right term))))))))
     (recure bdd)))
 

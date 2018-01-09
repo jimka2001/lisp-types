@@ -104,6 +104,8 @@
      type-spec)))
 
 
+(defvar *reduce-member-type* t)
+
 (defun type-to-dnf (type)
   (declare (optimize (speed 3) (debug 0) (compilation-speed 0) (space 0)))
   (labels ((and? (obj)
@@ -132,7 +134,8 @@
            (to-dnf (type)
              (declare (type (or list symbol) type))
              (when (and? type)
-               (setf type (reduce-member-type type)))
+               (when *reduce-member-type*
+                 (setf type (reduce-member-type type))))
              (when (and? type)
                ;; (and a b NIL c d) --> NIL
                (when (member nil (cdr type) :test #'eq)

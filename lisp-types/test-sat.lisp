@@ -88,7 +88,6 @@
 
 (define-test types/sat2
   (let (all-numbers decom decom-sat excl)
-    ;; (cl-user::print-vals
      (setf all-numbers (valid-subtypes 'number))
      (length all-numbers)
      (setf decom (decompose-types-graph all-numbers))
@@ -97,7 +96,6 @@
      (length decom-sat)
      (setf excl (set-exclusive-or decom decom-sat :test #'equivalent-types-p))
      (assert-true (null excl))
-    ;;)
   ))
 
 (define-test type/sat3
