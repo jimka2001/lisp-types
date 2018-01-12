@@ -1528,3 +1528,15 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
 
   (loop :for n :from n-min :to n-max
         :do (format t "(~A, ~A)~%" n (- (log2 (- n 2 (log2 n))) 2))))
+
+(defun call-with-caffeinate (thunk)
+  (let ((caff (sb-ext:run-program "caffeinate"
+                                  '("-i" "sleep" "31449600") ;; sleep for 1 year or until killed
+                                  :search t :wait nil)))
+    (prog1 (funcall thunk)
+      (sb-ext:process-kill caff 1))))
+
+(defmacro caffeinate (&body body)
+  "Evaluate the given code body, but using the caffeinate MACOS program to prevent the system from
+sleeping before the code finishes evaluating."
+  `(call-with-caffeinate (lambda () ,@body)))
