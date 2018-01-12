@@ -42,7 +42,7 @@
   list)
 
 (defun enter-conses (hash object)
-  "HASH is a hash-tabel which uses EQUAL as test.
+  "HASH is a hash-table which uses EQUAL as test.
    OBJECT is any lisp object.
    ENTER-CONSES returns an object which is EQUAL to the given OBJECT,
    but subsequent times ENTER-CONSES is called with another such EQUAL
@@ -101,6 +101,11 @@ If N > (length of data) then a permutation of DATA is returned"
 
 ;;(assert (not (valid-type-p (gensym))))
 ;;(assert (valid-type-p 'bignum))
+
+(defvar *reduce-member-type* t)
+
+
+
 
 (defun slow-smarter-subtypep (t1 t2)
   (declare (optimize (speed 3) (compilation-speed 0)))

@@ -26,7 +26,7 @@
            (when *bdd-verbose*
              (when (= 0 (mod *bdd-hash-access-count* 10000))
                (format t "bdd hash = ~A wall-time=~A cpu-time=~A~%"
-                       *bdd-hash*
+                       (getf *bdd-hash-struct* :hash)
                        (truncate (get-internal-run-time) internal-time-units-per-second)
                        (truncate (get-universal-time) internal-time-units-per-second)))))
          (relation (r x-parity y-parity)
@@ -69,14 +69,14 @@
       (cond
         ((eq left-bdd right-bdd) ;; 26%
          left-bdd)
-        ((bdd-find *bdd-hash* label left-bdd right-bdd)) ;; 63%
+        ((bdd-find (bdd-hash) label left-bdd right-bdd)) ;; 63%
         (t ;; 11%
          (let ((new-left  (bdd-reduce label left-bdd  left-reductions))
                (new-right (bdd-reduce label right-bdd right-reductions)))
            (cond
              ((eq new-left new-right) ;; 2.5%
               new-left)
-             ((bdd-find *bdd-hash* label new-left new-right)) ;;7%
+             ((bdd-find (bdd-hash) label new-left new-right)) ;;7%
              (t
               (let* ((bdd (make-instance bdd-node-class
                                          :label label
@@ -84,8 +84,8 @@
                                          :right new-right))
                      (key (bdd-make-key label (bdd-ident new-left) (bdd-ident new-right))))
                 (incr-hash)
-                (setf (gethash key *bdd-hash*) bdd)
-                (setf (gethash key *bdd-hash*)
+                (setf (gethash key (bdd-hash)) bdd)
+                (setf (gethash key (bdd-hash))
                       (bdd-reduce-allocated bdd new-left new-right)))))))))))
 
 (defmethod bdd-reduce-allocated ((bdd bdd-node) new-left new-right)
@@ -161,16 +161,6 @@ according to the LABEL which is now the label of some parent in its lineage."
 
 (defun check-table ()
   nil
-  ;; (maphash (lambda (key1 bdd1)
-  ;;            (maphash (lambda (key2 bdd2)
-  ;;                       (cond ((eq bdd1 bdd2))
-  ;;                             ((not (equal (bdd-to-dnf bdd1)
-  ;;                                          (bdd-to-dnf bdd2))))
-  ;;                             (t
-  ;;                              (assert nil (bdd1 bdd2 key1 key2)
-  ;;                                      "two bdds have some DNF"))))
-  ;;                     *bdd-hash*))
-  ;;          *bdd-hash*)
   )
 
 
@@ -560,6 +550,14 @@ of min-terms, this function returns a list of the min-terms."
                                  (%bdd-node (bdd-label term) *bdd-false* right :bdd-node-class (class-of term)))
                                (recure (bdd-right term))))))))
     (recure bdd)))
+
+(defun bdd-decompose-types-strong (type-specifiers)
+  (let ((*bdd-hash-strengh* :strong))
+    (bdd-decompose-types type-specifiers)))
+
+(defun bdd-decompose-types-weak (type-specifiers)
+  (let ((*bdd-hash-strengh* :weak))
+    (bdd-decompose-types type-specifiers)))
 
 (defun bdd-decompose-types (type-specifiers)
   (when type-specifiers

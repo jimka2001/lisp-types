@@ -76,21 +76,44 @@
                    (incf c)))
     c))
 
-(defun bdd-new-hash ()
-  (make-hash-table :test #'equal
-                   #+sbcl :weakness #+sbcl :value
-                   #+allegro :values #+allegro :weak))
+(defvar *bdd-generation* 0)
+(defvar *bdd-hash-strengh* :strong ) ;; or :weak
+(defun bdd-new-hash (&key (weak (eq *bdd-hash-strengh* :weak)))
+  (incf *bdd-generation*)
+  (list :generation *bdd-generation*
+        :recent-count 0
+        :strength weak
+        :hash 
+        (if weak
+            (make-hash-table :test #'equal
+                             #+sbcl :weakness #+sbcl :value
+                             #+allegro :values #+allegro :weak)
+            (make-hash-table :test #'equal))))
 
-(defvar *bdd-hash* (bdd-new-hash))
+(defvar *bdd-hash-struct* nil)
+(defun bdd-hash ()
+  (getf *bdd-hash-struct* :hash))
+(defun bdd-recent-count ()
+  (getf *bdd-hash-struct* :recent-count))
+
+(defun (setf bdd-recent-count) (value)
+  (setf (getf *bdd-hash-struct* :recent-count)
+        value))
+
+(defun bdd-generation ()
+  (getf *bdd-hash-struct* :generation))
+
+;;(defvar *bdd-hash* (bdd-new-hash))
+;;(defvar *bdd-recent-count* 0)
+
 (defvar *bdd-verbose* nil)
-
 
 (defmacro bdd-with-new-hash (vars &body body)
   `(bdd-call-with-new-hash (lambda ,vars ,@body)))
 
 (defun bdd-call-with-new-hash (thunk &key (verbose *bdd-verbose*))
   (let ((*bdd-verbose* verbose)
-        (*bdd-hash* (bdd-new-hash)))
+        (*bdd-hash-struct* (bdd-new-hash)))
     ;; (setf (gethash :type-system *bdd-hash*)
     ;;       (bdd '(not (or
     ;;                   (and (not integer) (not ratio) rational)
@@ -101,7 +124,7 @@
     (caching-types
      (prog1 (funcall thunk)
        (when verbose
-         (format t "finished with ~A~%" *bdd-hash*))))))
+         (format t "finished with ~A~%" (bdd-hash)))))))
   
 (defun bdd-make-key (label left right)
   (list left right label))
@@ -113,7 +136,22 @@
 
 (defun bdd-find (hash label left-bdd right-bdd)
   (declare (type bdd left-bdd right-bdd))
+  (when (eq hash (bdd-hash))
+    (setf (bdd-recent-count) (hash-table-count (bdd-hash))))
   (bdd-find-int-int hash label (bdd-ident left-bdd) (bdd-ident right-bdd)))
+
+#+sbcl
+(progn
+  (defun report-hash-lossage ()
+    (when (bdd-hash)
+      (let ((old (bdd-recent-count))
+            (new (hash-table-count (bdd-hash))))
+        (unless (= old new)
+          (format t "generation=~D Before GC hash count was ~A, after GC is ~A, lossage=~A~%"
+                  *bdd-generation* old new (- old new))
+          (setf (bdd-recent-count) new)))))
+  (pushnew 'report-hash-lossage sb-ext:*after-gc-hooks*))
+
 
 (defmethod print-object ((bdd bdd) stream)
   (print-unreadable-object (bdd stream :type t :identity nil)
