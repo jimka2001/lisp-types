@@ -463,6 +463,14 @@
 (defun count-parents-per-node (node)
   (length (getf node :super-types)))
 
+(defun decompose-types-bdd-graph-strong (type-specifiers)
+  (let ((*bdd-hash-strengh* :strong))
+    (decompose-types-bdd-graph type-specifiers)))
+
+(defun decompose-types-bdd-graph-weak (type-specifiers)
+  (let ((*bdd-hash-strengh* :weak))
+    (decompose-types-bdd-graph type-specifiers)))
+
 (defun decompose-types-bdd-graph (type-specifiers)
   (decompose-by-graph-1 type-specifiers :graph-class 'bdd-graph))
 

@@ -104,8 +104,6 @@
      type-spec)))
 
 
-(defvar *reduce-member-type* t)
-
 (defun type-to-dnf (type)
   (declare (optimize (speed 3) (debug 0) (compilation-speed 0) (space 0)))
   (labels ((and? (obj)

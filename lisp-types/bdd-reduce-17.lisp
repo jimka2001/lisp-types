@@ -57,10 +57,11 @@
              :initform nil)))
 
 (defgeneric extract-disjoint (graph))
-(defgeneric decompose-graph-1 (g))
-(defgeneric decompose-graph-2 (g))
+(defgeneric decompose-graph-1 (g u))
+(defgeneric decompose-graph-2 (g u))
+(defgeneric construct-graph (g u))
 
-(defmethod decompose-graph-1 ((g graph))
+(defmethod decompose-graph-1 ((g graph) u)
   (loop :while (or (blue g) (green g))
         :do (dolist (x->y (blue g))
               (destructuring-bind (x y) x->y
@@ -70,11 +71,19 @@
                 (break-touching g x y))))
   (extract-disjoint g))
 
+(defmethod decompose-graph-1 :around ((g graph) u)
+  (construct-graph g u)
+  (call-next-method))
+
+(defmethod decompose-graph-2 :around ((g graph) u)
+  (construct-graph g u)
+  (call-next-method))
+
 (defun decompose-by-graph-1 (u &key (graph-class 'sexp-graph))
   (declare (type list u))
-  (decompose-graph-1 (construct-graph graph-class u)))
+  (decompose-graph-1 (make-instance graph-class) u))
 
-(defmethod decompose-graph-2 ((g graph))
+(defmethod decompose-graph-2 ((g graph) u)
   (loop :while (or (blue g) (green g))
         :do (dolist (x->y (blue g))
               (destructuring-bind (x y) x->y
@@ -89,34 +98,35 @@
 
 (defun decompose-by-graph-2 (u &key (graph-class 'sexp-graph))
   (declare (type list u))
-  (decompose-graph-2 (construct-graph graph-class u)))
+  (decompose-graph-2 (make-instance graph-class) u))
 
-(defun construct-graph (graph-class u)
+(defmethod construct-graph ((g graph) u)
   (declare (type list u))
-  (let ((g (make-instance graph-class)))
-    (dolist (label u)
-      (add-node g label))
-    (mapl (lambda (tail)
-            (let ((x (car tail)))
-              (mapc (lambda (y)
-                      (cond
-                        ((node-subtypep x y)
-                         (add-blue-arrow g x y))
-                        ((node-subtypep y x)
-                         (add-blue-arrow g y x))
-                        (t
-                         (multiple-value-bind (disjoint trust) (node-disjoint-types-p x y)
-                           (cond
-                             ((null trust) ;; maybe intersection types, not sure
-                              (add-green-line g x y))
-                             (disjoint
-                              nil)
-                             (t ;; intersecting types
-                              (add-green-line g x y)))))))
-                    (cdr tail)))) (nodes g))
-    (dolist (node (nodes g))
-      (maybe-disjoint-node g node))
-    g))
+  (dolist (label u)
+    (add-node g label))
+  (mapl (lambda (tail)
+          (let ((x (car tail)))
+            (mapc (lambda (y)
+                    (cond
+                      ((node-subtypep x y)
+                       (add-blue-arrow g x y))
+                      ((node-subtypep y x)
+                       (add-blue-arrow g y x))
+                      (t
+                       (multiple-value-bind (disjoint trust) (node-disjoint-types-p x y)
+                         (cond
+                           ((null trust) ;; maybe intersection types, not sure
+                            (add-green-line g x y))
+                           (disjoint
+                            nil)
+                           (t ;; intersecting types
+                            (add-green-line g x y)))))))
+                  (cdr tail)))) (nodes g))
+  
+  (dolist (node (nodes g))
+    (maybe-disjoint-node g node))
+
+  g)
   
 (defun maybe-disjoint-node (g node)
   (declare (type graph g) (type node node))
@@ -264,11 +274,11 @@
 (defmethod extract-disjoint ((g sexp-graph))
   (mapcar #'label (disjoint g)))
 
-(defmethod decompose-graph-1 ((g sexp-graph))
+(defmethod decompose-graph-1 ((g sexp-graph) u)
   (caching-types
     (call-next-method)))
 
-(defmethod decompose-graph-2 ((g sexp-graph))
+(defmethod decompose-graph-2 ((g sexp-graph) u)
   (caching-types
     (call-next-method)))
 
@@ -306,10 +316,16 @@
 (defmethod extract-disjoint ((g bdd-graph))
   (mapcar #'bdd-to-dnf (mapcar #'label (disjoint g))))
 
-(defmethod decompose-graph-1 ((g bdd-graph))
+
+(defmethod decompose-graph-2 :around ((g bdd-graph) u)
+  (construct-graph g u)
+  (call-next-method))
+
+
+(defmethod decompose-graph-1 :around ((g bdd-graph) u)
   (bdd-with-new-hash ()
    (call-next-method)))
 
-(defmethod decompose-graph-2 ((g bdd-graph))
+(defmethod decompose-graph-2 :around ((g bdd-graph) u)
   (bdd-with-new-hash ()
    (call-next-method)))

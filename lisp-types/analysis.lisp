@@ -149,16 +149,41 @@
                  with t1 = (car types)
                  nconc (list t1 `(and ,t1 ,t2) `(or ,t1, t2)))))
 
+(defvar *colors* 
+ '(
+    "000000" "ffff00" "1ce6ff" "ff34ff" "ff4a46" "008941" "006fa6" "a30059"
+   ;;"ffdbe5"
+   "7a4900" "0000a6" "63ffac" "b79762" "004d43" "8fb0ff" "997d87"
+    "5a0007" "809693" "feffe6" "1b4400" "4fc601" "3b5dff" "4a3b53" "ff2f80"
+    "61615a" "ba0900" "6b7900" "00c2a0" "ffaa92" "ff90c9" "b903aa" "d16100"
+    "ddefff" "000035" "7b4f4b" "a1c299" "300018" "0aa6d8" "013349" "00846f"
+    "372101" "ffb500" "c2ffed" "a079bf" "cc0744" "c0b9b2" "c2ff99" "001e09"
+    "00489c" "6f0062" "0cbd66" "eec3ff" "456d75" "b77b68" "7a87a1" "788d66"
+    "885578" "fad09f" "ff8a9a" "d157a0" "bec459" "456648" "0086ed" "886f4c"
+
+    "34362d" "b4a8bd" "00a6aa" "452c2c" "636375" "a3c8c9" "ff913f" "938a81"
+    "575329" "00fecf" "b05b6f" "8cd0ff" "3b9700" "04f757" "c8a1a1" "1e6e00"
+    "7900d7" "a77500" "6367a9" "a05837" "6b002c" "772600" "d790ff" "9b9700"
+    "549e79" "fff69f" "201625" "72418f" "bc23ff" "99adc0" "3a2465" "922329"
+    "5b4534" "fde8dc" "404e55" "0089a3" "cb7e98" "a4e804" "324e72" "6a3a4c"
+    "83ab58" "001c1e" "d1f7ce" "004b28" "c8d0f6" "a3a489" "806c66" "222800"
+    "bf5650" "e83000" "66796d" "da007c" "ff1a59" "8adbb4" "1e0200" "5b4e51"
+    "c895c5" "320033" "ff6832" "66e1d3" "cfcdac" "d0ac94" "7ed379" "012c58"
+    ))
+
 
 (defvar *decomposition-function-descriptors*
-  `((:names (decompose-types) :max-num-types 15 :color "blue" :legend t)
-    (:names (decompose-types-rtev2) :max-num-types nil :color "olive" :legend t)
-    (:names (decompose-types-sat) :color "dark-cyan"  :legend t)
-    (:names (decompose-types-graph) :gnu-color "pink" :color "lavender" :legend t)
-    (:names (bdd-decompose-types) :color "orange" :legend t)
-    (:names ,*decompose-fun-names* :color "light-blue" :legend nil)
-    (:names (decompose-types-bdd-graph) :color "red" :linewidth 2  :legend t)
-    (:names (local-minimum) :color "black" :linewidth 2 :legend t)))
+  (let ((color 0))
+    `((:names (decompose-types) :max-num-types 15 :gnu-color ,(nth (incf color) *colors*) :color "blue" :legend t)
+      (:names (decompose-types-rtev2) :max-num-types nil  :gnu-color ,(nth (incf color) *colors*) :color "olive" :legend t)
+      (:names (decompose-types-sat)  :gnu-color ,(nth (incf color) *colors*) :color "dark-cyan"  :legend t)
+      (:names (decompose-types-graph)  :gnu-color ,(nth (incf color) *colors*) :color "lavender" :legend t)
+      (:names (bdd-decompose-types-strong)  :gnu-color ,(nth (incf color) *colors*) :color "orange" :legend t)
+      (:names (bdd-decompose-types-weak) :gnu-color ,(nth (incf color) *colors*) :color "gold" :legend t)
+      (:names ,*decompose-fun-names*  :gnu-color ,(nth (incf color) *colors*) :color "light-blue" :legend nil)
+      (:names (decompose-types-bdd-graph-strong)  :gnu-color ,(nth (incf color) *colors*) :color "red" :linewidth 1  :legend t)
+      (:names (decompose-types-bdd-graph-weak)  :gnu-color ,(nth (incf color) *colors*) :color "rust" :linewidth 1  :legend t)
+      (:names (local-minimum) :gnu-color "000000" :color "black" :linewidth 2 :legend t))))
 
 (defvar *decomposition-functions*
   (set-difference (mapcan (lambda (plist)
@@ -191,6 +216,7 @@
                           tag
                           (decompose *decomposition-functions*)
                           normalize
+                          hilite-min
                           (sorted-name "/dev/null")
                           (ltxdat-name "/dev/null")
                           (ltxdat-no-legend-name "/dev/null")
@@ -217,6 +243,7 @@
                   (funcall thunk))))
              (log-data ()
                (print-report :re-run re-run
+                             :include-decompose decompose
                              :dat-name dat-name
                              :ltxdat-name ltxdat-name
                              :ltxdat-no-legend-name ltxdat-no-legend-name
@@ -230,6 +257,7 @@
                              :normalize normalize
                              :time-out time-out
                              :limit limit
+                             :hilite-min hilite-min
                              :tag tag))
              (run1 (f len types)
                (lambda (&aux results)
@@ -404,7 +432,7 @@
     (the cons (or result1 result2))))
 
 (defvar *perf-results* nil)
-(defun types/cmp-perf (&key types (decompose 'bdd-decompose-types) (time-out 15) (num-tries 2) &aux (f (symbol-function decompose)))
+(defun types/cmp-perf (&key types (decompose 'bdd-decompose-types-weak) (time-out 15) (num-tries 2) &aux (f (symbol-function decompose)))
   (declare (type list types)
            (type symbol decompose)
            (type function f))
@@ -523,9 +551,6 @@
                  ))))
     (recure type-specs)))
 
-
-
-
 (defun compare/results (all-results &aux (good-results (setof res all-results
                                                          (and res
                                                               (null (getf res :time-out)))))
@@ -643,7 +668,6 @@
       (dolist (res (cdr good-results))
         (compare (car good-results) res)))))
 
-
 (defun count-pairs (data predicate)
   (let ((c 0))
     (loop :for tail :on data
@@ -673,36 +697,40 @@
        (dolist (next (cdr data))
          (format str "~A~A" delimiter next))))))
 
-(defun create-gnuplot (sorted-file gnuplot-file png-filename normalize)
+(defun create-gnuplot (sorted-file gnuplot-file png-filename normalize hilite-min include-decompose)
   (let ((content (with-open-file (stream sorted-file :direction :input)
                    (format t "reading    ~A~%" sorted-file)
                    (read stream nil nil))))
     (with-open-file (stream gnuplot-file :direction :output :if-exists :supersede :if-does-not-exist :create)
-      (format t "writing to ~A~%" gnuplot-file)
+      (format t "[writing to ~A~%" gnuplot-file)
       (destructuring-bind (&key summary sorted &allow-other-keys &aux min-curve min-curve-line-style) content
         (assert (typep sorted 'cons))
         ;; sort DATA so that the order agrees with *decomposition-function-descriptors*
         (setf sorted (mapcan (lambda (desc &aux (names (getf desc :names)))
-                             (setof plist sorted
-                               (exists name names
-                                 (string= (getf plist :decompose) (symbol-name name)))))
-                           *decomposition-function-descriptors*))
+                               (setof plist sorted
+                                 (exists name names
+                                   (string= (getf plist :decompose) (symbol-name name)))))
+                             (setof plist *decomposition-function-descriptors*
+                               (exists name include-decompose
+                                 (member name (getf plist :names))))))
         ;; if we are trying to normalize, we need at least two points in the graph
         ;;    so in this case remove DATA which has less that 2 points to plot
         (when normalize
           (setf sorted (setof plist sorted
                          (cdr (getf plist :xys)))))
-        (setf min-curve (reduce (lambda (curve1 curve2)
-                                  (if (< (getf curve1 :integral)
-                                         (getf curve2 :integral))
-                                      curve1
-                                      curve2)) (cdr sorted) :initial-value (car sorted)))
-        (assert (typep min-curve 'cons))
-        (when (cdr (getf (find-decomposition-function-descriptor (getf min-curve :decompose)) :names))
-          ;; this is one of the 45 curves of the parameterized functions
-          (setf min-curve `(:decompose "LOCAL-MINIMUM" ,@min-curve)))
+        (when hilite-min
+          (setf min-curve (reduce (lambda (curve1 curve2)
+                                    (if (< (getf curve1 :integral)
+                                           (getf curve2 :integral))
+                                        curve1
+                                        curve2)) (cdr sorted) :initial-value (car sorted)))
+          (assert (typep min-curve 'cons))
+          (when (cdr (getf (find-decomposition-function-descriptor (getf min-curve :decompose)) :names))
+            ;; this is one of the 45 curves of the parameterized functions
+            (setf min-curve `(:decompose "LOCAL-MINIMUM" ,@min-curve))))
         (format stream "# summary ~A~%" summary)
         (format stream "set term png~%")
+        (format stream "set key below~%") ;; enable legend
         (unless normalize
           (format stream "set logscale xy~%"))
         (labels ((xys (curve)
@@ -717,11 +745,10 @@
           (let* ((line-style 0)
                  (mapping (mapcar (lambda (descr)
                                     (incf line-style)
-                                    (format stream "set style line ~D linewidth ~D linecolor rgb ~S~%"
+                                    (format stream "set style line ~D linewidth ~D linecolor rgb \"#~A\"~%"
                                             line-style
                                             (or (getf descr :linewidth) 1)
-                                            (or (getf descr :gnu-color)
-                                                (getf descr :color)))
+                                            (getf descr :gnu-color))
                                     ;; collect
                                     `(:line-style ,line-style ,@descr))
                                   *decomposition-function-descriptors*))
@@ -730,8 +757,9 @@
                                                 :key (getter :decompose) :test #'string=)))))
             (assert (or (not normalize) normalize-to-xys) (normalize normalize-to-xys sorted))
             (incf line-style)
-            (setf min-curve-line-style line-style)
-            (format stream "set style line ~D linewidth 2 linecolor rgb ~S~%" min-curve-line-style "black")
+            (when hilite-min
+              (setf min-curve-line-style line-style)
+              (format stream "set style line ~D linewidth 2 linecolor rgb ~S~%" min-curve-line-style "black"))
             (labels ((interpolate-y (x0 x1 y1 x2 y2)
                        (+ y1 (* (- y2 y1)
                                 (/ (float (- x0 x1)) (- x2 x1)))))
@@ -785,16 +813,23 @@
                                                                                 (string= decompose
                                                                                          (symbol-name name))))
                                                                             mapping)))
-                                                (format nil "   \"-\" using 1:2 notitle with lines ls ~D"
-                                                        (getf mapping-plist :line-style))))
+                                                (with-output-to-string (str)
+                                                  (format str "   \"-\" using 1:2 with lines ls ~D"
+                                                          (getf mapping-plist :line-style))
+                                                  (format str " title ~S" decompose))))
                                             sorted)))
-              (format stream ",\\~%\   \"-\" using 1:2 notitle with lines ls ~D~%" min-curve-line-style)
+              (when hilite-min
+                (format stream ",\\~%\   \"-\" using 1:2 with lines ls ~D" min-curve-line-style)
+                (format stream " title ~S~%" "unknown"))
               (mapc #'plot-curve sorted)
-              (plot-curve min-curve))))))
+              (when hilite-min
+                (plot-curve min-curve))))))
+      (format t "~A ]~%" gnuplot-file))
 
     (run-program "gnuplot" (list gnuplot-file)
-                 :search t
+                 :search t 
                  :output png-filename
+                 :error *error-output*
                  :if-output-exists :supersede)))
 
 (defun integral (xys)
@@ -887,16 +922,22 @@ the list of xys need not be already ordered."
 (defun sort-results (in out &rest options)
   (declare #+sbcl (notinline sort))
   (cond
+    ((eq in nil) nil)
     ((typep in '(or pathname string))
-     (with-open-file (stream in :direction :input)
-       (apply #'sort-results stream out options)))
+     (format t "[reading from ~A~%" in)
+     (with-open-file (stream in :direction :input :if-does-not-exist nil)
+       (prog1 (apply #'sort-results stream out options)
+         (format t "]~%"))))
     ((typep out '(or pathname string))
+     (ensure-directories-exist out)
      (with-open-file (stream out :direction :output :if-exists :supersede :if-does-not-exist :create)
-       (format t "writing to ~A~%" out)
-       (apply #'sort-results in stream options)))
+       (format t "[writing to ~A~%" out)
+       (prog1 (apply #'sort-results in stream options)
+         (format t "]~%"))))
     ((eq out :return)
      ;; (reduce (lambda (num string) (format nil "~D~S" num string)) '(1 2 3) :initial-value "")
-     (destructuring-bind (&key summary limit data time-out-count run-count time-out-run-time run-time wall-time unknown known) (read in nil nil)
+     (destructuring-bind (&key summary limit data time-out-count run-count time-out-run-time run-time wall-time unknown known)
+         (read in nil nil)
        (let (observed-max-time observed-min-time observed-min-prod observed-max-prod)
          (dolist (plist data)
            (mapc (lambda (given calculated time)
@@ -1018,6 +1059,7 @@ the list of xys need not be already ordered."
   (let ((content (with-open-file (stream sorted-name :direction :input :if-does-not-exist :error)
                    (read stream))))
     (destructuring-bind (&key sorted &allow-other-keys) content
+      (ensure-directories-exist ltxdat-name)
       (with-open-file (stream ltxdat-name :direction :output :if-exists :supersede :if-does-not-exist :create)
         (format t "writing to ~A~%" ltxdat-name)
         (format stream "\\begin{tikzpicture}~%")
@@ -1037,7 +1079,12 @@ the list of xys need not be already ordered."
                               `(:decompose "LOCAL-MINIMUM" ,@min-curve)
                               nil))
           (flet ((plot (xys decompose descr)
-                   (format stream "\\addplot[color=~A] coordinates {~%" (getf descr :color))
+                   (let* ((decimal (parse-integer (getf descr :gnu-color) :radix 16))
+                          (red   (/ (logand decimal #xff0000) #x10000))
+                          (green (/ (logand decimal #x00ff00) #x100))
+                          (blue  (logand decimal #x0000ff)))
+                     (format stream "\\definecolor{color~A}{RGB}{~A,~A,~A}~%" (getf descr :gnu-color) red green blue)
+                     (format stream "\\addplot[color=color~A] coordinates {~%" (getf descr :gnu-color)))
                    (dolist (xy xys)
                      (format stream "(~D, ~S)~%" (car xy) (cadr xy)))
                    (format stream "};~%")
@@ -1104,23 +1151,24 @@ the list of xys need not be already ordered."
                        (length (set-difference value types :test #'equivalent-types-p)) ;; new
                        time decompose)))))))))
 
-(defun print-report (&key (re-run t) limit (summary nil) normalize (dat-name "/dev/null") (ltxdat-name "/dev/null") (ltxdat-no-legend-name "/dev/null") (sorted-name "/dev/null") (sexp-name "/dev/null") (png-name "/dev/null") (png-normalized-name "/dev/null") (gnuplot-name "/dev/null") (gnuplot-normalized-name "/dev/null") (include-decompose *decomposition-functions*) (tag "NO TITLE") &allow-other-keys)
+(defun print-report (&key (re-run t) limit (summary nil) normalize (dat-name "/dev/null") (ltxdat-name "/dev/null") (ltxdat-no-legend-name "/dev/null") (sorted-name "/dev/null") (sexp-name "/dev/null") (png-name "/dev/null") (png-normalized-name "/dev/null") (gnuplot-name "/dev/null") (gnuplot-normalized-name "/dev/null") (include-decompose *decomposition-functions*) (tag "NO TITLE") (hilite-min nil) &allow-other-keys)
   (format t "report ~A~%" summary)
   (when re-run
+    (ensure-directories-exist sexp-name)
     (with-open-file (stream sexp-name :direction :output :if-exists :supersede :if-does-not-exist :create)
       (format t "writing to ~A~%" sexp-name)
       (print-sexp stream summary limit)))
   (sort-results sexp-name sorted-name)
   (unless (string= sorted-name "/dev/null")
-    (create-gnuplot sorted-name gnuplot-name png-name nil)
+    (create-gnuplot sorted-name gnuplot-name png-name nil hilite-min include-decompose)
     (when normalize
-      (create-gnuplot sorted-name gnuplot-normalized-name png-normalized-name normalize))
+      (create-gnuplot sorted-name gnuplot-normalized-name png-normalized-name normalize hilite-min include-decompose))
     (print-ltxdat ltxdat-name           sorted-name include-decompose t nil)
     (print-ltxdat ltxdat-no-legend-name sorted-name include-decompose nil tag))
   (print-dat dat-name include-decompose))
 
 (defun test-report (&key sample (prefix "") (re-run t) (suite-time-out (* 60 60 4))  (time-out (* 3 60)) normalize (destination-dir "/Users/jnewton/newton.16.edtchs/src")
-                      types file-name (limit 15) tag (num-tries 2)
+                      types file-name (limit 15) tag hilite-min (num-tries 2)
                     &allow-other-keys)
   "TIME-OUT is the number of seconds to allow for one call to a single decompose function.
 SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
@@ -1139,6 +1187,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                              :normalize normalize
                              :sample sample
                              :num-tries num-tries
+                             :hilite-min hilite-min
                              (when file-name
                                (list
                                 :ltxdat-name (format nil "~A/~A~A.ltxdat" destination-dir prefix file-name)
@@ -1156,6 +1205,36 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
         when (zerop (random 2))
           collect i))
 
+(defun ranges (type min max)
+  (when (> min max)
+    (rotatef min max))
+  (list `(,type ,min ,max)
+        `(,type (,min) ,max)
+        `(,type ,min (,max))
+        `(,type (,min) (,max))))
+
+(defvar *real-number-range-types* 
+  (remove-duplicates
+   (loop for i from 1 to 25
+         nconc (let* ((a (random 100))
+                      (b (random 100))
+                      (c (random 100))
+                      (d (random 100))
+                      (min (/ a (1+ b)))
+                      (max (/ c (1+ d))))
+                 (ranges 'real min max))
+         nconc (ranges 'float (random 100.0) (random 100.0))
+         nconc (ranges 'integer (random 100) (random 100))
+         )
+   :test #'equal))
+
+(defvar *integer-range-types*
+  (remove-duplicates
+   (loop for i from 1 to 25
+         nconc (let* ((min (random (expt 10 (random i))))
+                      (max (random (expt 10 (random i)))))
+                 (ranges 'integer min max)))
+   :test #'equal))
 
 (defvar *member-types* (remove-duplicates
                         (loop for i from 1 to 25
@@ -1219,94 +1298,101 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
 
 
 
-(defun big-test-report (&rest options &key (num-tries 2) (multiplier 1) (prefix "") (re-run t) (suite-time-out (* 60 60 4)) (time-out 100) normalize (decomposition-functions *decomposition-functions*) (destination-dir "/Users/jnewton/newton.16.edtchs/src"))
-  (declare (ignore prefix re-run suite-time-out time-out normalize destination-dir num-tries))
-  (let ((sample 0)
-        (*decomposition-functions*  decomposition-functions))
+(defvar *bucket-reporters* nil)
 
 
-    (apply #'test-report :limit (* multiplier 18)
-                         :tag "Subtypes of CONDITION"
-                         :types (valid-subtypes 'condition)
-                         :file-name "subtypes-of-condition"
-                         :sample (incf sample 1/8)
-                         options)
+(defun make-bucket-reporter (&key tag scale types file-name)
+  (lambda (multiplier sample options)
+    (apply #'test-report :limit (* multiplier scale)
+                         :tag tag
+                         :types types
+                         :file-name file-name
+                         :sample sample
+                         options)))
 
+(defun add-bucket-reporter (&key tag scale types file-name)
+  (let ((pair (assoc tag *bucket-reporters* :test #'equal)))
+    (unless pair
+      (setf pair (list tag nil))
+      (push pair *bucket-reporters*))
+    (setf (cadr pair) (make-bucket-reporter :tag tag :scale scale :types types :file-name file-name))))
+
+(add-bucket-reporter :scale 15
+                     :tag "Real number ranges"
+                     :types *real-number-range-types*
+                     :file-name "number-ranges")
+
+(add-bucket-reporter :scale 15
+                     :tag "Integer ranges"
+                     :types *integer-range-types*
+                     :file-name "integer-ranges")
+
+(add-bucket-reporter :scale 18
+                     :tag "Subtypes of CONDITION"
+                     :types (valid-subtypes 'condition)
+                     :file-name "subtypes-of-condition")
+
+(add-bucket-reporter :scale 30
+                     :tag "MEMBER types"
+                     :types *member-types*
+                     :file-name "member")
+
+(add-bucket-reporter :scale 21
+                     :tag "OBJECT SYSTEM types"
+                     :types (loop :for name being the external-symbols in #+sbcl "SB-PCL" #+allegro "ACLMOP"
+                                  :when (find-class name nil)
+                                    :collect name)
+                     :file-name "pcl-types")
+
+(add-bucket-reporter :scale 30
+                     :tag "CL types"
+                     :types *cl-types*
+                     :file-name "cl-types")
+
+(add-bucket-reporter :scale 18
+                     :tag "Subtypes of NUMBER or CONDITION"
+                     :types (setof e (remove-duplicates (loop for t1 in (shuffle-list (union (valid-subtypes 'number)
+                                                                                             (valid-subtypes 'condition)))
+                                                              for t2 in (shuffle-list (union (valid-subtypes 'number)
+                                                                                             (valid-subtypes 'condition)))
+                                                              nconc (list t1 `(or ,t1 ,t2)
+                                                                          `(and ,t1 (not ,t2))))
+                                                        :test #'equal)
+                              (null (subtypep e nil)))
+                     :file-name "subtypes-of-number-or-condition")
+
+(add-bucket-reporter :scale 25
+                     :tag "Subtypes of NUMBER"
+                     :types *number-combos*
+                     :file-name "subtypes-of-number")
+
+(add-bucket-reporter :scale 33
+                     :tag "CL combinations"
+                     :types (choose-randomly  *cl-type-combos* 13850)
+                     :file-name "cl-combos")
     
+(add-bucket-reporter :scale 22
+                     :tag "Subtypes of T"
+                     :types (valid-subtypes t)
+                     :file-name "subtypes-of-t")
 
-    (apply #'test-report :limit (* multiplier 30)
-                         :tag "MEMBER types"
-                         :types *member-types*
-                         :file-name "member"
-                         :sample (incf sample 1/8)
-                         options)
-
-    (apply #'test-report :limit (* multiplier 21)
-                         :tag "OBJECT SYSTEM types"
-                         :types (loop :for name being the external-symbols in #+sbcl "SB-PCL" #+allegro "ACLMOP"
-                                      :when (find-class name nil)
-                                        :collect name)
-                         :file-name "pcl-types"
-                         :sample (incf sample 1/8)
-                         options)
-
-
-    (apply #'test-report :limit (* multiplier 30)
-                         :tag "CL types"
-                         :types *cl-types*
-                         :file-name "cl-types"
-                         :sample (incf sample 1/8)
-                         options)
-
-    (apply #'test-report :limit (* multiplier 18)
-                         :tag "Subtypes of NUMBER or CONDITION"
-                         ;; :types (union (valid-subtypes 'number) (valid-subtypes 'condition))
-                         :types (setof e (remove-duplicates (loop for t1 in (shuffle-list (union (valid-subtypes 'number) (valid-subtypes 'condition)))
-                                                                  for t2 in (shuffle-list (union (valid-subtypes 'number) (valid-subtypes 'condition)))
-                                                                  nconc (list t1 `(or ,t1 ,t2) `(and ,t1 (not ,t2)))) :test #'equal)
-                                  (null (subtypep e nil)))
-                         :file-name "subtypes-of-number-or-condition"
-                         :sample (incf sample 1/8)
-                         options)
-
-
-    (apply #'test-report :limit (* multiplier 25)
-                         :tag "Subtypes of NUMBER"
-                         :types *number-combos*
-                         :file-name "subtypes-of-number"
-                         :sample (incf sample 1/8)
-                         options)
-
-    (apply #'test-report :limit (* multiplier 33)
-                         :tag "CL combinations"
-                         :types (choose-randomly  *cl-type-combos* 13850)
-                         :file-name "cl-combos"
-                         :sample (incf sample 1/8)
-                         options)
-    
-
-    ;; (apply #'test-report :limit (* multiplier 25)
-    ;;                      :tag "numbers"
-    ;;                      :types (valid-subtypes 'number)
-    ;;                      :file-name "subtypes-of-number"
-    ;;                      options)
-
-
-    (apply #'test-report :limit (* multiplier 22)
-                         :tag "Subtypes of T"
-                         :types (valid-subtypes t)
-                         :file-name "subtypes-of-t"
-                         :sample (incf sample 1/8)
-                         options)
-
-
-    ))
+(defun big-test-report (&rest options &key (num-tries 2) (multiplier 1) (prefix "") (re-run t)
+                                        (suite-time-out (* 60 60 4)) (time-out 100) normalize hilite-min
+                                        (decomposition-functions *decomposition-functions*)
+                                        (destination-dir "/Users/jnewton/newton.16.edtchs/src")
+                                        )
+  (declare (ignore prefix re-run suite-time-out time-out normalize destination-dir num-tries hilite-min))
+  (let ((*decomposition-functions*  decomposition-functions))
+    (loop for (tag bucket-reporter) in *bucket-reporters*
+          for sample = (/ 1 (length *bucket-reporters*)) then (+ sample (/ 1 (length *bucket-reporters*)))
+          do (funcall bucket-reporter multiplier sample options)))    )
 
 
 (defun parameterization-report (&key (re-run t))
   (big-test-report :re-run re-run
                    :prefix "bdd-graph-"
                    :normalize 'decompose-types-bdd-graph
+                   :hilite-min t
                    :decomposition-functions (cons 'decompose-types-bdd-graph
                                                   *decompose-fun-names*)))
 
@@ -1318,10 +1404,28 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                    :normalize nil
                    :time-out 20
                    :num-tries 4
-                   :decomposition-functions '(decompose-types-bdd-graph
-                                              bdd-decompose-types
+                   :hilite-min nil
+                   :decomposition-functions '(decompose-types-bdd-graph-strong
+                                              decompose-types-bdd-graph-weak
+                                              bdd-decompose-types-strong
+                                              bdd-decompose-types-weak
                                               decompose-types-rtev2
                                               decompose-types-graph)))
+
+
+(defun bdd-report (&key (re-run t) (multiplier 1.8))
+  (big-test-report :re-run re-run
+                   :prefix "bdd-ws-" ;; should change to best-4-
+                   :multiplier multiplier
+                   :normalize nil
+                   :time-out 20
+                   :num-tries 4
+                   :hilite-min nil
+                   :decomposition-functions '(decompose-types-bdd-graph-strong
+                                              decompose-types-bdd-graph-weak
+                                              bdd-decompose-types-strong
+                                              bdd-decompose-types-weak)))
+
 (defun display-theta (n theta)
   (flet ((e2 (theta)
            (- (expt 2 (expt 2 theta))
@@ -1503,8 +1607,8 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                       n
                       theta-max
                       theta
-                      (1- (2^ (- n theta)))
-                      (2^ (2^ theta))
+                      (1- (2^ (- n theta))) 
+                     (2^ (2^ theta))
                       |ROBDD_n|
                       (* 100 compression)))))
                            
