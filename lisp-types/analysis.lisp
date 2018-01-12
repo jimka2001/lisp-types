@@ -474,6 +474,8 @@
              (format t "given: ~D~%" (length types))
              (let ((*package* (find-package "KEYWORD")))
                (format t "given: ~S~%" types))
+             ;; :known = number of elements of types X types for which A<B is known
+             ;; :unknown = number of elements of types X types for which A<B is unknown
              (list :given (length types)
                    :types types
                    :decompose decompose
@@ -816,7 +818,7 @@
                                                 (with-output-to-string (str)
                                                   (format str "   \"-\" using 1:2 with lines ls ~D"
                                                           (getf mapping-plist :line-style))
-                                                  (format str " title ~S" decompose))))
+                                                  (format str " title ~S" (string-downcase decompose)))))
                                             sorted)))
               (when hilite-min
                 (format stream ",\\~%\   \"-\" using 1:2 with lines ls ~D" min-curve-line-style)
@@ -887,6 +889,8 @@ the list of xys need not be already ordered."
                   :run-time run-time
                   :wall-time wall-time
                   :limit limit
+                  ;; :known = number of elements of types X types for which A<B is known
+                  ;; :unknown = number of elements of types X types for which A<B is unknown
                   :unknown unknown
                   :known known
                   :sigma sigma
@@ -962,6 +966,8 @@ the list of xys need not be already ordered."
                 :run-time run-time
                 :wall-time wall-time
                 :limit limit
+                ;; :known = number of elements of types X types for which A<B is known
+                ;; :unknown = number of elements of types X types for which A<B is unknown
                 :unknown unknown
                 :known known
                 :sorted (sort 
@@ -1312,17 +1318,16 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
 
 (defun add-bucket-reporter (&key tag scale types file-name)
   (let ((pair (assoc tag *bucket-reporters* :test #'equal)))
-    (unless pair
-      (setf pair (list tag nil))
-      (push pair *bucket-reporters*))
-    (setf (cadr pair) (make-bucket-reporter :tag tag :scale scale :types types :file-name file-name))))
+    (setf *bucket-reporters* (remove pair *bucket-reporters*))
+    (push (list tag (make-bucket-reporter :tag tag :scale scale :types types :file-name file-name))
+          *bucket-reporters*)))
 
-(add-bucket-reporter :scale 15
+(add-bucket-reporter :scale 20
                      :tag "Real number ranges"
                      :types *real-number-range-types*
                      :file-name "number-ranges")
 
-(add-bucket-reporter :scale 15
+(add-bucket-reporter :scale 20
                      :tag "Integer ranges"
                      :types *integer-range-types*
                      :file-name "integer-ranges")
