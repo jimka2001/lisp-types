@@ -475,12 +475,6 @@
   (decompose-by-graph-1 type-specifiers :graph-class 'bdd-graph))
 
 
-(defun decompose-types-bdd-graph-recursive-increasing-connections (type-specifiers)
-  (bdd-with-new-hash ()
-    (slow-decompose-types-bdd-graph type-specifiers
-                                    :sort-strategy "INCREASING-CONNECTIONS"
-                                    :inner-loop :recursive)))
-
 (defmacro make-decompose-fun-combos ()
   (let (fun-defs
         prop-defs
