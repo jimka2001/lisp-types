@@ -699,7 +699,8 @@
        (dolist (next (cdr data))
          (format str "~A~A" delimiter next))))))
 
-(defun create-gnuplot (sorted-file gnuplot-file png-filename normalize hilite-min include-decompose)
+(defun create-gnuplot (sorted-file gnuplot-file png-filename normalize hilite-min include-decompose key)
+  (declare (type (member :smooth :xys) key))
   (let ((content (with-open-file (stream sorted-file :direction :input)
                    (format t "reading    ~A~%" sorted-file)
                    (read stream nil nil))))
@@ -719,7 +720,7 @@
         ;;    so in this case remove DATA which has less that 2 points to plot
         (when normalize
           (setf sorted (setof plist sorted
-                         (cdr (getf plist :xys)))))
+                         (cdr (getf plist key)))))
         (when hilite-min
           (setf min-curve (reduce (lambda (curve1 curve2)
                                     (if (< (getf curve1 :integral)
@@ -733,17 +734,18 @@
         (format stream "# summary ~A~%" summary)
         (format stream "set term png~%")
         (format stream "set key below~%") ;; enable legend
+        (format stream "set title ~S~%" summary)
+        (format stream "show title~%")
         (unless normalize
           (format stream "set logscale xy~%"))
         (labels ((xys (curve)
                    (declare #+sbcl (notinline sort))
-                   (destructuring-bind (&key xys &allow-other-keys) curve
-                     (remove-duplicates (sort (copy-list xys)
-                                              (lambda (a b)
-                                                (if (= (car a) (car b))
-                                                    (< (cadr a) (cadr b))
-                                                    (< (car a) (car b)))))
-                                        :test #'equal))))
+                   (remove-duplicates (sort (copy-list (getf curve key))
+                                            (lambda (a b)
+                                              (if (= (car a) (car b))
+                                                  (< (cadr a) (cadr b))
+                                                  (< (car a) (car b)))))
+                                      :test #'equal)))
           (let* ((line-style 0)
                  (mapping (mapcar (lambda (descr)
                                     (incf line-style)
@@ -896,7 +898,7 @@ the list of xys need not be already ordered."
                   :sigma sigma
                   :mean mean
                   :sorted (mapcar (lambda (plist)
-                                    (destructuring-bind (&key integral samples decompose arguments xys &allow-other-keys
+                                    (destructuring-bind (&key integral samples decompose arguments xys smooth &allow-other-keys
                                                          &aux (score (unless (member sigma '(0 0.0 nil))
                                                                        (/ (- integral mean) sigma)))) plist
                                     (list :integral integral
@@ -908,6 +910,7 @@ the list of xys need not be already ordered."
                                           :samples samples
                                           :decompose decompose
                                           :arguments arguments
+                                          :smooth smooth
                                           :xys xys)))
                                 sorted))))))))
 
@@ -922,6 +925,48 @@ the list of xys need not be already ordered."
 ;; (reduce (lambda (string num) (format nil "~D~S" num string)) '(1 2 3) :initial-value "")
 
 
+(defun smoothen-2 (xys)
+  "takes a list of (x y) pairs and returns a new list of (x y) pairs with some of the noise filtered out.
+The smoothening method is simply a weighted averages of the 2 closest neighbors below and the 2 closest neighbors above."
+  (let* ((weights '(1 2 5 2 1))
+         (weight-sum (apply #'+ weights))
+         (num-weights (length weights))
+         (mid-index (truncate num-weights 2))
+         (data (list nil nil)))
+    (dotimes (i mid-index)
+      (tconc data (nth i xys)))
+    (while (nthcdr num-weights xys)
+      (tconc data (list (car (nth mid-index xys))
+                        (/ (float (reduce #'+ (mapcar (lambda (weight xy)
+                                                        (* weight (cadr xy))) weights xys))) weight-sum)))
+      (pop xys))
+    (pop xys)
+    (pop xys)
+    (dotimes (i mid-index)
+      (tconc data (nth i xys)))
+    (car data)))
+
+
+(defun smoothen (xys)
+  "Takes a list of (x y) pairs and returns a new list of (x y) pairs with some of the noise filtered out.
+The smoothening method is an average of all the points in an x-radius of the given point, 
+i.e., of all the points whose xcoord is between x/2 and x*2."
+  (flet ((between (x y z)
+           (and (<= x y)
+                (<= y z)))
+         (mean (xs)
+           (/ (reduce #'+ xs :initial-value 0.0)
+              (float (length xs)))))
+
+    (let* ((radius 2))
+      (loop :for xy :in xys
+            :for x0 = (car xy)
+            :for close = (loop :for sample :in xys
+                               :when (between (/ x0 radius)
+                                              (car sample)
+                                              (* x0 radius))
+                                 :collect (cadr sample))
+            :collect (list x0 (mean close))))))
 
 (defun sort-results (in out &rest options)
   (declare #+sbcl (notinline sort))
@@ -994,6 +1039,7 @@ the list of xys need not be already ordered."
                                                                           (< (car a) (car b))))))
                                            (list :integral (integral xys-extended)
                                                  :xys xys
+                                                 :smooth (smoothen xys)
                                                  :samples (length xys)
                                                  :decompose decompose
                                                  :arguments (get (intern decompose (find-package :lisp-types))
@@ -1157,6 +1203,18 @@ the list of xys need not be already ordered."
                        (length (set-difference value types :test #'equivalent-types-p)) ;; new
                        time decompose)))))))))
 
+
+(defun insert-suffix (filename suffix)
+  "insert the given SUFFIX before the filename extension: 
+ E.g., (insert-suffix \"/path/to/file.gnu\" \"-smooth\") --> \"/path/to/file-smooth.gnu\""
+  ;; find the final "."
+  (let ((index (search "." filename :from-end t)))
+    (when index
+      (let ((tail (subseq filename index))
+            (head (subseq filename 0 index)))
+        (concatenate 'string head suffix tail)))))
+
+
 (defun print-report (&key (re-run t) limit (summary nil) normalize (dat-name "/dev/null") (ltxdat-name "/dev/null") (ltxdat-no-legend-name "/dev/null") (sorted-name "/dev/null") (sexp-name "/dev/null") (png-name "/dev/null") (png-normalized-name "/dev/null") (gnuplot-name "/dev/null") (gnuplot-normalized-name "/dev/null") (include-decompose *decomposition-functions*) (tag "NO TITLE") (hilite-min nil) &allow-other-keys)
   (format t "report ~A~%" summary)
   (when re-run
@@ -1166,9 +1224,16 @@ the list of xys need not be already ordered."
       (print-sexp stream summary limit)))
   (sort-results sexp-name sorted-name)
   (unless (string= sorted-name "/dev/null")
-    (create-gnuplot sorted-name gnuplot-name png-name nil hilite-min include-decompose)
+    (create-gnuplot sorted-name gnuplot-name png-name
+                    nil hilite-min include-decompose :xys)
+    (create-gnuplot sorted-name (insert-suffix gnuplot-name "-smooth") (insert-suffix png-name "-smooth")
+                    nil hilite-min include-decompose :smooth)
+    
     (when normalize
-      (create-gnuplot sorted-name gnuplot-normalized-name png-normalized-name normalize hilite-min include-decompose))
+      (create-gnuplot sorted-name gnuplot-normalized-name png-normalized-name
+                      normalize hilite-min include-decompose :xys)
+      (create-gnuplot sorted-name (insert-suffix gnuplot-normalized-name "-smooth") (insert-suffix png-normalized-name "-smooth")
+                      normalize hilite-min include-decompose :smooth))
     (print-ltxdat ltxdat-name           sorted-name include-decompose t nil)
     (print-ltxdat ltxdat-no-legend-name sorted-name include-decompose nil tag))
   (print-dat dat-name include-decompose))
