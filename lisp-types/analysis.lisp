@@ -419,7 +419,7 @@
                (bordeaux-threads:destroy-thread th-worker))
              :name "th-observer stop-watch"))
       (setf th-worker (bordeaux-threads:make-thread #'time-it :name "th-handle thunk"))
-      (handler-case (cl-user::print-conditions (bordeaux-threads:join-thread th-worker))
+      (handler-case (print-conditions (bordeaux-threads:join-thread th-worker))
         #+sbcl(SB-THREAD:JOIN-THREAD-ERROR (e)
                 (setf th-worker-join-failed e)
                 nil))
