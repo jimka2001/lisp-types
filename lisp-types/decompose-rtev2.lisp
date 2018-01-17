@@ -23,9 +23,10 @@
 
 (defun slow-decompose-types-rtev2 (type-specifiers)
   (declare (optimize (speed 3) (compilation-speed 0) (debug 0))
-           (notinline union))
+           #+sbcl (notinline union))
   (let ((type-specifiers (mapcar #'reduce-lisp-type-simple type-specifiers))
-        (known-intersecting (make-hash-table :test #'equal)) decomposition) ;; the list of disjoint type-specifiers
+        (known-intersecting (make-hash-table :test #'equal))
+        decomposition) ;; the list of disjoint type-specifiers
     (labels ((disjoint? (T1 T2 &aux (key (list T1 T2)))
                (multiple-value-bind (hit found?) (gethash key known-intersecting)
                  (cond
@@ -35,23 +36,32 @@
                           (setf (gethash key known-intersecting) (disjoint-types-p T1 T2)))))))
 	     (forget (type)
 	       (setf type-specifiers (remove type type-specifiers :test #'eq)))
+             (already-in-list (a b)
+               ;;(format t "  check equivalent ? to=~A~%"  b)
+               (equivalent-types-p a b))
 	     (remember (type)
-	       (pushnew type type-specifiers :test #'equivalent-types-p)))
+               ;;(format t "  equivalent ? to=~A~%"  type)
+	       (pushnew type type-specifiers :test #'already-in-list)))
       (while type-specifiers
+        ;;(format t "~D type specifiers~%" (length type-specifiers))
+
         (let* ((A (car type-specifiers))
                (intersecting (setof B (cdr type-specifiers)
                                (not (disjoint? A B)))))
+          ;;(format t "  known=~A~%"  known-intersecting)
           (forget A)
           (cond
             ((null intersecting)
+             ;;(format t "    vacuity check of ~A~%" A)
              (unless (cached-subtypep A nil)
                (pushnew A decomposition :test #'equivalent-types-p)))
             (t
              (dolist (B intersecting)
                (forget B)
-               (remember (reduce-lisp-type-simple `(and ,A ,B)))
-               (remember (reduce-lisp-type-simple `(and ,A (not ,B))))
-               (remember (reduce-lisp-type-simple `(and (not ,A) ,B))))))))
+               ;;(format t "   closure of~%     ~A~% and ~A~%" A B)
+               (remember (type-to-dnf `(and ,A ,B)))
+               (remember (type-to-dnf `(and ,A (not ,B))))
+               (remember (type-to-dnf `(and (not ,A) ,B))))))))
       (mapcar 'reduce-lisp-type-full decomposition))))
 
 
@@ -60,8 +70,5 @@
   "Given a list TYPE-SPECIFIERS of lisp type names, return a list of disjoint, 
 non-nil type-specifiers comprising the same union, with each of the resulting
 type-specifiers being a sub-type of one of the given type-specifiers."
-  (call-with-disjoint-hash
-      (lambda ()
-        (call-with-subtype-hash
-            (lambda ()
-              (slow-decompose-types-rtev2 type-specifiers))))))
+  (caching-types
+    (slow-decompose-types-rtev2 type-specifiers)))

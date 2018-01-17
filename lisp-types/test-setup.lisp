@@ -19,27 +19,30 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(asdf:defsystem :lisp-types
-  :depends-on (:dispatch)
-  :components
-  ((:module "lisp-types"
-    :components
-    ((:file "macros")
-     (:file "util")
-     (:file "lisp-types" :depends-on ("macros"))
-     (:file "reduce" :depends-on ("macros" "lisp-types"))
-     (:file "decompose" :depends-on ("reduce"))
-     (:file "sat" :depends-on ("macros" "lisp-types"))
-     (:file "typecase" :depends-on ("lisp-types"))
-     (:file "graph" :depends-on ("macros" "lisp-types" "util"))
-     (:file "bdd" :depends-on ("macros" "lisp-types"))
-     (:file "bdd-reduce-generic")
-     (:file "bdd-reduce" :depends-on ("bdd-reduce-generic" "bdd"))
-     (:file "bdd-graph" :depends-on ("macros" "bdd" "bdd-reduce"))
-     (:file "bdd-dot" :depends-on ("bdd" "bdd-reduce"))
-     (:file "bdd-worst-case" :depends-on ("bdd"))
-     (:file "bdd-size-simulation" :depends-on ("bdd"))
-     (:file "bdd-reduce-17" :depends-on ("bdd"))
-     (:file "decompose-rtev2" :depends-on ("bdd"))
-     (:file "bdd-typecase" :depends-on ("bdd-reduce-generic" "bdd"))
-     ))))
+
+(defpackage :lisp-types.test
+  (:shadowing-import-from :lisp-types "TEST" "A")
+  ;;(:shadowing-import-from :closer-mop "STANDARD-GENERIC-FUNCTION" "DEFMETHOD" "DEFGENERIC")
+  (:use :cl :lisp-types :lisp-unit ;;:closer-mop
+   #+sbcl :sb-pcl
+   #+allegro :aclmop
+        ))
+
+
+(in-package :lisp-types.test)
+
+(let ((lisp-types-test (find-package  :lisp-types.test))
+      (lisp-types (find-package  :lisp-types)))
+  (do-symbols (name :lisp-types)
+    (when (and (eq lisp-types (symbol-package name))
+               (not (find-symbol (symbol-name name) lisp-types-test)))
+      (format t "4 importing name=~A into  :lisp-types.test~%" name)
+      (shadowing-import name :lisp-types.test))))
+
+;; configuration for lisp-unit
+(setf lisp-unit:*print-summary* t
+      lisp-unit:*print-failures* t
+      lisp-unit:*print-errors* t
+      )
+
+(lisp-unit:use-debugger t)

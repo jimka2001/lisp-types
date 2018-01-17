@@ -68,141 +68,68 @@ is the work-horse for REDUCED-TYPECASE."
 		  (remember term nil)))))
 	   (transform-clauses (clauses)
 	     (loop :for clause :in clauses
-		   :collect (let* ((t2 (substitute-type (car clause) reductions))
-				   (t3 (reduce-lisp-type t2)))
-			      (remember (car clause) nil)
-			      (remember t2 nil)
-			      (remember t3 nil)
-			      (cons t3 (cdr clause))))))
-    (let ((clauses (transform-clauses clauses)))
-      (cond
-	((null clauses)
-	 obj)
-	(t
-	 (destructuring-bind ((type &rest expressions) &rest other-clauses) clauses
-	   (cond
-	     ;;
-	     ((eq t type)
-	      ;; (typecase obj (t 42))
-	      ;; --> (progn obj 42)
-	      `(progn ,obj ,@expressions))
-	     ((and (eq 'null type)
-		   (null other-clauses))
-	      ;; (typecase obj (null 42))
-	      ;; --> (unless obj 42)
-	      `(unless ,obj ,@expressions))
-	     (t
-	      `(typecase ,obj ,@clauses)))))))))
+                   :for t2 = (type-to-dnf (substitute-type (car clause) reductions))
+                   :do (remember (car clause) nil)
+                   :do (remember t2 nil)
+		   :collect (cons t2 (cdr clause)))))
+    `(typecase ,obj ,@(transform-clauses clauses))))
 
 (defmacro reduced-typecase (obj &rest clauses)
   "Syntactically similar to TYPECASE. Expands to a call to TYPECASE but
-with cases reduced if possible.  In particular latter cases assume that previous
-cases have failed.  This macro preserves the order of the clauses, but is
-likely to change the executable logic (preserving semantics) of the test
-of each clause.
-E.g.,
-(reduced-typecase obj
-   (float 41)
-   ((and number (not float)) 42))
+ with cases reduced if possible.  In particular latter cases assume that previous
+ cases have failed.  This macro preserves the order of the clauses, but is
+ likely to change the executable logic (preserving semantics) of the test
+ of each clause.
+ E.g.,
+ (reduced-typecase obj
+    (float 41)
+    ((and number (not float)) 42))
+ 
+ Because if clause 2 is reached, it is known that obj is not a FLOAT, so this expands to
+ 
+ (typecase obj
+    (float 41)
+    (number 42))
+ 
+ There may be cases when a type specifier reduces to nil, in which case the
+ compiler may issue warnings about removing unreachable code."
+ (expand-reduced-typecase obj clauses))
 
-Because if clause 2 is reached, it is known that obj is not a FLOAT, so this expands to
-
-(typecase obj
-   (float 41)
-   (number 42))
-
-There may be cases when a type specifier reduces to nil, in which case the
-compiler may issue warnings about removing unreachable code."
-  (expand-reduced-typecase obj clauses))
-
-(defun cost-heuristic (type-specifier)
+(defun type-specifier-complexity-heuristic (type-specifier)
   "Calculate a heuristic guess of the cost of checking type membership of a given
-type-specifier.  There are a few rules for calculating this heuristic:
-1) cost=1 : t and nil
-2) cost=2 : class-names in any package or type names in the CL package
-3) cost=2 : class-object
-4) and/or cost=1 + recursive costs of each type-specifier
-     exception short circuited for and/nil and or/t
-5) cost=10 : satisfies 
-6) cost=4 : otherwise"
-  (cond
-    ((eql t type-specifier)
-     1)
-    ((null type-specifier)
-     1)
-    ((symbolp type-specifier)
-     (cond ((find-class type-specifier nil)
-	    2)
-	   ((eql (find-package type-specifier)
-		 (find-package :cl))
-	    2)
-	   (t
-	    4)))
-    ((atom type-specifier)
-     2)
-    (t ; list
-     (case (car type-specifier)
-       ((or)
-	(let* ((t-tail (member t type-specifier))
-	       (head (if t-tail
-			 (ldiff type-specifier t-tail)
-			 type-specifier)))
-	  (apply #'+ (if t-tail 2 1) (mapcar #'cost-heuristic (cdr head)))))
-       ((and)
-	(let* ((nil-tail (member nil type-specifier))
-	       (head (if nil-tail
-			 (ldiff type-specifier nil-tail)
-			 type-specifier)))
-	  (apply #'+ (if nil-tail 2 1) (mapcar #'cost-heuristic (cdr head)))))
-       ((not cons)
-	(apply #'+ 1 (mapcar #'cost-heuristic (cdr type-specifier))))
-       ((member eql)
-	(length (cdr type-specifier)))
-       ((satisfies)	
-	10)
-       (t
-	4)))))
+type-specifier."
+  (typecase type-specifier
+    ((cons (eql satisfies))
+     10)
+    ((cons (member and or not))
+     (reduce (lambda (sum ts)
+               (+ sum (type-specifier-complexity-heuristic ts)))
+             (cdr type-specifier)
+             :initial-value (length type-specifier)))
+    (cons
+     (length type-specifier))
+    (t
+     1)))
 
-(defun expand-disjoint-typecase (obj clauses &key (reorder nil))
+(defun typecase-complexity-heuristic (typecase-form)
+  (loop :for clause :in (cddr typecase-form)
+        :for weight := (length (cddr typecase-form))
+          :then (1- weight)
+        :summing (* weight (type-specifier-complexity-heuristic (car clause)))))
+
+(defun make-disjoint-clauses (typecase-clauses)
+  (let (complements)
+    (loop :for clause :in typecase-clauses
+          :collect (let* ((t2 (car clause))
+                          (t3 (reduce-lisp-type `(and ,t2 ,@complements))))
+                     (push `(not ,t2) complements)
+                     (cons t3 (cdr clause))))))
+
+(defun expand-disjoint-typecase (obj clauses)
   "Returns a TYPECASE form given its first argument, OBJ, and list of CLAUSES.
-The clauses appear in the same order, but the tests of each may have been
-(non-destructively) modified so that the caller is free to re-order the clauses."
-  (labels ((transform-clauses (clauses)
-	     (let (complements)
-	       (loop :for clause :in clauses
-		     :collect (let* ((t2 (car clause))
-				     (t3 (reduce-lisp-type `(and ,t2 ,@complements))))
-				(push `(not ,t2) complements)
-				(cons t3 (cdr clause))))))
-	   (complexity (obj)
-	     (cond ((listp obj) ; nil==>0 non-nil list ==> >1
-		    (apply #'+ (length obj) (mapcar #'complexity obj)))
-		   (t 1)))
-	   (cmp (a b)
-	     (cond ((equal a b)
-		    t)
-		   ((null a)		; nil moves to the end
-		    nil)
-		   ((null b)		; keep nil at end
-		    t)
-		   ((and (symbolp a)
-			 (symbolp b)) ; leave symbols in the same order for stability
-		    t)
-		   ((symbolp a) ; keep symbols at beginning
-		    t)
-		   ((symbolp b) ; move symbol to beginning
-		    nil)
-		   ((and (listp a)
-			 (listp b)) ; more complex goes to end
-		    (<= (complexity a)
-			(complexity b)))
-		   (t
-		    (error "cannot compare objects ~A vs ~A" (class-of a) (class-of b))))))
-		    
-    (let ((new-clauses (transform-clauses clauses)))
-      `(typecase ,obj ,@(if reorder
-			    (stable-sort new-clauses #'cmp :key #'car)
-			    new-clauses)))))
+ The clauses appear in the same order, but the tests of each may have been
+ (non-destructively) modified so that the caller is free to re-order the clauses."
+  `(typecase ,obj ,@(make-disjoint-clauses clauses)))
 
 (defmacro disjoint-typecase (obj &rest clauses)
   "Syntactically similar to TYPECASE. Expands to a call to TYPECASE but
@@ -225,15 +152,6 @@ There may be cases when a type specifier reduces to nil, in which case the
 compiler may issue warnings about removing unreachable code."
   (expand-disjoint-typecase obj clauses))
 
-(defun expand-optimized-typecase (obj clauses)
-  `(reduced-typecase ,@(cdr (expand-disjoint-typecase obj clauses :reorder t))))
-
-(defmacro optimized-typecase (obj &rest clauses)
-  "Syntactically similar to TYPECASE. Expands to a call to TYPECASE but
-with the types reduced as if by DISJOINT-TYPECASE, then sorting the clauses
-by increasing complexity, and finally REDUCED-TYPECASE."
-  (expand-optimized-typecase obj clauses))
-  
 (defun map-permutations (visit data)
   "call the given unary VISITOR function once for each permutation of the given list DATA"
   (declare (type list data)
@@ -246,8 +164,9 @@ by increasing complexity, and finally REDUCED-TYPECASE."
                  (t
                   (incf k)
                   (loop :for items :on data
-			:do (unless (member items so-far :test #'eq)
-			      (next (cons items so-far) k)))))))
+			:unless (member items so-far
+                                        :test #'eq)
+                          :do (next (cons items so-far) k))))))
       (next nil 0))))
 
 (defun lconc (buf items)
@@ -268,29 +187,27 @@ by increasing complexity, and finally REDUCED-TYPECASE."
 (defun tconc (buf &rest items)
   (lconc buf items))
 
-(defmacro auto-permute-typecase (obj &body clauses)
+(defmacro auto-permute-typecase (obj &body clauses
+                                 &aux (*reduce-member-type* nil))
   "Syntactically similar to TYPECASE. Expands to a call to TYPECASE but
 with the types reduced and re-ordered to minimize a projected cost
 heuristic function.  Semantics of the typecase is preserved."
   (flet ((clauses-cost (clauses)
-	   (let ((buf (list nil)))
-	     (dotimes (len (length clauses))
-	       (lconc buf (subseq clauses 0 len)))
-	     (cost-heuristic `(or ,@(mapcar #'car (car buf)))))))
-    (let ((min-metric (clauses-cost clauses))
-	  (min-clauses clauses))
-      (destructuring-bind (_typecase obj &rest disjoint-clauses) (expand-disjoint-typecase obj clauses)
-	(declare (ignore _typecase))
-	(map-permutations (lambda (permuted-clauses)
-			    (destructuring-bind (_typecase _obj &rest clauses)
-				(expand-reduced-typecase obj permuted-clauses)
-			      (declare (ignore _typecase _obj))
-			      (let ((metric (clauses-cost clauses)))
-				(when (< metric min-metric)
-				  (setf min-metric metric)
-				  (setf min-clauses clauses)))))
-			  disjoint-clauses)
-	`(typecase ,obj ,@min-clauses)))))
+           (typecase-complexity-heuristic `(typecase ,obj ,@clauses))))
+    (caching-types
+      (let ((min-metric (clauses-cost clauses))
+            (min-clauses clauses))
+        (destructuring-bind (_typecase obj &rest disjoint-clauses) (expand-disjoint-typecase obj clauses)
+          (declare (ignore _typecase))
+          (map-permutations (lambda (permuted-clauses)
+                              (destructuring-bind (_typecase _obj &rest clauses)
+                                  (expand-reduced-typecase obj permuted-clauses)
+                                (declare (ignore _typecase _obj))
+                                (let ((metric (clauses-cost clauses)))
+                                  (when (< metric min-metric)
+                                    (setf min-metric metric)
+                                    (setf min-clauses clauses)))))
+                            disjoint-clauses)
+          `(typecase ,obj ,@min-clauses))))))
 
 
-		       

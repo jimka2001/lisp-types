@@ -90,7 +90,7 @@
   (graph-to-dot graph *standard-output*))
 
 (defmethod graph-to-dot (graph (stream stream))
-  (declare (notinline sort)
+  (declare #+sbcl (notinline sort)
            (type list graph))
   (let ((graph (sort (copy-list graph) #'< :key (lambda (node)
 						  (graph-node-id node)))))
@@ -177,7 +177,7 @@
 	    "duplicates in graph nodes: ~A" (find-duplicates graph :key #'type-option :test #'eq))
     (dolist (node graph)
       (declare (type graph-node node)
-               (notinline typep))
+               #+sbcl (notinline typep))
       (assert (typep node 'graph-node)
 	      (notes node)
 	      "corrupt car of node")
@@ -260,7 +260,7 @@
 (defun create-png (graph &key (disjoint-types nil) (message "")
                    &aux (dot-file (format nil "/tmp/jnewton/graph/graph-~2,'0D.dot" (incf *iteration*)))
                      (out (format nil "/tmp/jnewton/graph/graph-~2,'0D.png" *iteration*)))
-  (declare (notinline sort))
+  (declare #+sbcl (notinline sort))
   (flet ((count-touches ()
            (/ (loop :for node :in graph
                     :summing (length (touch-options node)))

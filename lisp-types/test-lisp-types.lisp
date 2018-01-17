@@ -19,13 +19,8 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(defpackage :lisp-types.test
-  (:shadowing-import-from :lisp-types "TEST" "A")
-  ;;(:shadowing-import-from :closer-mop "STANDARD-GENERIC-FUNCTION" "DEFMETHOD" "DEFGENERIC")
-  (:use :cl :lisp-types :lisp-unit ;;:closer-mop
-   #+sbcl :sb-pcl
-   #+allegro :aclmop
-        ))
+
+(in-package :lisp-types.test)
 
 (eval-when (:execute :load-toplevel :compile-toplevel)
   (defun shadow-package-symbols ()
@@ -40,7 +35,16 @@
 (shadow-package-symbols)
 
 
-(in-package :lisp-types.test)
+
+
+(deftype test-float-radix () '(integer 0 (64)))
+(deftype test-float-digits () '(integer 0 64))
+(deftype test-array-rank () '(integer 0 (65529)))
+(deftype test-array-total-size () `(integer 0 (,(- most-positive-fixnum 2))))
+(deftype test-char-code () '(integer 0 (#x110000)))
+(deftype test-char-int () 'test-char-code)
+
+
 
 (defun test ()
   (let ((*print-summary* t)
@@ -477,3 +481,12 @@
   (assert-true (equal '(t t) (multiple-value-list (disjoint-types-p '(not number) 'float))))
   (assert-true (equal '(t t) (multiple-value-list (disjoint-types-p 'float '(not number)))))
   (assert-false (disjoint-types-p '(not float) '(not integer))))
+
+(define-test type/alphbetize-type
+  (assert-true (equal (ALPHABETIZE-TYPE
+                       '(OR (AND (NOT FIXNUM) BIT FIXNUM (NOT BIT))
+                         (AND BIT FIXNUM (NOT BIT))
+                         (AND BIT FIXNUM (NOT BIT) (NOT FIXNUM))))
+                      '(OR (AND BIT FIXNUM (NOT BIT))
+                        (AND BIT FIXNUM (NOT BIT) (NOT FIXNUM))
+                        (AND BIT FIXNUM (NOT BIT) (NOT FIXNUM))))))

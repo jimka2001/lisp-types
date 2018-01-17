@@ -32,21 +32,29 @@
   )
 
 
-(defun gc ()
+(defun garbage-collect ()
   #+sbcl (sb-ext::gc :full t)
   #+allegro (excl:gc t)
 )
 
-(defun caching-call (thunk key hash)
+(defvar *verbose-caching* nil)
+(defvar *caching-thresh* 2048)
+
+(defun caching-call (thunk key hash fun-name access increment)
   "Helper function used by the expansion of DEF-CACHE-FUN.  This function
  manages the caching and cache search of the function defined by DEF-CACHE-FUN."
   (declare (type (function () t) thunk)
+           (type (function () unsigned-byte) access increment)
+           (type symbol fun-name)
            (type list key)
            (type (or null hash-table) hash))
   (cond
     ((null hash)
      (funcall thunk))
     (t
+     (when (and *verbose-caching*
+                (= 0 (mod (funcall increment) *caching-thresh*)))
+       (format t "~D ~A ~A~%" (funcall access) fun-name hash))
      (apply #'values
             (multiple-value-bind (value foundp) (gethash key hash)
               (cond
@@ -54,7 +62,7 @@
                 (t
                  (setf (gethash key hash) (multiple-value-list (funcall thunk))))))))))
 
-(defmacro def-cache-fun ((fun-name with-name &key (hash (gensym "hash"))) lam-list doc-string  &body body)
+(defmacro def-cache-fun ((fun-name with-name &key (hash (gensym "hash")) (access-count (gensym "count"))) lam-list doc-string  &body body)
   "Define two functions named by FUN-NAME and WITH-NAME.  The lambda list of the 
  first function is given by LAM-LIST.  The semantics of the first function will be
  to normally simply return the value of BODY.  However, if the call site to the
@@ -65,18 +73,26 @@
   (declare (type string doc-string))
   `(progn
      (defvar ,hash nil)
-
+     (defvar ,access-count 0)
      (defun ,with-name (thunk)
        (declare (type (function () t) thunk))
-       (let ((,hash (make-hash-table :test #'equal)))
-         (declare (ignorable ,hash))
-         (prog1 (funcall thunk)
-           (format t "finished with ~A=~A~%" ',fun-name ,hash))))
+       (if (null ,hash)
+           (let ((,hash (make-hash-table :test #'equal)))
+             (declare (ignorable ,hash))
+             (prog1 (funcall thunk)
+               (when *verbose-caching*
+                 (format t "finished with ~A=~A~%" ',fun-name ,hash))))
+           (funcall thunk)))
        
      (defun ,fun-name (&rest arg)
        ,doc-string
        (destructuring-bind ,lam-list arg
-         (caching-call (lambda () ,@body) arg ,hash)))))
+         (caching-call (lambda () ,@body)
+                       arg
+                       ,hash
+                       ',fun-name
+                       (lambda () ,access-count)
+                       (lambda () (incf ,access-count)))))))
 
 (def-cache-fun (cached-subtypep call-with-subtypep-cache :hash *subtypep-hash*) (sub super)
                "Wrapper around CL:SUBTYPEP.  Manages the caching of return values of SUBTYPEP within the

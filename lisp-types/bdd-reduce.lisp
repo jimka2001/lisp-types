@@ -26,7 +26,7 @@
            (when *bdd-verbose*
              (when (= 0 (mod *bdd-hash-access-count* 10000))
                (format t "bdd hash = ~A wall-time=~A cpu-time=~A~%"
-                       *bdd-hash*
+                       (getf *bdd-hash-struct* :hash)
                        (truncate (get-internal-run-time) internal-time-units-per-second)
                        (truncate (get-universal-time) internal-time-units-per-second)))))
          (relation (r x-parity y-parity)
@@ -65,57 +65,60 @@
          (right-reductions (mapcar #'cddddr (setof r reductions
                                               (eq :right (getf r :child))))))
 
-    (defun %bdd-node (label left-bdd right-bdd)
+    (defun %bdd-node (label left-bdd right-bdd &key (bdd-node-class 'bdd-node))
       (cond
         ((eq left-bdd right-bdd) ;; 26%
          left-bdd)
-        ((bdd-find *bdd-hash* label left-bdd right-bdd)) ;; 63%
+        ((bdd-find (bdd-hash) label left-bdd right-bdd)) ;; 63%
         (t ;; 11%
          (let ((new-left  (bdd-reduce label left-bdd  left-reductions))
                (new-right (bdd-reduce label right-bdd right-reductions)))
            (cond
              ((eq new-left new-right) ;; 2.5%
               new-left)
-             ((bdd-find *bdd-hash* label new-left new-right)) ;;7%
+             ((bdd-find (bdd-hash) label new-left new-right)) ;;7%
              (t
-              (let* ((bdd (make-instance 'bdd-node
+              (let* ((bdd (make-instance bdd-node-class
                                          :label label
                                          :left  new-left
                                          :right new-right))
                      (key (bdd-make-key label (bdd-ident new-left) (bdd-ident new-right))))
                 (incr-hash)
-                (setf (gethash key *bdd-hash*) bdd)
-                (setf (gethash key *bdd-hash*)
-                      (cond
-                        ;; check (bdd-and-not bdd new-left)
-                        ;;   vs  (bdd-and-not new-left bdd)
-                        ((bdd-type-equal bdd new-left) ;; 0.006%   ;; TODO perhaps it is more interesting to check equivalance first to the 'smaller' of new-left and new-right, not sure because checking for smaller might be slow, and making a new slot to store the size might expand memory enough to also make the program slower?
-                         new-left)
-                        ;; check (bdd-and-not bdd new-right)
-                        ;;   vs  (bdd-and-not new-right bdd)
-                        ((bdd-type-equal bdd new-right) ;; 0.5%
-                         new-right)
-                        ;; the next two clauses, which use CL:SUBTYPEP are necessary
-                        ;; because the CL type system contains lots of identities
-                        ;; which are difficult to encode.  such as
-                        ;;   (nil = (and (not integer) (not ration) rational))
-                        ;;  and several more.  Even if we could encode all these relationships,
-                        ;;  there are more potential relationships every time a user's deftype
-                        ;;  is evaluated.  For example, it might be that
-                        ;;  (nil = (and user-type (not (cons string))))
-                        ;;  but we can't find that out as there's no way to iterate
-                        ;;  through all the user's type definitions and their expansions.
-                        ((smarter-subtypep (bdd-to-expr bdd) nil) ;; 0.03%
-                         *bdd-false*)
-                        ((smarter-subtypep t (bdd-to-expr bdd))
-                         *bdd-true*)
-                        (t ;; 1.7%
-                         bdd))))))))))))
+                (setf (gethash key (bdd-hash)) bdd)
+                (setf (gethash key (bdd-hash))
+                      (bdd-reduce-allocated bdd new-left new-right)))))))))))
 
-(defun bdd-find-reduction (label bdd reduction-rules)
-  (declare (type bdd bdd)
-           (type list reduction-rules)
-           (optimize (speed 3) (safety 0)))
+(defmethod bdd-reduce-allocated ((bdd bdd-node) new-left new-right)
+  (cond
+    ;; check (bdd-and-not bdd new-left)
+    ;;   vs  (bdd-and-not new-left bdd)
+    ((bdd-type-equal bdd new-left) ;; 0.006%   ;; TODO perhaps it is more interesting to check equivalance first to the 'smaller' of new-left and new-right, not sure because checking for smaller might be slow, and making a new slot to store the size might expand memory enough to also make the program slower?
+     new-left)
+    ;; check (bdd-and-not bdd new-right)
+    ;;   vs  (bdd-and-not new-right bdd)
+    ((bdd-type-equal bdd new-right) ;; 0.5%
+     new-right)
+    ;; the next two clauses, which use CL:SUBTYPEP are necessary
+    ;; because the CL type system contains lots of identities
+    ;; which are difficult to encode.  such as
+    ;;   (nil = (and (not integer) (not ration) rational))
+    ;;  and several more.  Even if we could encode all these relationships,
+    ;;  there are more potential relationships every time a user's deftype
+    ;;  is evaluated.  For example, it might be that
+    ;;  (nil = (and user-type (not (cons string))))
+    ;;  but we can't find that out as there's no way to iterate
+    ;;  through all the user's type definitions and their expansions.
+    ((smarter-subtypep (bdd-to-expr bdd) nil) ;; 0.03%
+     *bdd-false*)
+    ((smarter-subtypep t (bdd-to-expr bdd))
+     *bdd-true*)
+    (t ;; 1.7%
+     bdd)))
+
+
+(defmethod bdd-find-reduction (label (bdd bdd) reduction-rules)
+  (declare (type list reduction-rules)
+           (optimize (speed 3)))
   "Apply each of the REDUCTION-RULES to BDD.  Some of the reduction rules may
 result in reducing the BDD to a simpler form.   If no reduction rule applies
 then NIL is returned, otherwise the reduced BDD is returned.
@@ -136,7 +139,7 @@ Each element of REDUCTION-RULES is a plist having at least the keys
     (if (eq bdd reduced)
         nil
         reduced)))
-      
+
 (defun bdd-reduce (label bdd search)
   "This recursive function starts at a BDD whose bdd-label is LABEL, but during the
 recursive descent, LEVEL remains fixed, while BDD walks the BDD dag.  At each step,
@@ -152,21 +155,12 @@ according to the LABEL which is now the label of some parent in its lineage."
                (t
                 (%bdd-node (bdd-label bdd)
                            (recure (bdd-left bdd))
-                           (recure (bdd-right bdd)))))))
+                           (recure (bdd-right bdd))
+                           :bdd-node-class (class-of bdd))))))
     (recure bdd)))
 
 (defun check-table ()
   nil
-  ;; (maphash (lambda (key1 bdd1)
-  ;;            (maphash (lambda (key2 bdd2)
-  ;;                       (cond ((eq bdd1 bdd2))
-  ;;                             ((not (equal (bdd-to-dnf bdd1)
-  ;;                                          (bdd-to-dnf bdd2))))
-  ;;                             (t
-  ;;                              (assert nil (bdd1 bdd2 key1 key2)
-  ;;                                      "two bdds have some DNF"))))
-  ;;                     *bdd-hash*))
-  ;;          *bdd-hash*)
   )
 
 
@@ -456,9 +450,8 @@ in the topological ordering (i.e., the first value)."
 (define-compiler-macro bdd-typep (obj type-specifier)
   (typecase type-specifier
     ((cons (eql quote))
-     (bdd-call-with-new-hash
-      (lambda (&aux (bdd (bdd (cadr type-specifier))))
-        `(funcall ,(bdd-to-if-then-else-3 bdd (gensym)) ,obj))))
+     (bdd-with-new-hash (&aux (bdd (bdd (cadr type-specifier))))
+       `(funcall ,(bdd-to-if-then-else-3 bdd (gensym)) ,obj)))
     (t
      `(typep ,obj ,type-specifier))))
 
@@ -493,50 +486,49 @@ convert it to DNF (disjunctive-normal-form)"
   (bdd-to-dnf (bdd type)))
 
 (defun %bdd-decompose-types (type-specifiers)
-  (declare (optimize (debug 0) (safety 0) (speed 3))) ;; optimize tail call 
-  (bdd-call-with-new-hash
-   (lambda (&aux (bdds (remove-if #'bdd-empty-type (mapcar #'bdd type-specifiers))))
-     (declare (type list bdds))
-     (labels ((try (bdds disjoint-bdds &aux (bdd-a (car bdds)))
-                (declare (type bdd bdd-a))
-                (cond
-                  ((null bdds)
-                   disjoint-bdds)
-                  (t
-                   (flet ((reduction (acc bdd-b &aux (bdd-ab (bdd-and bdd-a bdd-b)))
-                            (declare (type bdd bdd-b bdd-ab)
-                                     (type (cons (member t nil) (cons list (eql nil))) acc))
-                            (destructuring-bind (all-disjoint? bdd-set) acc
-                              (declare (type (member t nil) all-disjoint?)
-                                       (type list bdd-set)
-                                       (notinline union))
-                              (cond
-                                ((bdd-empty-type bdd-ab)
-                                 ;; If the intersection of A and B is the empty type,
-                                 ;; then we don't need to calculate A\B and B\A because
-                                 ;; we know that A\B = A and B\A = B.
-                                 ;; Thus we simply add B to the bdd-set being accumulated.
-                                 (list all-disjoint? (adjoin bdd-b bdd-set)))
-                                (t
-                                 ;; If the interesction of A and B is non empty,
-                                 ;; then we augment bdd-set with at most 3 types.  Looking at
-                                 ;; {AB, A\B, B\A} \ {{}}, some of which might be equal, so we
-                                 ;; remove duplicates, and accumulate also all-disjoint?=nil because
-                                 ;; we've found something A is not disjoint with.
-                                 (list nil
-                                       (union (remove-duplicates
-                                               (remove-if #'bdd-empty-type
-                                                          (list bdd-ab
-                                                                (bdd-and-not bdd-a bdd-ab)
-                                                                (bdd-and-not bdd-b bdd-ab))))
-                                              bdd-set)))))))
-                     (destructuring-bind (all-disjoint? bdd-set)
-                         (reduce #'reduction (cdr bdds) :initial-value '(t nil))
-                       (try bdd-set
-                            (if all-disjoint?
-                                (pushnew bdd-a disjoint-bdds)
-                                disjoint-bdds))))))))
-       (try bdds nil)))))
+  (declare (optimize (debug 0) (speed 3))) ;; optimize tail call 
+  (bdd-with-new-hash (&aux (bdds (remove-if #'bdd-empty-type (mapcar #'bdd type-specifiers))))
+    (declare (type list bdds))
+    (labels ((try (bdds disjoint-bdds &aux (bdd-a (car bdds)))
+               (declare (type (or null bdd) bdd-a))
+               (cond
+                 ((null bdds)
+                  disjoint-bdds)
+                 (t
+                  (flet ((reduction (acc bdd-b &aux (bdd-ab (bdd-and bdd-a bdd-b)))
+                           (declare (type bdd bdd-b bdd-ab)
+                                    (type (cons (member t nil) (cons list (eql nil))) acc))
+                           (destructuring-bind (all-disjoint? bdd-set) acc
+                             (declare (type (member t nil) all-disjoint?)
+                                      (type list bdd-set)
+                                      #+sbcl (notinline union))
+                             (cond
+                               ((bdd-empty-type bdd-ab)
+                                ;; If the intersection of A and B is the empty type,
+                                ;; then we don't need to calculate A\B and B\A because
+                                ;; we know that A\B = A and B\A = B.
+                                ;; Thus we simply add B to the bdd-set being accumulated.
+                                (list all-disjoint? (adjoin bdd-b bdd-set)))
+                               (t
+                                ;; If the interesction of A and B is non empty,
+                                ;; then we augment bdd-set with at most 3 types.  Looking at
+                                ;; {AB, A\B, B\A} \ {{}}, some of which might be equal, so we
+                                ;; remove duplicates, and accumulate also all-disjoint?=nil because
+                                ;; we've found something A is not disjoint with.
+                                (list nil
+                                      (union (remove-duplicates
+                                              (remove-if #'bdd-empty-type
+                                                         (list bdd-ab
+                                                               (bdd-and-not bdd-a bdd-ab)
+                                                               (bdd-and-not bdd-b bdd-ab))))
+                                             bdd-set)))))))
+                    (destructuring-bind (all-disjoint? bdd-set)
+                        (reduce #'reduction (cdr bdds) :initial-value '(t nil))
+                      (try bdd-set
+                           (if all-disjoint?
+                               (pushnew bdd-a disjoint-bdds)
+                               disjoint-bdds))))))))
+      (try bdds nil))))
 
 (defun bdd-collect-terms (bdd)
   (declare (type bdd bdd))
@@ -552,21 +544,26 @@ of min-terms, this function returns a list of the min-terms."
                 nil)
                (bdd-node
                 (nconc (mapcar (lambda (left)
-                                 (%bdd-node (bdd-label term) left *bdd-false*))
+                                 (%bdd-node (bdd-label term) left *bdd-false* :bdd-node-class (class-of term)))
                                (recure (bdd-left term)))
                        (mapcar (lambda (right)
-                                 (%bdd-node (bdd-label term) *bdd-false* right))
+                                 (%bdd-node (bdd-label term) *bdd-false* right :bdd-node-class (class-of term)))
                                (recure (bdd-right term))))))))
     (recure bdd)))
 
+(defun bdd-decompose-types-strong (type-specifiers)
+  (let ((*bdd-hash-strengh* :strong))
+    (bdd-decompose-types type-specifiers)))
+
+(defun bdd-decompose-types-weak (type-specifiers)
+  (let ((*bdd-hash-strengh* :weak))
+    (bdd-decompose-types type-specifiers)))
+
 (defun bdd-decompose-types (type-specifiers)
   (when type-specifiers
-    (call-with-disjoint-hash
-        (lambda ()
-          (call-with-subtype-hash
-              (lambda ()
-                (mapcar #'bdd-to-dnf
-                        (%bdd-decompose-types type-specifiers))))))))
+    (caching-types
+      (mapcar #'bdd-to-dnf
+              (%bdd-decompose-types type-specifiers)))))
 
 (defun bdd-find-dup-bdds (bdds)
   "A debugging function.  It can be used to find whether two (or more) bdds
@@ -598,26 +595,25 @@ in the given list have the same dnf form."
 (defun check-decomposition (given calculated)
   "debugging function to assure that a given list of types GIVEN corresponds correctly
 to a set of types returned from %bdd-decompose-types."
-  (bdd-call-with-new-hash
-   (lambda ()
-     (let ((bdd-given (bdd `(or ,@given)))
-           (bdd-calculated (bdd `(or ,@calculated))))
-       (unless (bdd-subtypep bdd-given bdd-calculated)
-         (error "union of given types ~A is not a subset of union of~%    calculated types ~A~%difference is ~A"
-                given calculated (bdd-to-dnf (bdd-and-not bdd-given bdd-calculated))))
-       (unless (bdd-subtypep bdd-calculated bdd-given)
-         (error "union of calculated types ~A is not a subset of~%    union of given types ~A~%difference is ~A"
-                calculated given (bdd-to-dnf (bdd-and-not bdd-calculated bdd-given))))
-       (dolist (c calculated)
-         (when (bdd-empty-type (bdd c))
-           (error "calculated empty type ~A" c))
-         (unless (exists g given
-                   (bdd-subtypep (bdd c) (bdd g)))
-           (error "calculated type ~A is not a subset of any given type ~A"
-                  c given))
-         (dolist (c2 (remove c calculated))
-           (when (bdd-type-equal (bdd c2) (bdd c))
-             (error "calculated two equal types ~A = ~A" c c2))))))))
+  (bdd-with-new-hash ()
+    (let ((bdd-given (bdd `(or ,@given)))
+          (bdd-calculated (bdd `(or ,@calculated))))
+      (unless (bdd-subtypep bdd-given bdd-calculated)
+        (error "union of given types ~A is not a subset of union of~%    calculated types ~A~%difference is ~A"
+               given calculated (bdd-to-dnf (bdd-and-not bdd-given bdd-calculated))))
+      (unless (bdd-subtypep bdd-calculated bdd-given)
+        (error "union of calculated types ~A is not a subset of~%    union of given types ~A~%difference is ~A"
+               calculated given (bdd-to-dnf (bdd-and-not bdd-calculated bdd-given))))
+      (dolist (c calculated)
+        (when (bdd-empty-type (bdd c))
+          (error "calculated empty type ~A" c))
+        (unless (exists g given
+                  (bdd-subtypep (bdd c) (bdd g)))
+          (error "calculated type ~A is not a subset of any given type ~A"
+                 c given))
+        (dolist (c2 (remove c calculated))
+          (when (bdd-type-equal (bdd c2) (bdd c))
+            (error "calculated two equal types ~A = ~A" c c2)))))))
 
 (defun boolean-expr-to-latex (expr &optional (stream t))
   (etypecase expr

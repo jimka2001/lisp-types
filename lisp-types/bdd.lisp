@@ -34,7 +34,8 @@
 (defvar *bdd-count* 1)
 (defclass bdd ()
   ((ident ;; :reader bdd-ident
-          :initarg :ident :initform (incf *bdd-count*))
+    :type unsigned-byte
+    :initarg :ident :initform (incf *bdd-count*))
    (label ;; :reader bdd-label
     :initarg :label)
    (dnf)
@@ -75,10 +76,36 @@
                    (incf c)))
     c))
 
-(defun bdd-new-hash ()
-  (make-hash-table :test #'equal))
+(defvar *bdd-generation* 0)
+(defvar *bdd-hash-strengh* :strong ) ;; or :weak
+(defun bdd-new-hash (&key (weak (eq *bdd-hash-strengh* :weak)))
+  (incf *bdd-generation*)
+  (list :generation *bdd-generation*
+        :recent-count 0
+        :strength weak
+        :hash 
+        (if weak
+            (make-hash-table :test #'equal
+                             #+sbcl :weakness #+sbcl :value
+                             #+allegro :values #+allegro :weak)
+            (make-hash-table :test #'equal))))
 
-(defvar *bdd-hash* (bdd-new-hash))
+(defvar *bdd-hash-struct* nil)
+(defun bdd-hash ()
+  (getf *bdd-hash-struct* :hash))
+(defun bdd-recent-count ()
+  (getf *bdd-hash-struct* :recent-count))
+
+(defun (setf bdd-recent-count) (value)
+  (setf (getf *bdd-hash-struct* :recent-count)
+        value))
+
+(defun bdd-generation ()
+  (getf *bdd-hash-struct* :generation))
+
+;;(defvar *bdd-hash* (bdd-new-hash))
+;;(defvar *bdd-recent-count* 0)
+
 (defvar *bdd-verbose* nil)
 
 (defmacro bdd-with-new-hash (vars &body body)
@@ -86,7 +113,7 @@
 
 (defun bdd-call-with-new-hash (thunk &key (verbose *bdd-verbose*))
   (let ((*bdd-verbose* verbose)
-        (*bdd-hash* (bdd-new-hash)))
+        (*bdd-hash-struct* (bdd-new-hash)))
     ;; (setf (gethash :type-system *bdd-hash*)
     ;;       (bdd '(not (or
     ;;                   (and (not integer) (not ratio) rational)
@@ -94,23 +121,37 @@
     ;;                   (and array sequence (not vector))
     ;;                   (and (not float) (not integer) (not ratio) real)
     ;;                   (and (not bignum) (not fixnum) unsigned-byte)))))
-    (call-with-subtypep-cache
-     (lambda ()
-       (prog1 (funcall thunk)
-         (when verbose
-           (format t "finished with ~A~%" *bdd-hash*)))))))
+    (caching-types
+     (prog1 (funcall thunk)
+       (when verbose
+         (format t "finished with ~A~%" (bdd-hash)))))))
   
 (defun bdd-make-key (label left right)
   (list left right label))
 
 (defun bdd-find-int-int (hash label left right)
   (declare (type fixnum left right)
-           (optimize (speed 3) (safety 0)))
+           (optimize (speed 3)))
   (gethash (bdd-make-key label left right) hash))
 
 (defun bdd-find (hash label left-bdd right-bdd)
   (declare (type bdd left-bdd right-bdd))
+  (when (eq hash (bdd-hash))
+    (setf (bdd-recent-count) (hash-table-count (bdd-hash))))
   (bdd-find-int-int hash label (bdd-ident left-bdd) (bdd-ident right-bdd)))
+
+#+sbcl
+(progn
+  (defun report-hash-lossage ()
+    (when (bdd-hash)
+      (let ((old (bdd-recent-count))
+            (new (hash-table-count (bdd-hash))))
+        (unless (= old new)
+          (format t "generation=~D Before GC hash count was ~A, after GC is ~A, lossage=~A~%"
+                  *bdd-generation* old new (- old new))
+          (setf (bdd-recent-count) new)))))
+  (pushnew 'report-hash-lossage sb-ext:*after-gc-hooks*))
+
 
 (defmethod print-object ((bdd bdd) stream)
   (print-unreadable-object (bdd stream :type t :identity nil)
@@ -164,29 +205,32 @@
       (%bdd-node label *bdd-true* *bdd-false*)
       (error "invalid type specifier: ~A" label)))
 
+(defgeneric bdd-list-to-bdd (head tail))
+
+(defmethod bdd-list-to-bdd ((head (eql 'and)) tail)
+  (reduce #'bdd-and (mapcar #'bdd tail) :initial-value *bdd-true*))
+
+(defmethod bdd-list-to-bdd ((head (eql 'or)) tail)
+  (reduce #'bdd-or (mapcar #'bdd tail) :initial-value *bdd-false*))
+
+(defmethod bdd-list-to-bdd ((head (eql 'not)) tail)
+  ;; (assert (null (cdr tail)) ()
+  ;;         "NOT takes exactly one argument: cannot convert ~A to a BDD" expr)
+  (bdd-and-not *bdd-true* (bdd (car tail))))
+
+(defmethod bdd-list-to-bdd ((head (eql 'and-not)) tail)
+  ;; (assert (<= 2 (length tail)) ()
+  ;;         "AND-NOT takes at least two arguments: cannot convert ~A to a BDD" expr)
+  (destructuring-bind (bdd-head &rest bdd-tail) (mapcar #'bdd tail)
+    (reduce #'bdd-and-not bdd-tail :initial-value bdd-head)))
+
+(defmethod bdd-list-to-bdd (head tail &aux (expr (cons head tail)))
+  (if (valid-type-p expr)
+      (%bdd-node expr *bdd-true* *bdd-false*)
+      (error "invalid type specifier: ~A" expr)))
+
 (defmethod bdd ((expr list))
-  (declare (optimize (speed 3) (safety 0) (debug 0) (compilation-speed 0) (space 0)))
-  (destructuring-bind (head &rest tail) expr
-    (flet ((bdd-tail ()
-             (mapcar #'bdd tail)))
-      (case head
-        ((and)
-         (reduce #'bdd-and (bdd-tail) :initial-value *bdd-true* ))
-        ((or)
-         (reduce #'bdd-or (bdd-tail) :initial-value *bdd-false*))
-        ((not)
-         ;; (assert (null (cdr tail)) ()
-         ;;         "NOT takes exactly one argument: cannot convert ~A to a BDD" expr)
-         (bdd-and-not *bdd-true* (bdd (car tail))))
-        ((and-not)
-         ;; (assert (<= 2 (length tail)) ()
-         ;;         "AND-NOT takes at least two arguments: cannot convert ~A to a BDD" expr)
-         (destructuring-bind (bdd-head &rest bdd-tail) (bdd-tail)
-           (reduce #'bdd-and-not bdd-tail :initial-value bdd-head)))
-        (t
-         (if (valid-type-p expr)
-             (%bdd-node expr *bdd-true* *bdd-false*)
-             (error "invalid type specifier: ~A" expr)))))))
+  (bdd-list-to-bdd (car expr) (cdr expr)))
 
 (defmethod bdd ((label (eql nil)))
   *bdd-false*)
@@ -255,9 +299,11 @@
 (defmethod bdd-and-not ((true bdd-true) (b bdd))
   (%bdd-node (bdd-label b)
             (bdd-and-not *bdd-true* (bdd-left b))
-            (bdd-and-not *bdd-true* (bdd-right b))))
+            (bdd-and-not *bdd-true* (bdd-right b))
+            :bdd-node-class (class-of b)))
 
-(defun bdd-cmp (t1 t2)
+
+(defun %bdd-cmp (t1 t2)
   (cond
     ((equal t1 t2)
      '=)
@@ -265,6 +311,12 @@
      '<)
     ((null t2)
      '>)
+    ((and (listp t1)
+          (not (listp t2)))
+     '>)
+    ((and (listp t2)
+          (not (listp t1)))
+     '<)
     ((not (eql (class-of t1) (class-of t2))) 
      (bdd-cmp (class-name (class-of t1)) (class-name (class-of t2))))
     (t
@@ -310,6 +362,16 @@
        (t
         (error "cannot compare a ~A with a ~A" (class-of t1) (class-of t2)))))))
 
+(defvar *bdd-cmp-function* #'%bdd-cmp)
+
+(defun bdd-cmp (t1 t2)
+  (the (member < > =)
+       (funcall *bdd-cmp-function* t1 t2)))
+
+(defgeneric bdd-cmp-bdd (bdd1 bdd2))
+(defmethod bdd-cmp-bdd ((bdd1 bdd-node) (bdd2 bdd-node))
+  (bdd-cmp (bdd-label bdd1) (bdd-label bdd2)))
+
 (flet ((bdd-op (op b1 b2)
          (declare (type bdd b1 b2))
          (let ((a1 (bdd-label b1))
@@ -319,13 +381,13 @@
                (c2 (bdd-left b2))
                (d2 (bdd-right b2)))
            (declare (type bdd c1 c2 d1 d2))
-           (ecase (bdd-cmp a1 a2)
+           (ecase (bdd-cmp-bdd b1 b2)
              ((=)
-              (%bdd-node a1 (funcall op c1 c2) (funcall op d1 d2)))
+              (%bdd-node a1 (funcall op c1 c2) (funcall op d1 d2) :bdd-node-class (class-of b1)))
              ((<)
-              (%bdd-node a1 (funcall op c1 b2) (funcall op d1 b2)))
+              (%bdd-node a1 (funcall op c1 b2) (funcall op d1 b2) :bdd-node-class (class-of b1)))
              ((>)
-              (%bdd-node a2 (funcall op b1 c2) (funcall op b1 d2)))))))
+              (%bdd-node a2 (funcall op b1 c2) (funcall op b1 d2) :bdd-node-class (class-of b2)))))))
 
   (defmethod bdd-or ((b1 bdd-node) (b2 bdd-node))
     (if (eq b1 b2)
@@ -381,5 +443,3 @@
           (t
            `(or (and ,(bdd-label bdd) ,(bdd-to-expr (bdd-left bdd)))
                 (and (not ,(bdd-label bdd)) ,(bdd-to-expr (bdd-right bdd))))))))
-
-

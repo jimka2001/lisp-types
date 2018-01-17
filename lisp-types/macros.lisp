@@ -28,7 +28,6 @@
    "VALID-TYPE-P"
    "REDUCE-LISP-TYPE"
    "REDUCED-TYPECASE"
-   "OPTIMIZED-TYPECASE"
    "DISJOINT-TYPES-P"
    "SMARTER-SUBTYPEP"
    "EQUIVALENT-TYPES-P"
@@ -37,12 +36,13 @@
    "BDD"
    "RUN-PROGRAM"
    "GC"
+   "CACHING-TYPES"
    ))
 
 (in-package   :lisp-types)
 
 (defmacro exists (obj data &body body)
-  (etypecase obj
+  (typecase obj
     (list
      (let ((var (gensym "exists")))
        `(member-if (lambda (,var)

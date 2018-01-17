@@ -103,29 +103,26 @@
                             (MEMBER 0 2 4))))
 
 (define-test disjoint-cmp-9
-  (bdd-call-with-new-hash
-   (lambda ()
-     (assert-test (= 3 (length (bdd-decompose-types '((MEMBER 0 2)
+  (bdd-with-new-hash ()
+   (assert-test (= 3 (length (bdd-decompose-types '((MEMBER 0 2)
                                                       (MEMBER 0 1 2)
-                                                      (MEMBER 0 2 4)))))))))
+                                                      (MEMBER 0 2 4))))))))
 
 (define-test disjoint-cmp-a
-  (bdd-call-with-new-hash
-   (lambda ()
-     (bdd-call-with-new-hash
-      (lambda ()
-        (let* ((t1 (bdd '(member 0 2)))
-               (t2 (bdd '(member 0 1 2)))
-               (t3 (bdd '(member 0 2 4)))
-               (bdds (list t1 t2 t3))
-               (U (reduce #'bdd-or bdds :initial-value *bdd-false*)))
-          (assert-false (eq '= (bdd-cmp '(member  0 2 4) '(member 0 2))))
-          (forall x '(0 1 2 4)
-            (assert-true (bdd-type-p x U)))
-          (assert-false (bdd-type-p 3 U))
-          (assert-true (bdd-type-p 0 (bdd-and U t1)))
-          (assert-true (bdd-type-p 2 (bdd-and U t1)))
-          (assert-true (bdd-type-p 4 (bdd-and-not U t1)))))))))
+  (bdd-with-new-hash ()
+    (bdd-with-new-hash ()
+      (let* ((t1 (bdd '(member 0 2)))
+             (t2 (bdd '(member 0 1 2)))
+             (t3 (bdd '(member 0 2 4)))
+             (bdds (list t1 t2 t3))
+             (U (reduce #'bdd-or bdds :initial-value *bdd-false*)))
+        (assert-false (eq '= (bdd-cmp '(member  0 2 4) '(member 0 2))))
+        (forall x '(0 1 2 4)
+          (assert-true (bdd-type-p x U)))
+        (assert-false (bdd-type-p 3 U))
+        (assert-true (bdd-type-p 0 (bdd-and U t1)))
+        (assert-true (bdd-type-p 2 (bdd-and U t1)))
+        (assert-true (bdd-type-p 4 (bdd-and-not U t1)))))))
 
 (define-test disjoint-cmp-b
   (assert-true (= 9 (length (decompose-types-graph
@@ -254,7 +251,7 @@
 (define-test disjoint-cmp-l
   (let ((type-specifiers
           '(CONDITION RESTART RATIONAL CONS RATIO READER-ERROR STRUCTURE-CLASS
-            SYNONYM-STREAM ARITHMETIC-ERROR CHAR-CODE WARNING FLOAT-RADIX
+            SYNONYM-STREAM ARITHMETIC-ERROR TEST-CHAR-CODE WARNING FLOAT-RADIX
             SIMPLE-BIT-VECTOR STREAM-ERROR ARRAY STYLE-WARNING)))
     (slow-decompose-types-bdd-graph type-specifiers 
                                 :sort-nodes #'(lambda (graph)
@@ -264,57 +261,22 @@
                                 :inner-loop :operation
                                 :do-break-sub :strict
                                 :do-break-loop t)))
-                                
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ;; (lisp-types.test::sort-results "/Users/jnewton/newton.16.edtchs/src/member.sexp" nil)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 (defun perf-test-1 (&key (size 11))
-  (bdd-call-with-new-hash
-   (lambda (&aux (type-specifiers (lisp-types::choose-randomly (loop :for name being the external-symbols in "SB-PCL"
-                                                                     :when (find-class name nil)
-                                                                       :collect name) size)))
-     (slow-decompose-types-bdd-graph type-specifiers
-                                 :sort-nodes (lambda (graph)
-                                               (declare (notinline sort))
-                                               (sort graph #'< :key
-                                                     #'count-connections-per-node))
-                                 :sort-strategy  "INCREASING-CONNECTIONS"
-                                 :inner-loop :node
-                                 :do-break-sub :relaxed
-                                 :do-break-loop nil))))
+  (bdd-with-new-hash (&aux (type-specifiers (lisp-types::choose-randomly (loop :for name being the external-symbols in "SB-PCL"
+                                                                               :when (find-class name nil)
+                                                                                 :collect name) size)))
+    (slow-decompose-types-bdd-graph type-specifiers
+                                    :sort-nodes (lambda (graph)
+                                                  (declare (notinline sort))
+                                                  (sort graph #'< :key
+                                                        #'count-connections-per-node))
+                                    :sort-strategy  "INCREASING-CONNECTIONS"
+                                    :inner-loop :node
+                                    :do-break-sub :relaxed
+                                    :do-break-loop nil)))
 
 (defun read-trace (stream)
   (let (pending)

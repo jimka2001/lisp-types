@@ -92,19 +92,19 @@
                          (shuffle-list graph))
         :sort-strategy "SHUFFLE")
        (:sort-nodes ,(lambda (graph)
-                       (declare (notinline sort))
+                       (declare #+sbcl (notinline sort))
                        (sort graph #'< :key #'count-connections-per-node))
         :sort-strategy "INCREASING-CONNECTIONS")
        (:sort-nodes ,(lambda (graph)
-                       (declare (notinline sort))
+                       (declare #+sbcl (notinline sort))
                        (sort graph #'> :key #'count-connections-per-node))
         :sort-strategy "DECREASING-CONNECTIONS")
        (:sort-nodes ,(lambda (graph)
-                       (declare (notinline sort))
+                       (declare #+sbcl (notinline sort))
                        (sort graph #'> :key #'count-parents-per-node))
         :sort-strategy "BOTTOM-TO-TOP")
        (:sort-nodes ,(lambda (graph)
-                       (declare (notinline sort))
+                       (declare #+sbcl (notinline sort))
                        (sort graph #'< :key #'count-parents-per-node))
         :sort-strategy "TOP-TO-BOTTOM"))))
 
@@ -123,7 +123,7 @@
                                      (sort-nodes (find-sort-strategy-function sort-strategy))
                                      (do-disjoint t)
                                      (do-break-touch t))
-  (declare (notinline sort +)
+  (declare #+sbcl (notinline sort +)
            ;;(ignore sort-strategy)
            (type (member :node :operation) inner-loop)
            (type (member :strict :relaxed) do-break-sub)
@@ -144,7 +144,7 @@
                 (sort (mapcar #'bdd type-specifiers)
                       #'>
                       :key #'(lambda (bdd)
-                               (declare (notinline length))
+                               (declare #+sbcl (notinline length))
                                (length (bdd-collect-atomic-types bdd))))
                 :test #'bdd-type-equal))
          (bdd-type-orig (bdd `(or ,@type-specifiers)))
@@ -301,7 +301,7 @@
                    ;;(mapc #'remove-nil! (getf node :sub-types))
                    ))
                (break-touch! (node-x node-y)
-                 (declare (notinline union +))
+                 (declare #+sbcl (notinline union +))
                  (incf changed)
                  (no-touch! node-x node-y)
                  (let* ((bdd-x (getf node-x :bdd))
@@ -463,15 +463,17 @@
 (defun count-parents-per-node (node)
   (length (getf node :super-types)))
 
+(defun decompose-types-bdd-graph-strong (type-specifiers)
+  (let ((*bdd-hash-strengh* :strong))
+    (decompose-types-bdd-graph type-specifiers)))
+
+(defun decompose-types-bdd-graph-weak (type-specifiers)
+  (let ((*bdd-hash-strengh* :weak))
+    (decompose-types-bdd-graph type-specifiers)))
+
 (defun decompose-types-bdd-graph (type-specifiers)
   (decompose-by-graph-1 type-specifiers :graph-class 'bdd-graph))
 
-
-(defun decompose-types-bdd-graph-recursive-increasing-connections (type-specifiers)
-  (bdd-call-with-new-hash (lambda ()
-                       (slow-decompose-types-bdd-graph type-specifiers
-                                                   :sort-strategy "INCREASING-CONNECTIONS"
-                                                   :inner-loop :recursive))))
 
 (defmacro make-decompose-fun-combos ()
   (let (fun-defs
@@ -511,8 +513,8 @@
 
                 (push `(setf (get ',fun-name 'decompose-properties) ',props) prop-defs)
                 (push `(defun ,fun-name (type-specifiers)
-                         (bdd-call-with-new-hash (lambda ()
-                                              (slow-decompose-types-bdd-graph type-specifiers ,@props))))
+                         (bdd-with-new-hash ()
+                           (slow-decompose-types-bdd-graph type-specifiers ,@props)))
                       fun-defs)))))))
     (setf fun-names (mapcar #'cadr fun-defs))
     `(progn

@@ -42,7 +42,7 @@
   list)
 
 (defun enter-conses (hash object)
-  "HASH is a hash-tabel which uses EQUAL as test.
+  "HASH is a hash-table which uses EQUAL as test.
    OBJECT is any lisp object.
    ENTER-CONSES returns an object which is EQUAL to the given OBJECT,
    but subsequent times ENTER-CONSES is called with another such EQUAL
@@ -102,13 +102,19 @@ If N > (length of data) then a permutation of DATA is returned"
 ;;(assert (not (valid-type-p (gensym))))
 ;;(assert (valid-type-p 'bignum))
 
+(defvar *reduce-member-type* t)
+
+
+
+
 (defun slow-smarter-subtypep (t1 t2)
   (declare (optimize (speed 3) (compilation-speed 0)))
   (cond
-    ((typep t1 '(cons (member eql member))) ; (eql obj) or (member obj1 ...)
+    ((and *reduce-member-type*
+          (typep t1 '(cons (member eql member)))) ; (eql obj) or (member obj1 ...)
      (list (every #'(lambda (obj)
-                      (declare (notinline typep))
-                      (typep obj t2))
+                      (declare #+sbcl (notinline typep))
+                      (ignore-errors (typep obj t2)))
                   (cdr t1))
            t))
     ;; T1 <: T2 <==> not(T2) <: not(T1)
@@ -162,12 +168,14 @@ If N > (length of data) then a permutation of DATA is returned"
   "The sbcl subtypep function does not know that (eql :x) is a subtype of keyword,
 this function SMARTER-SUBTYPEP understands this."
   (declare (optimize (speed 3) (compilation-speed 0)))
-  (multiple-value-bind (T1<=T2 OK) (cached-subtypep t1 t2)
-    (cond
-      (OK
-       (values T1<=T2 t))
-      (t
-       (apply #'values (slow-smarter-subtypep t1 t2))))))
+  (let ((t1 (type-to-dnf t1))
+        (t2 (type-to-dnf t2)))
+    (multiple-value-bind (T1<=T2 OK) (cached-subtypep t1 t2)
+      (cond
+        (OK
+         (values T1<=T2 t))
+        (t
+         (apply #'values (slow-smarter-subtypep t1 t2)))))))
 
 (defun xor (a b)
   (or (and a (not b))
@@ -184,11 +192,16 @@ this function SMARTER-SUBTYPEP understands this."
 i.e., is a subtype of nil."
   (apply #'values (slow-disjoint-types-p T1 T2)))
 
-(defun slow-disjoint-types-p (T1 T2 &aux X Y (t12 (list T1 T2)))
+(defun slow-disjoint-types-p (t1 t2
+                              &aux
+                                (T1 (type-to-dnf t1))
+                                (T2 (type-to-dnf t2))
+                                X Y
+                                (t12 (type-to-dnf (list 'and T1 T2))))
   "SLOW-DISJOINT-TYPES-P returns a list of two booleans, whereas DISJOINT-TYPES-P returns
  the two corresponding VALUES."
-  (declare (notinline subsetp))
-  (multiple-value-bind (disjointp OK) (cached-subtypep (cons 'and t12) nil)
+  (declare #+sbcl (notinline subsetp))
+  (multiple-value-bind (disjointp OK) (cached-subtypep t12 nil)
     (cond
       (OK
        (cons disjointp '(t)))
@@ -252,13 +265,30 @@ i.e., is a subtype of nil."
        '(nil nil)))))
 
 (def-cache-fun (equivalent-types-p call-with-equiv-hash) (T1 T2)
-  "Two types are considered equivalent if each is a subtype of the other."
-  (multiple-value-bind (T1<=T2 okT1T2) (smarter-subtypep T1 T2)
-    (multiple-value-bind (T2<=T1 okT2T2) (smarter-subtypep T2 T1)
-      (values (and T1<=T2 T2<=T1) (and okT1T2 okT2T2)))))
+               "Two types are considered equivalent if each is a subtype of the other."
+  (let ((T1 (type-to-dnf T1))
+        (T2 (type-to-dnf T2)))
+    (multiple-value-bind (T1<=T2 okT1T2) (smarter-subtypep T1 T2)
+      (if (and okT1T2 (not T1<=T2))
+          (values nil t) ; no need to call subtypep a second time
+          (multiple-value-bind (T2<=T1 okT2T1) (smarter-subtypep T2 T1)
+            (if (and okT2T1 (not T2<=T1))
+                (values nil t)
+                (values (and T1<=T2 T2<=T1) (and okT1T2 okT2T1))))))))
+
+(defmacro caching-types (&body body)
+  `(call-with-disjoint-hash
+    (lambda ()
+      (call-with-subtype-hash
+       (lambda ()
+         (call-with-equiv-hash
+          (lambda ()
+            (call-with-subtypep-cache
+             (lambda ()
+               ,@body)))))))))
 
 (defun set-equalp (set-a set-b &key (test #'equal))
-  (declare (notinline set-exclusive-or))
+  (declare #+sbcl (notinline set-exclusive-or))
   (not (set-exclusive-or set-a set-b :test test)))
 
 (defun set-subsetp (set-sub set-super &key (test #'equal))
