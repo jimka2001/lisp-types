@@ -735,7 +735,6 @@
         (format stream "set term png~%")
         (format stream "set key below~%") ;; enable legend
         (format stream "set title ~S~%" summary)
-        (format stream "show title~%")
         (unless normalize
           (format stream "set logscale xy~%"))
         (labels ((xys (curve)
@@ -1374,7 +1373,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
 
 
 (defun make-bucket-reporter (&key tag scale types file-name)
-  (lambda (multiplier sample options)
+  (lambda (multiplier sample options &key (destination-dir *destination-dir*))
     (apply #'test-report :limit (* multiplier scale)
                          :tag tag
                          :types types
@@ -1453,24 +1452,24 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                                         (decomposition-functions *decomposition-functions*)
                                         (destination-dir *destination-dir*)
                                         )
-  (declare (ignore prefix re-run suite-time-out time-out normalize destination-dir num-tries hilite-min))
+  (declare (ignore prefix re-run suite-time-out time-out normalize num-tries hilite-min))
   (let ((*decomposition-functions*  decomposition-functions))
     (loop for (tag bucket-reporter) in *bucket-reporters*
           for sample = (/ 1 (length *bucket-reporters*)) then (+ sample (/ 1 (length *bucket-reporters*)))
-          do (funcall bucket-reporter multiplier sample options)))    )
+          do (funcall bucket-reporter multiplier sample options :destination-dir destination-dir)))    )
 
 
-(defun parameterization-report (&key (re-run t))
+(defun parameterization-report (&key (re-run t)  (destination-dir *destination-dir*))
   (big-test-report :re-run re-run
                    :prefix "bdd-graph-"
                    :normalize 'decompose-types-bdd-graph
                    :hilite-min t
-                   :destination-dir *destination-dir*
+                   :destination-dir destination-dir
                    :decomposition-functions (cons 'decompose-types-bdd-graph
                                                   *decompose-fun-names*)))
 
 
-(defun best-2-report (&key (re-run t) (multiplier 1.8))
+(defun best-2-report (&key (re-run t) (multiplier 1.8) (destination-dir *destination-dir*))
   (big-test-report :re-run re-run
                    :prefix "best-2-" ;; should change to best-4-
                    :multiplier multiplier
@@ -1478,7 +1477,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                    :time-out 20
                    :num-tries 4
                    :hilite-min nil
-                   :destination-dir *destination-dir*
+                   :destination-dir destination-dir
                    :decomposition-functions '(decompose-types-bdd-graph-strong
                                               decompose-types-bdd-graph-weak
                                               bdd-decompose-types-strong
@@ -1487,7 +1486,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                                               decompose-types-graph)))
 
 
-(defun bdd-report (&key (re-run t) (multiplier 1.8))
+(defun bdd-report (&key (re-run t) (multiplier 1.8)  (destination-dir *destination-dir*))
   (big-test-report :re-run re-run
                    :prefix "bdd-ws-" ;; should change to best-4-
                    :multiplier multiplier
@@ -1495,7 +1494,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                    :time-out 20
                    :num-tries 4
                    :hilite-min nil
-                   :destination-dir *destination-dir*
+                   :destination-dir destination-dir
                    :decomposition-functions '(decompose-types-bdd-graph-strong
                                               decompose-types-bdd-graph-weak
                                               bdd-decompose-types-strong
