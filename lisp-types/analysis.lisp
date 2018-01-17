@@ -419,7 +419,7 @@
                (bordeaux-threads:destroy-thread th-worker))
              :name "th-observer stop-watch"))
       (setf th-worker (bordeaux-threads:make-thread #'time-it :name "th-handle thunk"))
-      (handler-case (cl-user::print-conditions (bordeaux-threads:join-thread th-worker))
+      (handler-case (print-conditions (bordeaux-threads:join-thread th-worker))
         #+sbcl(SB-THREAD:JOIN-THREAD-ERROR (e)
                 (setf th-worker-join-failed e)
                 nil))
@@ -1238,7 +1238,8 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
     (print-ltxdat ltxdat-no-legend-name sorted-name include-decompose nil tag))
   (print-dat dat-name include-decompose))
 
-(defun test-report (&key sample (prefix "") (re-run t) (suite-time-out (* 60 60 4))  (time-out (* 3 60)) normalize (destination-dir "/Users/jnewton/newton.16.edtchs/src")
+(defvar *destination-dir* "/Users/jnewton/newton.16.edtchs/src")
+(defun test-report (&key sample (prefix "") (re-run t) (suite-time-out (* 60 60 4))  (time-out (* 3 60)) normalize (destination-dir *destination-dir*)
                       types file-name (limit 15) tag hilite-min (num-tries 2)
                     &allow-other-keys)
   "TIME-OUT is the number of seconds to allow for one call to a single decompose function.
@@ -1379,6 +1380,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                          :types types
                          :file-name file-name
                          :sample sample
+                         :destination-dir destination-dir
                          options)))
 
 (defun add-bucket-reporter (&key tag scale types file-name)
@@ -1449,7 +1451,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
 (defun big-test-report (&rest options &key (num-tries 2) (multiplier 1) (prefix "") (re-run t)
                                         (suite-time-out (* 60 60 4)) (time-out 100) normalize hilite-min
                                         (decomposition-functions *decomposition-functions*)
-                                        (destination-dir "/Users/jnewton/newton.16.edtchs/src")
+                                        (destination-dir *destination-dir*)
                                         )
   (declare (ignore prefix re-run suite-time-out time-out normalize destination-dir num-tries hilite-min))
   (let ((*decomposition-functions*  decomposition-functions))
@@ -1463,6 +1465,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                    :prefix "bdd-graph-"
                    :normalize 'decompose-types-bdd-graph
                    :hilite-min t
+                   :destination-dir *destination-dir*
                    :decomposition-functions (cons 'decompose-types-bdd-graph
                                                   *decompose-fun-names*)))
 
@@ -1475,6 +1478,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                    :time-out 20
                    :num-tries 4
                    :hilite-min nil
+                   :destination-dir *destination-dir*
                    :decomposition-functions '(decompose-types-bdd-graph-strong
                                               decompose-types-bdd-graph-weak
                                               bdd-decompose-types-strong
@@ -1491,6 +1495,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                    :time-out 20
                    :num-tries 4
                    :hilite-min nil
+                   :destination-dir *destination-dir*
                    :decomposition-functions '(decompose-types-bdd-graph-strong
                                               decompose-types-bdd-graph-weak
                                               bdd-decompose-types-strong
