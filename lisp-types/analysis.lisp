@@ -756,9 +756,17 @@
                                     `(:line-style ,line-style ,@descr))
                                   *decomposition-function-descriptors*))
                  (normalize-to-xys (when normalize
-                                     (xys (find (symbol-name normalize) sorted
-                                                :key (getter :decompose) :test #'string=)))))
-            (assert (or (not normalize) normalize-to-xys) (normalize normalize-to-xys sorted))
+                                     (let ((plist (or (find (symbol-name normalize) sorted
+                                                            :key (getter :decompose) :test #'string=)
+                                                      (error "cannot find :decompose ~A~%   with key=~A~%  with include-decompose=~A~%  in sorted=~A"
+                                                             (symbol-name normalize)
+                                                             key
+                                                             include-decompose
+                                                             sorted))))
+                                       (or (xys plist)
+                                           (error "failed to compute points from sorted=~A" plist))))))
+            (assert (or (not normalize) normalize-to-xys)
+                    (normalize normalize-to-xys sorted))
             (incf line-style)
             (when hilite-min
               (setf min-curve-line-style line-style)
@@ -1678,13 +1686,14 @@ sleeping before the code finishes evaluating."
           do (funcall bucket-reporter multiplier sample options :destination-dir destination-dir)))    )
 
 
-(defun parameterization-report (&key (re-run t)  (destination-dir *destination-dir*))
+(defun parameterization-report (&key (re-run t) (multiplier 1) (destination-dir *destination-dir*))
   (big-test-report :re-run re-run
                    :prefix "bdd-graph-"
-                   :normalize 'decompose-types-bdd-graph
+                   :normalize 'decompose-types-bdd-graph-weak
                    :hilite-min t
                    :destination-dir destination-dir
-                   :decomposition-functions (cons 'decompose-types-bdd-graph
+                   :multiplier multiplier
+                   :decomposition-functions (cons 'decompose-types-bdd-graph-weak
                                                   *decompose-fun-names*)))
 
 
