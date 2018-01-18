@@ -1447,59 +1447,6 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                      :types (valid-subtypes t)
                      :file-name "subtypes-of-t")
 
-(defun big-test-report (&rest options &key (num-tries 2) (multiplier 1) (prefix "") (re-run t)
-                                        (suite-time-out (* 60 60 4)) (time-out 100) normalize hilite-min
-                                        (decomposition-functions *decomposition-functions*)
-                                        (destination-dir *destination-dir*)
-                                        )
-  (declare (ignore prefix re-run suite-time-out time-out normalize num-tries hilite-min))
-  (let ((*decomposition-functions*  decomposition-functions))
-    (loop for (tag bucket-reporter) in *bucket-reporters*
-          for sample = (/ 1 (length *bucket-reporters*)) then (+ sample (/ 1 (length *bucket-reporters*)))
-          do (funcall bucket-reporter multiplier sample options :destination-dir destination-dir)))    )
-
-
-(defun parameterization-report (&key (re-run t)  (destination-dir *destination-dir*))
-  (big-test-report :re-run re-run
-                   :prefix "bdd-graph-"
-                   :normalize 'decompose-types-bdd-graph
-                   :hilite-min t
-                   :destination-dir destination-dir
-                   :decomposition-functions (cons 'decompose-types-bdd-graph
-                                                  *decompose-fun-names*)))
-
-
-(defun best-2-report (&key (re-run t) (multiplier 1.8) (destination-dir *destination-dir*))
-  (big-test-report :re-run re-run
-                   :prefix "best-2-" ;; should change to best-4-
-                   :multiplier multiplier
-                   :normalize nil
-                   :time-out 20
-                   :num-tries 4
-                   :hilite-min nil
-                   :destination-dir destination-dir
-                   :decomposition-functions '(decompose-types-bdd-graph-strong
-                                              decompose-types-bdd-graph-weak
-                                              bdd-decompose-types-strong
-                                              bdd-decompose-types-weak
-                                              decompose-types-rtev2
-                                              decompose-types-graph)))
-
-
-(defun bdd-report (&key (re-run t) (multiplier 1.8)  (destination-dir *destination-dir*))
-  (big-test-report :re-run re-run
-                   :prefix "bdd-ws-" ;; should change to best-4-
-                   :multiplier multiplier
-                   :normalize nil
-                   :time-out 20
-                   :num-tries 4
-                   :hilite-min nil
-                   :destination-dir destination-dir
-                   :decomposition-functions '(decompose-types-bdd-graph-strong
-                                              decompose-types-bdd-graph-weak
-                                              bdd-decompose-types-strong
-                                              bdd-decompose-types-weak)))
-
 (defun display-theta (n theta)
   (flet ((e2 (theta)
            (- (expt 2 (expt 2 theta))
@@ -1718,3 +1665,57 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
   "Evaluate the given code body, but using the caffeinate MACOS program to prevent the system from
 sleeping before the code finishes evaluating."
   `(call-with-caffeinate (lambda () ,@body)))
+
+(defun big-test-report (&rest options &key (num-tries 2) (multiplier 1) (prefix "") (re-run t)
+                                        (suite-time-out (* 60 60 4)) (time-out 100) normalize hilite-min
+                                        (decomposition-functions *decomposition-functions*)
+                                        (destination-dir *destination-dir*)
+                                        )
+  (declare (ignore prefix re-run suite-time-out time-out normalize num-tries hilite-min))
+  (let ((*decomposition-functions*  decomposition-functions))
+    (loop for (tag bucket-reporter) in *bucket-reporters*
+          for sample = (/ 1 (length *bucket-reporters*)) then (+ sample (/ 1 (length *bucket-reporters*)))
+          do (funcall bucket-reporter multiplier sample options :destination-dir destination-dir)))    )
+
+
+(defun parameterization-report (&key (re-run t)  (destination-dir *destination-dir*))
+  (big-test-report :re-run re-run
+                   :prefix "bdd-graph-"
+                   :normalize 'decompose-types-bdd-graph
+                   :hilite-min t
+                   :destination-dir destination-dir
+                   :decomposition-functions (cons 'decompose-types-bdd-graph
+                                                  *decompose-fun-names*)))
+
+
+(defun best-2-report (&key (re-run t) (multiplier 1.8) (destination-dir *destination-dir*))
+  (big-test-report :re-run re-run
+                   :prefix "best-2-" ;; should change to best-4-
+                   :multiplier multiplier
+                   :normalize nil
+                   :time-out 20
+                   :num-tries 4
+                   :hilite-min nil
+                   :destination-dir destination-dir
+                   :decomposition-functions '(decompose-types-bdd-graph-strong
+                                              decompose-types-bdd-graph-weak
+                                              bdd-decompose-types-strong
+                                              bdd-decompose-types-weak
+                                              decompose-types-rtev2
+                                              decompose-types-graph)))
+
+
+(defun bdd-report (&key (re-run t) (multiplier 1.8)  (destination-dir *destination-dir*))
+  (big-test-report :re-run re-run
+                   :prefix "bdd-ws-" ;; should change to best-4-
+                   :multiplier multiplier
+                   :normalize nil
+                   :time-out 20
+                   :num-tries 4
+                   :hilite-min nil
+                   :destination-dir destination-dir
+                   :decomposition-functions '(decompose-types-bdd-graph-strong
+                                              decompose-types-bdd-graph-weak
+                                              bdd-decompose-types-strong
+                                              bdd-decompose-types-weak)))
+
