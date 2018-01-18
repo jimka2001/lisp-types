@@ -514,7 +514,8 @@
                 (push `(setf (get ',fun-name 'decompose-properties) ',props) prop-defs)
                 (push `(defun ,fun-name (type-specifiers)
                          (bdd-with-new-hash ()
-                           (slow-decompose-types-bdd-graph type-specifiers ,@props)))
+                           (let ((*bdd-hash-strengh* :weak))
+                             (slow-decompose-types-bdd-graph type-specifiers ,@props))))
                       fun-defs)))))))
     (setf fun-names (mapcar #'cadr fun-defs))
     `(progn
