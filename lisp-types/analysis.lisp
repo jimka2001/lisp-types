@@ -744,6 +744,7 @@
                                               (if (= (car a) (car b))
                                                   (< (cadr a) (cadr b))
                                                   (< (car a) (car b)))))
+                                      :key #'car
                                       :test #'equal)))
           (let* ((line-style 0)
                  (mapping (mapcar (lambda (descr)
