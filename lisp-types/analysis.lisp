@@ -1731,7 +1731,7 @@ sleeping before the code finishes evaluating."
                                               decompose-types-graph)))
 
 
-(defun bdd-report (&key (re-run t) (multiplier 1.8)  (destination-dir *destination-dir*))
+(defun bdd-report (&key (re-run t) (multiplier 2.5)  (destination-dir *destination-dir*))
   (big-test-report :re-run re-run
                    :prefix "bdd-ws-" ;; should change to best-4-
                    :multiplier multiplier
