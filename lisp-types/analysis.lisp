@@ -1025,32 +1025,32 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
                 :sorted (sort 
                          (loop for plist in data
                                collect (destructuring-bind (&key decompose given calculated run-time &allow-other-keys) plist
-                                         (let* ((xys (mapcar (lambda (given calculated run-time)
-                                                               (declare (type fixnum given calculated)
-                                                                        (type number run-time))
-                                                               (list (* given calculated) run-time)) given calculated run-time))
-                                                (xys-extended xys))
-                                           (unless (find observed-min-prod xys-extended :key #'car)
-                                             (push (list observed-min-prod observed-min-time) xys-extended))
-                                           (unless (find observed-max-prod xys-extended :key #'car)
-                                             (push (list observed-max-prod observed-max-time) xys-extended))
-                                           (setf xys (sort (copy-list xys)
-                                                           (lambda (a b)
-                                                             (if (= (car a) (car b))
-                                                                 (< (cadr a) (cadr b))
-                                                                 (< (car a) (car b))))))
-                                           (setf xys-extended (sort (copy-list xys-extended)
-                                                                    (lambda (a b)
-                                                                      (if (= (car a) (car b))
-                                                                          (< (cadr a) (cadr b))
-                                                                          (< (car a) (car b))))))
-                                           (list :integral (integral xys-extended)
-                                                 :xys xys
-                                                 :smooth (smoothen xys)
-                                                 :samples (length xys)
-                                                 :decompose decompose
-                                                 :arguments (get (intern decompose (find-package :lisp-types))
-                                                                 'decompose-properties)))))
+                                         (flet ((cmp (a b)
+                                                  (if (= (car a) (car b))
+                                                      (< (cadr a) (cadr b))
+                                                      (< (car a) (car b)))))
+                                           (let* ((xys (mapcar (lambda (given calculated run-time)
+                                                                 (declare (type fixnum given calculated)
+                                                                          (type number run-time))
+                                                                 (list (* given calculated) run-time)) given calculated run-time))
+                                                  (xys-extended xys))
+                                             (unless (find observed-min-prod xys-extended :key #'car)
+                                               (push (list observed-min-prod observed-min-time) xys-extended))
+                                             (unless (find observed-max-prod xys-extended :key #'car)
+                                               (push (list observed-max-prod observed-max-time) xys-extended))
+                                             ;; if two adjacent points have the same x, remove the second, because
+                                             ;;  its y value is larger, thanks to the sort #'cmp
+                                             (setf xys (remove-duplicates (sort (copy-list xys) #'cmp)
+                                                                          :key #'car :from-end t))
+                                             (setf xys-extended (remove-duplicates (sort (copy-list xys-extended) #'cmp)
+                                                                                   :key #'car :from-end t))
+                                             (list :integral (integral xys-extended)
+                                                   :xys xys
+                                                   :smooth (smoothen xys)
+                                                   :samples (length xys)
+                                                   :decompose decompose
+                                                   :arguments (get (intern decompose (find-package :lisp-types))
+                                                                   'decompose-properties))))))
                          #'< :key (lambda (obj) (getf obj :integral))))))))
     (t
      (let ((*package* (find-package "CL")))
