@@ -744,6 +744,7 @@
                                               (if (= (car a) (car b))
                                                   (< (cadr a) (cadr b))
                                                   (< (car a) (car b)))))
+                                      :key #'car
                                       :test #'equal)))
           (let* ((line-style 0)
                  (mapping (mapcar (lambda (descr)
@@ -1674,6 +1675,22 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
 sleeping before the code finishes evaluating."
   `(call-with-caffeinate (lambda () ,@body)))
 
+
+(defmacro with-dup-stream ((stream file) &body body)
+  "Rebind the named STREAM to a broadcast-stream which duplicates it to the named FILE, evaluating the BODY within the dynamic extend of the rebinding."
+  (let ((log-file (gensym)))
+    `(with-open-file (,log-file ,file
+                                :direction :output
+                                :if-exists :supersede
+                                :if-does-not-exist :create)
+       (let ((,stream (make-broadcast-stream ,stream ,log-file)))
+         ,@body))))
+                         
+
+
+
+
+
 (defun big-test-report (&rest options &key (num-tries 2) (multiplier 1) (prefix "") (re-run t)
                                         (suite-time-out (* 60 60 4)) (time-out 100) normalize hilite-min
                                         (decomposition-functions *decomposition-functions*)
@@ -1688,7 +1705,7 @@ sleeping before the code finishes evaluating."
 
 (defun parameterization-report (&key (re-run t) (multiplier 1) (destination-dir *destination-dir*))
   (big-test-report :re-run re-run
-                   :prefix "bdd-graph-"
+                   :prefix "param-"
                    :normalize 'decompose-types-bdd-graph-weak
                    :hilite-min t
                    :destination-dir destination-dir
