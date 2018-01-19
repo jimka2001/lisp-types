@@ -1705,7 +1705,7 @@ sleeping before the code finishes evaluating."
 
 (defun parameterization-report (&key (re-run t) (multiplier 1) (destination-dir *destination-dir*))
   (big-test-report :re-run re-run
-                   :prefix "bdd-graph-"
+                   :prefix "param-"
                    :normalize 'decompose-types-bdd-graph-weak
                    :hilite-min t
                    :destination-dir destination-dir
