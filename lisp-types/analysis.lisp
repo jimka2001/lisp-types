@@ -711,135 +711,138 @@
     (with-open-file (stream gnuplot-file :direction :output :if-exists :supersede :if-does-not-exist :create)
       (format t "[writing to ~A~%" gnuplot-file)
       (destructuring-bind (&key summary sorted &allow-other-keys &aux min-curve min-curve-line-style) content
-        (assert (typep sorted 'cons))
-        ;; sort DATA so that the order agrees with *decomposition-function-descriptors*
-        (setf sorted (mapcan (lambda (desc &aux (names (getf desc :names)))
-                               (setof plist sorted
-                                 (exists name names
-                                   (string= (getf plist :decompose) (symbol-name name)))))
-                             (setof plist *decomposition-function-descriptors*
-                               (exists name include-decompose
-                                 (member name (getf plist :names))))))
-        ;; if we are trying to normalize, we need at least two points in the graph
-        ;;    so in this case remove DATA which has less that 2 points to plot
-        (when normalize
-          (setf sorted (setof plist sorted
-                         (cdr (getf plist key)))))
-        (when hilite-min
-          (setf min-curve (reduce (lambda (curve1 curve2)
-                                    (if (< (getf curve1 :integral)
-                                           (getf curve2 :integral))
-                                        curve1
-                                        curve2)) (cdr sorted) :initial-value (car sorted)))
-          (assert (typep min-curve 'cons))
-          (when (cdr (getf (find-decomposition-function-descriptor (getf min-curve :decompose)) :names))
-            ;; this is one of the 45 curves of the parameterized functions
-            (setf min-curve `(:decompose "LOCAL-MINIMUM" ,@min-curve))))
-        (format stream "# summary ~A~%" summary)
-        (format stream "set term png~%")
-        (format stream "set key below~%") ;; enable legend
-        (format stream "set title ~S~%" summary)
-        (unless normalize
-          (format stream "set logscale xy~%"))
-        (labels ((xys (curve)
-                   (declare #+sbcl (notinline sort))
-                   (remove-duplicates (sort (copy-list (getf curve key))
-                                            (lambda (a b)
-                                              (if (= (car a) (car b))
-                                                  (< (cadr a) (cadr b))
-                                                  (< (car a) (car b)))))
-                                      :key #'car
-                                      :test #'equal)))
-          (let* ((line-style 0)
-                 (mapping (mapcar (lambda (descr)
-                                    (incf line-style)
-                                    (format stream "set style line ~D linewidth ~D linecolor rgb \"#~A\"~%"
-                                            line-style
-                                            (or (getf descr :linewidth) 1)
-                                            (getf descr :gnu-color))
-                                    ;; collect
-                                    `(:line-style ,line-style ,@descr))
-                                  *decomposition-function-descriptors*))
-                 (normalize-to-xys (when normalize
-                                     (let ((plist (or (find (symbol-name normalize) sorted
-                                                            :key (getter :decompose) :test #'string=)
-                                                      (error "cannot find :decompose ~A~%   with key=~A~%  with include-decompose=~A~%  in sorted=~A"
-                                                             (symbol-name normalize)
-                                                             key
-                                                             include-decompose
-                                                             sorted))))
-                                       (or (xys plist)
-                                           (error "failed to compute points from sorted=~A" plist))))))
-            (assert (or (not normalize) normalize-to-xys)
-                    (normalize normalize-to-xys sorted))
-            (incf line-style)
-            (when hilite-min
-              (setf min-curve-line-style line-style)
-              (format stream "set style line ~D linewidth 2 linecolor rgb ~S~%" min-curve-line-style "black"))
-            (labels ((interpolate-y (x0 x1 y1 x2 y2)
-                       (+ y1 (* (- y2 y1)
-                                (/ (float (- x0 x1)) (- x2 x1)))))
-                     (interpolate (x)
-                       (declare (type integer x))
-                       (mapl (lambda (tail &aux (xy1 (car tail)) (xy2 (cadr tail)) (xy-tail (cddr tail)))
-                               ;; normalize-to-xys is a list of x-y pairs already ordered by x value, with no duplicate x's
-                               ;; for the given x, interpolate the value of y
-                               ;; 1) if x < the min x from normalize-to-xys
-                               ;; 2) if x is found exactly in normalize-to-xys
-                               ;; 3) if x is strictly between two x's from normalize-to-xys
-                               ;; 4) if x > the max x from normalize-to-xys
-                               (assert xy2 (x normalize tail normalize-to-xys)
-                                       "interpolation failed to find x=~A" x)
-                               (cond
-                                 ((or (< x (car xy1)) ; case 1
-                                      (and xy2        ; case 3
-                                           (> x (car xy1))
-                                           (< x (car xy2)))
-                                      (and xy2 ; case 4
-                                           (null xy-tail)
-                                           (> x (car xy2))))
-                                  (return-from interpolate (interpolate-y x (car xy1) (cadr xy1) (car xy2) (cadr xy2))))
-                                 ((= x (car xy1)) ; case 2
-                                  (return-from interpolate (cadr xy1)))
-                                 ((and xy2
-                                       (= x (car xy2))) ; case 2
-                                  (return-from interpolate (cadr xy2)))))
-                             normalize-to-xys))
-                     (plot-curve (curve)
-                       (destructuring-bind (&key decompose
-                                            &allow-other-keys
-                                            &aux (color (or (getf (find-decomposition-function-descriptor decompose) :gnu-color)
-                                                            (getf (find-decomposition-function-descriptor decompose) :color))))
-                           curve
-                         (format stream "# ~A ~A~%" color decompose)
-                         (dolist (pair (xys curve))
-                           (destructuring-bind (x y) pair
-                             (cond
-                               (normalize
-                                (format stream "~A ~A~%" x (- y (the number (interpolate x)))))
-                               ((zerop y))
-                               (t
-                                (format stream "~A ~A~%" x y)))))
-                         (format stream "end~%"))))
-              (format stream "plot ~A"
-                      (build-string (format nil ",\\~%")
-                                    (mapcar (lambda (data-plist &aux (decompose (getf data-plist :decompose)))
-                                              (let ((mapping-plist (find-if (lambda (mapping-plist)
-                                                                              (exists name (getf mapping-plist :names)
-                                                                                (string= decompose
-                                                                                         (symbol-name name))))
-                                                                            mapping)))
-                                                (with-output-to-string (str)
-                                                  (format str "   \"-\" using 1:2 with lines ls ~D"
-                                                          (getf mapping-plist :line-style))
-                                                  (format str " title ~S" (string-downcase decompose)))))
-                                            sorted)))
+        (if (not sorted)
+            (warn "skipping ~S too few points" summary)
+            (progn
+              (assert (typep sorted 'cons))
+              ;; sort DATA so that the order agrees with *decomposition-function-descriptors*
+              (setf sorted (mapcan (lambda (desc &aux (names (getf desc :names)))
+                                     (setof plist sorted
+                                       (exists name names
+                                         (string= (getf plist :decompose) (symbol-name name)))))
+                                   (setof plist *decomposition-function-descriptors*
+                                     (exists name include-decompose
+                                       (member name (getf plist :names))))))
+              ;; if we are trying to normalize, we need at least two points in the graph
+              ;;    so in this case remove DATA which has less that 2 points to plot
+              (when normalize
+                (setf sorted (setof plist sorted
+                               (cdr (getf plist key)))))
               (when hilite-min
-                (format stream ",\\~%\   \"-\" using 1:2 with lines ls ~D" min-curve-line-style)
-                (format stream " title ~S~%" "unknown"))
-              (mapc #'plot-curve sorted)
-              (when hilite-min
-                (plot-curve min-curve))))))
+                (setf min-curve (reduce (lambda (curve1 curve2)
+                                          (if (< (getf curve1 :integral)
+                                                 (getf curve2 :integral))
+                                              curve1
+                                              curve2)) (cdr sorted) :initial-value (car sorted)))
+                (assert (typep min-curve 'cons))
+                (when (cdr (getf (find-decomposition-function-descriptor (getf min-curve :decompose)) :names))
+                  ;; this is one of the 45 curves of the parameterized functions
+                  (setf min-curve `(:decompose "LOCAL-MINIMUM" ,@min-curve))))
+              (format stream "# summary ~A~%" summary)
+              (format stream "set term png~%")
+              (format stream "set key below~%") ;; enable legend
+              (format stream "set title ~S~%" summary)
+              (unless normalize
+                (format stream "set logscale xy~%"))
+              (labels ((xys (curve)
+                         (declare #+sbcl (notinline sort))
+                         (remove-duplicates (sort (copy-list (getf curve key))
+                                                  (lambda (a b)
+                                                    (if (= (car a) (car b))
+                                                        (< (cadr a) (cadr b))
+                                                        (< (car a) (car b)))))
+                                            :key #'car
+                                            :test #'equal)))
+                (let* ((line-style 0)
+                       (mapping (mapcar (lambda (descr)
+                                          (incf line-style)
+                                          (format stream "set style line ~D linewidth ~D linecolor rgb \"#~A\"~%"
+                                                  line-style
+                                                  (or (getf descr :linewidth) 1)
+                                                  (getf descr :gnu-color))
+                                          ;; collect
+                                          `(:line-style ,line-style ,@descr))
+                                        *decomposition-function-descriptors*))
+                       (normalize-to-xys (when normalize
+                                           (let ((plist (or (find (symbol-name normalize) sorted
+                                                                  :key (getter :decompose) :test #'string=)
+                                                            (error "cannot find :decompose ~A~%   with key=~A~%  with include-decompose=~A~%  in sorted=~A"
+                                                                   (symbol-name normalize)
+                                                                   key
+                                                                   include-decompose
+                                                                   sorted))))
+                                             (or (xys plist)
+                                                 (error "failed to compute points from sorted=~A" plist))))))
+                  (assert (or (not normalize) normalize-to-xys)
+                          (normalize normalize-to-xys sorted))
+                  (incf line-style)
+                  (when hilite-min
+                    (setf min-curve-line-style line-style)
+                    (format stream "set style line ~D linewidth 2 linecolor rgb ~S~%" min-curve-line-style "black"))
+                  (labels ((interpolate-y (x0 x1 y1 x2 y2)
+                             (+ y1 (* (- y2 y1)
+                                      (/ (float (- x0 x1)) (- x2 x1)))))
+                           (interpolate (x)
+                             (declare (type integer x))
+                             (mapl (lambda (tail &aux (xy1 (car tail)) (xy2 (cadr tail)) (xy-tail (cddr tail)))
+                                     ;; normalize-to-xys is a list of x-y pairs already ordered by x value, with no duplicate x's
+                                     ;; for the given x, interpolate the value of y
+                                     ;; 1) if x < the min x from normalize-to-xys
+                                     ;; 2) if x is found exactly in normalize-to-xys
+                                     ;; 3) if x is strictly between two x's from normalize-to-xys
+                                     ;; 4) if x > the max x from normalize-to-xys
+                                     (assert xy2 (x normalize tail normalize-to-xys)
+                                             "interpolation failed to find x=~A" x)
+                                     (cond
+                                       ((or (< x (car xy1)) ; case 1
+                                            (and xy2        ; case 3
+                                                 (> x (car xy1))
+                                                 (< x (car xy2)))
+                                            (and xy2 ; case 4
+                                                 (null xy-tail)
+                                                 (> x (car xy2))))
+                                        (return-from interpolate (interpolate-y x (car xy1) (cadr xy1) (car xy2) (cadr xy2))))
+                                       ((= x (car xy1)) ; case 2
+                                        (return-from interpolate (cadr xy1)))
+                                       ((and xy2
+                                             (= x (car xy2))) ; case 2
+                                        (return-from interpolate (cadr xy2)))))
+                                   normalize-to-xys))
+                           (plot-curve (curve)
+                             (destructuring-bind (&key decompose
+                                                  &allow-other-keys
+                                                  &aux (color (or (getf (find-decomposition-function-descriptor decompose) :gnu-color)
+                                                                  (getf (find-decomposition-function-descriptor decompose) :color))))
+                                 curve
+                               (format stream "# ~A ~A~%" color decompose)
+                               (dolist (pair (xys curve))
+                                 (destructuring-bind (x y) pair
+                                   (cond
+                                     (normalize
+                                      (format stream "~A ~A~%" x (- y (the number (interpolate x)))))
+                                     ((zerop y))
+                                     (t
+                                      (format stream "~A ~A~%" x y)))))
+                               (format stream "end~%"))))
+                    (format stream "plot ~A"
+                            (build-string (format nil ",\\~%")
+                                          (mapcar (lambda (data-plist &aux (decompose (getf data-plist :decompose)))
+                                                    (let ((mapping-plist (find-if (lambda (mapping-plist)
+                                                                                    (exists name (getf mapping-plist :names)
+                                                                                      (string= decompose
+                                                                                               (symbol-name name))))
+                                                                                  mapping)))
+                                                      (with-output-to-string (str)
+                                                        (format str "   \"-\" using 1:2 with lines ls ~D"
+                                                                (getf mapping-plist :line-style))
+                                                        (format str " title ~S" (string-downcase decompose)))))
+                                                  sorted)))
+                    (when hilite-min
+                      (format stream ",\\~%\   \"-\" using 1:2 with lines ls ~D" min-curve-line-style)
+                      (format stream " title ~S~%" "unknown"))
+                    (mapc #'plot-curve sorted)
+                    (when hilite-min
+                      (plot-curve min-curve))))))))
       (format t "~A ]~%" gnuplot-file))
 
     (run-program "gnuplot" (list gnuplot-file)
@@ -1611,13 +1614,10 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                            (/ (+ (expt 2d0 (expt 2d0 theta)) (expt 2d0 (- n theta)) -1)
                               (1- (expt 2d0 (1+ (float n) ))))))))
   
-
 (defun robdd-compressions (min max)
   (loop :for n :from min :to max
         :collect (destructuring-bind (&key compression &allow-other-keys) (robdd-size n)
                    (list n compression))))
-
-
 
 (defun theta-latex-table (n-min n-max) ;; normally 1 21
   (format t "$~A$ & $~A$ & $~A$ & $~A$ & $~A$ & $~A$ & $~A$\\\\~%"
@@ -1679,7 +1679,6 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
 sleeping before the code finishes evaluating."
   `(call-with-caffeinate (lambda () ,@body)))
 
-
 (defmacro with-dup-stream ((stream file) &body body)
   "Rebind the named STREAM to a broadcast-stream which duplicates it to the named FILE, evaluating the BODY within the dynamic extend of the rebinding."
   (let ((log-file (gensym)))
@@ -1689,34 +1688,35 @@ sleeping before the code finishes evaluating."
                                 :if-does-not-exist :create)
        (let ((,stream (make-broadcast-stream ,stream ,log-file)))
          ,@body))))
-                         
-
-
-
-
 
 (defun big-test-report (&rest options &key (num-tries 2) (multiplier 1) (prefix "") (re-run t)
                                         (suite-time-out (* 60 60 4)) (time-out 100) normalize hilite-min
                                         (decomposition-functions *decomposition-functions*)
                                         (destination-dir *destination-dir*)
                                         )
-  (declare (ignore prefix re-run suite-time-out time-out normalize num-tries hilite-min))
+  (declare (ignore prefix re-run suite-time-out time-out num-tries hilite-min))
+  (when normalize
+    (assert (member normalize decomposition-functions) (normalize decomposition-functions)))
+  (dolist (df decomposition-functions)
+    (unless (exists plist *decomposition-function-descriptors*
+              (member df (getf plist :names)))
+      (let ((*package* (find-package :keyword)))
+        (error "No plist has :name ~A in ~A"
+               df *decomposition-function-descriptors*))))
   (let ((*decomposition-functions*  decomposition-functions))
     (loop for (tag bucket-reporter) in *bucket-reporters*
           for sample = (/ 1 (length *bucket-reporters*)) then (+ sample (/ 1 (length *bucket-reporters*)))
           do (funcall bucket-reporter multiplier sample options :destination-dir destination-dir)))    )
 
-
 (defun parameterization-report (&key (re-run t) (multiplier 1) (destination-dir *destination-dir*))
   (big-test-report :re-run re-run
                    :prefix "param-"
-                   :normalize 'decompose-types-bdd-graph-weak
+                   :normalize 'decompose-types-bdd-graph
                    :hilite-min t
                    :destination-dir destination-dir
                    :multiplier multiplier
-                   :decomposition-functions (cons 'decompose-types-bdd-graph-weak
+                   :decomposition-functions (cons 'decompose-types-bdd-graph
                                                   *decompose-fun-names*)))
-
 
 (defun best-2-report (&key (re-run t) (multiplier 1.8) (destination-dir *destination-dir*))
   (big-test-report :re-run re-run
@@ -1734,7 +1734,6 @@ sleeping before the code finishes evaluating."
                                               decompose-types-rtev2
                                               decompose-types-graph)))
 
-
 (defun bdd-report (&key (re-run t) (multiplier 2.5)  (destination-dir *destination-dir*))
   (big-test-report :re-run re-run
                    :prefix "bdd-ws-" ;; should change to best-4-
@@ -1748,4 +1747,3 @@ sleeping before the code finishes evaluating."
                                               decompose-types-bdd-graph-weak
                                               bdd-decompose-types-strong
                                               bdd-decompose-types-weak)))
-
