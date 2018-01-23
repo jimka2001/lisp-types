@@ -183,8 +183,10 @@
       (:names (decompose-types-graph)  :gnu-color ,(nth (incf color) *colors*) :color "lavender" :legend t)
       (:names (bdd-decompose-types-strong)  :gnu-color ,(nth (incf color) *colors*) :color "orange" :legend t)
       (:names (bdd-decompose-types-weak) :gnu-color ,(nth (incf color) *colors*) :color "gold" :legend t)
+      (:names (bdd-decompose-types-weak-dynamic) :gnu-color ,(nth (incf color) *colors*) :color "gold" :legend t)
       (:names ,*decompose-fun-names*  :gnu-color ,(nth (incf color) *colors*) :color "light-blue" :legend nil)
       (:names (decompose-types-bdd-graph-strong)  :gnu-color ,(nth (incf color) *colors*) :color "red" :linewidth 1  :legend t)
+      (:names (decompose-types-bdd-graph-weak-dynamic)  :gnu-color ,(nth (incf color) *colors*) :color "rust" :linewidth 1  :legend t)
       (:names (decompose-types-bdd-graph-weak)  :gnu-color ,(nth (incf color) *colors*) :color "rust" :linewidth 1  :legend t)
       (:names (decompose-types-bdd-graph)  :gnu-color ,(nth (incf color) *colors*) :color "rust" :linewidth 2  :legend t)
       (:names (local-minimum) :gnu-color "000000" :color "black" :linewidth 2 :legend t))))
@@ -339,7 +341,7 @@
                        :run-time run-time
                        :value s2))
                 ((< run-time (the real (getf result :run-time)))
-                 (format t "[try ~D] found faster ~A < ~A~%" try run-time (getf result :run-time))
+                 ;;(format t "[try ~D] found faster ~A < ~A~%" try run-time (getf result :run-time))
                  (list :wall-time wall-time
                        :run-time run-time
                        :value s2))
@@ -1692,8 +1694,7 @@ sleeping before the code finishes evaluating."
 (defun big-test-report (&rest options &key (num-tries 2) (multiplier 1) (prefix "") (re-run t)
                                         (suite-time-out (* 60 60 4)) (time-out 100) normalize hilite-min
                                         (decomposition-functions *decomposition-functions*)
-                                        (destination-dir *destination-dir*)
-                                        )
+                                        (destination-dir *destination-dir*))
   (declare (ignore prefix re-run suite-time-out time-out num-tries hilite-min))
   (when normalize
     (assert (member normalize decomposition-functions) (normalize decomposition-functions)))
@@ -1703,10 +1704,11 @@ sleeping before the code finishes evaluating."
       (let ((*package* (find-package :keyword)))
         (error "No plist has :name ~A in ~A"
                df *decomposition-function-descriptors*))))
-  (let ((*decomposition-functions*  decomposition-functions))
+  (let ((*bdd-hash-struct* (bdd-new-hash))
+        (*decomposition-functions*  decomposition-functions))
     (loop for (tag bucket-reporter) in *bucket-reporters*
           for sample = (/ 1 (length *bucket-reporters*)) then (+ sample (/ 1 (length *bucket-reporters*)))
-          do (funcall bucket-reporter multiplier sample options :destination-dir destination-dir)))    )
+          do (funcall bucket-reporter multiplier sample options :destination-dir destination-dir))))
 
 (defun parameterization-report (&key (re-run t) (multiplier 1) (destination-dir *destination-dir*))
   (big-test-report :re-run re-run
@@ -1729,8 +1731,10 @@ sleeping before the code finishes evaluating."
                    :destination-dir destination-dir
                    :decomposition-functions '(decompose-types-bdd-graph-strong
                                               decompose-types-bdd-graph-weak
+                                              decompose-types-bdd-graph-weak-dynamic
                                               bdd-decompose-types-strong
                                               bdd-decompose-types-weak
+                                              bdd-decompose-types-weak-dynamic
                                               decompose-types-rtev2
                                               decompose-types-graph)))
 
@@ -1745,5 +1749,7 @@ sleeping before the code finishes evaluating."
                    :destination-dir destination-dir
                    :decomposition-functions '(decompose-types-bdd-graph-strong
                                               decompose-types-bdd-graph-weak
+                                              decompose-types-bdd-graph-weak-dynamic
                                               bdd-decompose-types-strong
-                                              bdd-decompose-types-weak)))
+                                              bdd-decompose-types-weak
+                                              bdd-decompose-types-weak-dynamic)))
