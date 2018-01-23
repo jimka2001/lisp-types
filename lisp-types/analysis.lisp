@@ -341,7 +341,7 @@
                        :run-time run-time
                        :value s2))
                 ((< run-time (the real (getf result :run-time)))
-                 (format t "[try ~D] found faster ~A < ~A~%" try run-time (getf result :run-time))
+                 ;;(format t "[try ~D] found faster ~A < ~A~%" try run-time (getf result :run-time))
                  (list :wall-time wall-time
                        :run-time run-time
                        :value s2))
