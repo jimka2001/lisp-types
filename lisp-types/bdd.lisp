@@ -77,18 +77,26 @@
     c))
 
 (defvar *bdd-generation* 0)
-(defvar *bdd-hash-strengh* :strong ) ;; or :weak
-(defun bdd-new-hash (&key (weak (eq *bdd-hash-strengh* :weak)))
+(defvar *bdd-hash-strength* :strong ) ;; or :weak or :weak-dynamic
+(defun bdd-new-hash (&key ((bdd-hash-strengh *bdd-hash-strength*) :weak))
   (incf *bdd-generation*)
-  (list :generation *bdd-generation*
-        :recent-count 0
-        :strength weak
-        :hash 
-        (if weak
-            (make-hash-table :test #'equal
-                             #+sbcl :weakness #+sbcl :value
-                             #+allegro :values #+allegro :weak)
-            (make-hash-table :test #'equal))))
+  (flet ((make-hash ()
+           (make-hash-table :test #'equal
+                            #+sbcl :weakness #+sbcl :value
+                            #+allegro :values #+allegro :weak)))
+    (list :generation *bdd-generation*
+          :recent-count 0
+          :strength *bdd-hash-strength*
+          :hash 
+          (ecase *bdd-hash-strength*
+            ((:weak)
+             (make-hash))
+            ((:strong)
+             (make-hash-table :test #'equal))
+            ((:weak-dynamic)
+             (if (bdd-hash)
+                 (bdd-hash)
+                 (make-hash)))))))
 
 (defvar *bdd-hash-struct* nil)
 (defun bdd-hash ()

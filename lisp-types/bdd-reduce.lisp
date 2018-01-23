@@ -442,7 +442,6 @@ in the topological ordering (i.e., the first value)."
               ,@(mapcan #'label-function
                         (mapcar #'car (reverse bdd->name-mapping)))))))))
 
-
 (defun bdd-typep (obj type-specifier)
   "This function has the same syntax as CL:TYPEP, but using a BDD based algorithm " 
   (bdd-type-p obj (bdd type-specifier)))
@@ -552,14 +551,15 @@ of min-terms, this function returns a list of the min-terms."
     (recure bdd)))
 
 (defun bdd-decompose-types-strong (type-specifiers)
-  (let ((*bdd-hash-strengh* :strong))
-    (bdd-decompose-types type-specifiers)))
+  (bdd-decompose-types type-specifiers :bdd-hash-strength :strong))
 
 (defun bdd-decompose-types-weak (type-specifiers)
-  (let ((*bdd-hash-strengh* :weak))
-    (bdd-decompose-types type-specifiers)))
+  (bdd-decompose-types type-specifiers :bdd-hash-strength :weak))
 
-(defun bdd-decompose-types (type-specifiers)
+(defun bdd-decompose-types-weak-dynamic (type-specifiers)
+  (bdd-decompose-types type-specifiers :bdd-hash-strength :weak-dynamic))
+
+(defun bdd-decompose-types (type-specifiers &key ((:bdd-hash-strength *bdd-hash-strength*) :weak))
   (when type-specifiers
     (caching-types
       (mapcar #'bdd-to-dnf

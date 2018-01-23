@@ -464,22 +464,16 @@
   (length (getf node :super-types)))
 
 (defun decompose-types-bdd-graph-strong (type-specifiers)
-  (let ((*bdd-hash-strengh* :strong))
-    (decompose-types-bdd-graph type-specifiers)))
+  (decompose-types-bdd-graph type-specifiers :bdd-hash-strength :strong))
 
 (defun decompose-types-bdd-graph-weak (type-specifiers)
-  (let ((*bdd-hash-strengh* :weak))
-    (decompose-types-bdd-graph type-specifiers)))
+  (decompose-types-bdd-graph type-specifiers :bdd-hash-strength :weak))
 
-(defun decompose-types-bdd-graph (type-specifiers)
+(defun decompose-types-bdd-graph-weak-dynamic (type-specifiers)
+  (decompose-types-bdd-graph type-specifiers :bdd-hash-strength :weak-dynamic))
+
+(defun decompose-types-bdd-graph (type-specifiers &key ((:bdd-hash-strength *bdd-hash-strength*) :weak))
   (decompose-by-graph-1 type-specifiers :graph-class 'bdd-graph))
-
-
-(defun decompose-types-bdd-graph-recursive-increasing-connections (type-specifiers)
-  (bdd-with-new-hash ()
-    (slow-decompose-types-bdd-graph type-specifiers
-                                    :sort-strategy "INCREASING-CONNECTIONS"
-                                    :inner-loop :recursive)))
 
 (defmacro make-decompose-fun-combos ()
   (let (fun-defs
@@ -520,7 +514,8 @@
                 (push `(setf (get ',fun-name 'decompose-properties) ',props) prop-defs)
                 (push `(defun ,fun-name (type-specifiers)
                          (bdd-with-new-hash ()
-                           (slow-decompose-types-bdd-graph type-specifiers ,@props)))
+                           (let ((*bdd-hash-strength* :weak))
+                             (slow-decompose-types-bdd-graph type-specifiers ,@props))))
                       fun-defs)))))))
     (setf fun-names (mapcar #'cadr fun-defs))
     `(progn
