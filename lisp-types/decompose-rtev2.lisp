@@ -22,7 +22,7 @@
 (in-package   :lisp-types)
 
 (defun slow-decompose-types-rtev2 (type-specifiers)
-  (declare (optimize (speed 3) (compilation-speed 0) (debug 0))
+  (declare ;;(optimize (speed 3) (compilation-speed 0) (debug 0))
            #+sbcl (notinline union))
   (let ((type-specifiers (mapcar #'reduce-lisp-type-simple type-specifiers))
         (known-intersecting (make-hash-table :test #'equal))

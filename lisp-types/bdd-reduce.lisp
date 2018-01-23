@@ -485,7 +485,7 @@ convert it to DNF (disjunctive-normal-form)"
   (bdd-to-dnf (bdd type)))
 
 (defun %bdd-decompose-types (type-specifiers)
-  (declare (optimize (debug 0) (speed 3))) ;; optimize tail call 
+  ;;(declare (optimize (debug 0) (speed 3))) ;; optimize tail call 
   (bdd-with-new-hash (&aux (bdds (remove-if #'bdd-empty-type (mapcar #'bdd type-specifiers))))
     (declare (type list bdds))
     (labels ((try (bdds disjoint-bdds &aux (bdd-a (car bdds)))

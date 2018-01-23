@@ -23,7 +23,7 @@
 (in-package   :lisp-types)
 
 (defun slow-decompose-types (type-specifiers)
-  (declare (optimize (speed 3) (compilation-speed 0) (debug 0))
+  (declare ;;(optimize (speed 3) (compilation-speed 0) (debug 0))
            #+sbcl (notinline union))
   ;;  (declare (optimize (debug 3))  #+sbcl (notinline union))
   (let ((known-intersecting (make-hash-table :test #'equal)) decomposition) ;; the list of disjoint type-specifiers
