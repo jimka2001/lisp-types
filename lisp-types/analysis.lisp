@@ -231,7 +231,8 @@
                           (gnuplot-normalized-name "/dev/null")
                           (png-name "/dev/null")
                           (png-normalized-name "/dev/null")
-                          (dat-name "/dev/null"))
+                          (dat-name "/dev/null")
+                          (profile nil))
   (declare (type (or list (and symbol (satisfies symbol-function))) decompose))
   (let ((*package* (find-package "KEYWORD"))
         (start-time (get-universal-time))
@@ -284,7 +285,8 @@
                  (let ((result (types/cmp-perf :num-tries num-tries
                                                :types (choose-randomly types len)
                                                :decompose f
-                                               :time-out time-out)))
+                                               :time-out time-out
+                                               :profile profile)))
                    (format t " run-time:  ~A~%" (getf result :run-time))
                    (when verify
                      (push result results)
@@ -319,10 +321,7 @@
       (log-data)))
   t)
 
-
-
-
-(defun best-time (num-tries thunk)
+(defun best-time (num-tries thunk &key profile)
   "returns a plist with the fields :wall-time :run-time :value"
   (declare (type (and fixnum unsigned-byte) num-tries)
            (type (function () t) thunk))
@@ -330,7 +329,12 @@
     (dotimes (try num-tries)
       (let* ((run-time-t1 (get-internal-run-time))
              (start-real-time (get-internal-real-time))
-             (s2 (funcall thunk))
+             profile-plists
+             (s2 (if profile
+                     (call-with-profiling thunk
+                                          (lambda (plists)
+                                            (setf profile-plists plists)))
+                     (funcall thunk)))
              (run-time-t2 (get-internal-run-time))
              (wall-time (/ (- (get-internal-real-time) start-real-time) internal-time-units-per-second))
              (run-time (/ (- run-time-t2 run-time-t1) internal-time-units-per-second)))
@@ -339,17 +343,19 @@
                 ((not result) ; if first time through dotime/try loop
                  (list :wall-time (the real wall-time)
                        :run-time run-time
-                       :value s2))
+                       :value s2
+                       :profile-plists profile-plists))
                 ((< run-time (the real (getf result :run-time)))
                  ;;(format t "[try ~D] found faster ~A < ~A~%" try run-time (getf result :run-time))
                  (list :wall-time wall-time
                        :run-time run-time
-                       :value s2))
+                       :value s2
+                       :profile-plists profile-plists))
                 (t
                  result)))))
     result))
 
-(defun call-with-timeout (time-out thunk num-tries)
+(defun call-with-timeout (time-out thunk num-tries &key profile)
   "TIME-OUT, integer, the wall-time allowed to call the function THUNK.
  THUNK is a 0-ary function returning some type X.
  Call the function THUNK, in one thread, and start a 2nd observer thread.  The 2nd thread
@@ -360,18 +366,19 @@
  is run directly.
  Returns a plist, one of the following:
  (:wall-time rational :run-time rational :time-out integer) or
- (:wall-time rational :run-time rational :value X)"
+ (:wall-time rational :run-time rational :value X :profile-plists list-of-plists)"
   (declare (type (or null (and fixnum unsigned-byte)) time-out)
            (type (function () t) thunk)
            (type (and fixnum unsigned-byte) num-tries))
   (if (not time-out)
-      (best-time num-tries thunk)
-      (%call-with-timeout time-out thunk num-tries)))
+      (best-time num-tries thunk :profile profile)
+      (%call-with-timeout time-out thunk num-tries :profile profile)))
 
 #+allegro
-(defun %call-with-timeout (time-out thunk num-tries)
+(defun %call-with-timeout (time-out thunk num-tries &key profile)
   (declare (type (and fixnum unsigned-byte) time-out num-tries)
-           (type (function () t) thunk))
+           (type (function () t) thunk)
+           (ignore profile))
   (let ((start-run-time (get-internal-run-time))
         (start-real-time (get-internal-real-time)))
     (sys:with-timeout (time-out (let ((run-time (get-internal-run-time))
@@ -379,11 +386,10 @@
                                   (list :wall-time (/ (- real-time start-real-time) internal-time-units-per-second)
                                         :run-time  (/ (- run-time start-run-time) internal-time-units-per-second)
                                         :time-out time-out)))
-      (best-time num-tries thunk))))
+      (best-time num-tries thunk :profile nil))))
 
 
-#+sbcl 
-(defun %call-with-timeout (time-out thunk num-tries)
+(defun %call-with-timeout (time-out thunk num-tries &key profile)
   (declare (type (and fixnum unsigned-byte) time-out num-tries)
            (type (function () t) thunk))
   (let (th-worker th-observer th-worker-join-failed th-observer-join-failed th-worker-destroyed-observer time-it-error result1 result2
@@ -438,7 +444,8 @@
     (the cons (or result1 result2))))
 
 (defvar *perf-results* nil)
-(defun types/cmp-perf (&key types (decompose 'bdd-decompose-types-weak) (time-out 15) (num-tries 2) &aux (f (symbol-function decompose)))
+(defun types/cmp-perf (&key types (decompose 'bdd-decompose-types-weak) (time-out 15) (num-tries 2) profile
+                       &aux (f (symbol-function decompose)))
   (declare (type list types)
            (type symbol decompose)
            (type function f))
@@ -456,7 +463,8 @@
      (let ((result (call-with-timeout time-out
                                       (lambda ()
                                         (funcall f types))
-                                      num-tries))
+                                      num-tries
+                                      :profile profile))
            (num-unknown 0)
            (num-known 0))
        (declare (type (and unsigned-byte fixnum) num-known num-unknown))
@@ -469,10 +477,11 @@
                    (incf num-known))))))
        (assert (or (typep (getf result :run-time) 'number )
                    (getf result :time-out)) (result))
-       (destructuring-bind (&key time-out (run-time 0) (wall-time 0) value) result
+       (destructuring-bind (&key time-out (run-time 0) (wall-time 0) value profile-plists) result
          (declare (type (or null fixnum) time-out)
                   (type list value)
-                  (type number run-time wall-time))
+                  (type number run-time wall-time)
+                  (type (or cons null) profile-plists))
          (push
           (cond
             (time-out
@@ -500,6 +509,7 @@
                    :wall-time (/ wall-time 1.0)
                    :run-time (/ run-time 1.0)
                    :calculated (length value)
+                   :profile-plists profile-plists
                    ;; :value value
                    )))
           *perf-results*))
@@ -1257,7 +1267,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
 
 (defvar *destination-dir* "/Users/jnewton/newton.16.edtchs/src")
 (defun test-report (&key sample (prefix "") (re-run t) (suite-time-out (* 60 60 4))  (time-out (* 3 60)) normalize (destination-dir *destination-dir*)
-                      types file-name (limit 15) tag hilite-min (num-tries 2)
+                      types file-name (limit 15) tag hilite-min (num-tries 2) profile
                     &allow-other-keys)
   "TIME-OUT is the number of seconds to allow for one call to a single decompose function.
 SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
@@ -1277,6 +1287,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                              :sample sample
                              :num-tries num-tries
                              :hilite-min hilite-min
+                             :profile profile
                              (when file-name
                                (list
                                 :ltxdat-name (format nil "~A/~A~A.ltxdat" destination-dir prefix file-name)
@@ -1465,12 +1476,6 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                      :types (valid-subtypes t)
                      :file-name "subtypes-of-t")
 
-
-                           
-
-
-
-
 (defun call-with-caffeinate (thunk)
   (let ((caff (sb-ext:run-program "caffeinate"
                                   '("-i" "sleep" "31449600") ;; sleep for 1 year or until killed
@@ -1496,8 +1501,9 @@ sleeping before the code finishes evaluating."
 (defun big-test-report (&rest options &key (num-tries 2) (multiplier 1) (prefix "") (re-run t)
                                         (suite-time-out (* 60 60 4)) (time-out 100) normalize hilite-min
                                         (decomposition-functions *decomposition-functions*)
+                                        profile
                                         (destination-dir *destination-dir*))
-  (declare (ignore prefix re-run suite-time-out time-out num-tries hilite-min))
+  (declare (ignore prefix re-run suite-time-out time-out num-tries hilite-min profile))
   (when normalize
     (assert (member normalize decomposition-functions) (normalize decomposition-functions)))
   (dolist (df decomposition-functions)
@@ -1543,6 +1549,23 @@ sleeping before the code finishes evaluating."
 (defun bdd-report (&key (re-run t) (multiplier 2.5)  (destination-dir *destination-dir*))
   (big-test-report :re-run re-run
                    :prefix "bdd-ws-" ;; should change to best-4-
+                   :multiplier multiplier
+                   :normalize nil
+                   :time-out 20
+                   :num-tries 4
+                   :hilite-min nil
+                   :destination-dir destination-dir
+                   :decomposition-functions '(decompose-types-bdd-graph-strong
+                                              decompose-types-bdd-graph-weak
+                                              decompose-types-bdd-graph-weak-dynamic
+                                              bdd-decompose-types-strong
+                                              bdd-decompose-types-weak
+                                              bdd-decompose-types-weak-dynamic)))
+
+(defun bdd-report-profile (&key (re-run t) (multiplier 0.3)  (destination-dir *destination-dir*))
+  (big-test-report :re-run re-run
+                   :profile t
+                   :prefix "bdd-profile-"
                    :multiplier multiplier
                    :normalize nil
                    :time-out 20
