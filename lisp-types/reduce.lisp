@@ -83,7 +83,8 @@
   operands)
 
 (defun reduce-member-type (type-spec)
-  (declare (optimize (speed 3) (compilation-speed 0) (debug 0)))
+  (declare ;;(optimize (speed 3) (compilation-speed 0) (debug 0))
+   )
   (cond
     ((and (consp type-spec)
           (eq 'AND (car type-spec)))
@@ -105,7 +106,8 @@
 
 
 (defun type-to-dnf (type)
-  (declare (optimize (speed 3) (debug 0) (compilation-speed 0) (space 0)))
+  (declare ;;(optimize (speed 3) (debug 0) (compilation-speed 0) (space 0))
+   )
   (labels ((and? (obj)
              (and (consp obj)
                   (eq 'and (car obj))))
@@ -315,7 +317,7 @@ repeated or contradictory type designators.
 
 If :full nil is given, then an incomplete but fast reduction is done.  No step is made which requires
 a call to subtypep or friends."
-  (declare (optimize (speed 3) (compilation-speed 0))
+  (declare ;;(optimize (speed 3) (compilation-speed 0))
 	   (inline sub-super reduce-absorption reduce-redundancy remove-supers remove-subs))
 
   (labels ((build (op zero args)

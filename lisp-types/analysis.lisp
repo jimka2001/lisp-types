@@ -1,4 +1,4 @@
-;; Copyright (c) 2016 EPITA Research and Development Laboratory
+;; Copyright (c) 2016-18 EPITA Research and Development Laboratory
 ;;
 ;; Permission is hereby granted, free of charge, to any person obtaining
 ;; a copy of this software and associated documentation
@@ -184,7 +184,7 @@
       (:names (bdd-decompose-types-strong)  :gnu-color ,(nth (incf color) *colors*) :color "orange" :legend t)
       (:names (bdd-decompose-types-weak) :gnu-color ,(nth (incf color) *colors*) :color "gold" :legend t)
       (:names (bdd-decompose-types-weak-dynamic) :gnu-color ,(nth (incf color) *colors*) :color "gold" :legend t)
-      (:names ,*decompose-fun-names*  :gnu-color ,(nth (incf color) *colors*) :color "light-blue" :legend nil)
+      (:names ,*decompose-fun-parameterized-names*  :gnu-color ,(nth (incf color) *colors*) :color "light-blue" :legend nil)
       (:names (decompose-types-bdd-graph-strong)  :gnu-color ,(nth (incf color) *colors*) :color "red" :linewidth 1  :legend t)
       (:names (decompose-types-bdd-graph-weak-dynamic)  :gnu-color ,(nth (incf color) *colors*) :color "rust" :linewidth 1  :legend t)
       (:names (decompose-types-bdd-graph-weak)  :gnu-color ,(nth (incf color) *colors*) :color "rust" :linewidth 1  :legend t)
@@ -194,7 +194,7 @@
 (defvar *decomposition-functions*
   (set-difference (mapcan (lambda (plist)
                             (copy-list (getf plist :names))) *decomposition-function-descriptors*)
-                  (cons 'local-minimum *decompose-fun-names*)))
+                  (cons 'local-minimum *decompose-fun-parameterized-names*)))
 
 (defun encode-time (time &aux (decoded-time (multiple-value-list (decode-universal-time time))))
   "Create a string similar to the UNIX date command: e.g., \"Thu Aug  3 10:39:18 2017\""
@@ -231,7 +231,8 @@
                           (gnuplot-normalized-name "/dev/null")
                           (png-name "/dev/null")
                           (png-normalized-name "/dev/null")
-                          (dat-name "/dev/null"))
+                          (dat-name "/dev/null")
+                          (profile nil))
   (declare (type (or list (and symbol (satisfies symbol-function))) decompose))
   (let ((*package* (find-package "KEYWORD"))
         (start-time (get-universal-time))
@@ -284,7 +285,8 @@
                  (let ((result (types/cmp-perf :num-tries num-tries
                                                :types (choose-randomly types len)
                                                :decompose f
-                                               :time-out time-out)))
+                                               :time-out time-out
+                                               :profile profile)))
                    (format t " run-time:  ~A~%" (getf result :run-time))
                    (when verify
                      (push result results)
@@ -319,37 +321,46 @@
       (log-data)))
   t)
 
-
-
-
-(defun best-time (num-tries thunk)
+(defun best-time (num-tries thunk &key profile)
   "returns a plist with the fields :wall-time :run-time :value"
   (declare (type (and fixnum unsigned-byte) num-tries)
            (type (function () t) thunk))
   (let (result)
+    (assert profile)
     (dotimes (try num-tries)
       (let* ((run-time-t1 (get-internal-run-time))
              (start-real-time (get-internal-real-time))
-             (s2 (funcall thunk))
+             profile-plists
+             (n-times 1)
+             (s2 (if profile
+                     (call-with-profiling thunk
+                                          (lambda (plists)
+                                            (setf profile-plists plists))
+                                          (lambda (n)
+                                            (setf n-times n)))
+                     (funcall thunk)))
              (run-time-t2 (get-internal-run-time))
-             (wall-time (/ (- (get-internal-real-time) start-real-time) internal-time-units-per-second))
-             (run-time (/ (- run-time-t2 run-time-t1) internal-time-units-per-second)))
+             (wall-time (/ (- (get-internal-real-time) start-real-time) internal-time-units-per-second n-times))
+             (run-time (/ (- run-time-t2 run-time-t1) internal-time-units-per-second n-times)))
+        ;;(assert profile-plists)
         (setf result
               (cond
                 ((not result) ; if first time through dotime/try loop
                  (list :wall-time (the real wall-time)
                        :run-time run-time
-                       :value s2))
+                       :value s2
+                       :profile-plists profile-plists))
                 ((< run-time (the real (getf result :run-time)))
                  ;;(format t "[try ~D] found faster ~A < ~A~%" try run-time (getf result :run-time))
                  (list :wall-time wall-time
                        :run-time run-time
-                       :value s2))
+                       :value s2
+                       :profile-plists profile-plists))
                 (t
                  result)))))
     result))
 
-(defun call-with-timeout (time-out thunk num-tries)
+(defun call-with-timeout (time-out thunk num-tries &key profile)
   "TIME-OUT, integer, the wall-time allowed to call the function THUNK.
  THUNK is a 0-ary function returning some type X.
  Call the function THUNK, in one thread, and start a 2nd observer thread.  The 2nd thread
@@ -360,18 +371,19 @@
  is run directly.
  Returns a plist, one of the following:
  (:wall-time rational :run-time rational :time-out integer) or
- (:wall-time rational :run-time rational :value X)"
+ (:wall-time rational :run-time rational :value X :profile-plists list-of-plists)"
   (declare (type (or null (and fixnum unsigned-byte)) time-out)
            (type (function () t) thunk)
            (type (and fixnum unsigned-byte) num-tries))
   (if (not time-out)
-      (best-time num-tries thunk)
-      (%call-with-timeout time-out thunk num-tries)))
+      (best-time num-tries thunk :profile profile)
+      (%call-with-timeout time-out thunk num-tries :profile profile)))
 
 #+allegro
-(defun %call-with-timeout (time-out thunk num-tries)
+(defun %call-with-timeout (time-out thunk num-tries &key profile)
   (declare (type (and fixnum unsigned-byte) time-out num-tries)
-           (type (function () t) thunk))
+           (type (function () t) thunk)
+           (ignore profile))
   (let ((start-run-time (get-internal-run-time))
         (start-real-time (get-internal-real-time)))
     (sys:with-timeout (time-out (let ((run-time (get-internal-run-time))
@@ -379,66 +391,28 @@
                                   (list :wall-time (/ (- real-time start-real-time) internal-time-units-per-second)
                                         :run-time  (/ (- run-time start-run-time) internal-time-units-per-second)
                                         :time-out time-out)))
-      (best-time num-tries thunk))))
+      (best-time num-tries thunk :profile nil))))
 
-
-#+sbcl 
-(defun %call-with-timeout (time-out thunk num-tries)
+#+sbcl
+(defun %call-with-timeout (time-out thunk num-tries &key profile)
   (declare (type (and fixnum unsigned-byte) time-out num-tries)
            (type (function () t) thunk))
-  (let (th-worker th-observer th-worker-join-failed th-observer-join-failed th-worker-destroyed-observer time-it-error result1 result2
-                  (start-run-time (get-internal-run-time))
-                  (start-real-time (get-internal-real-time)))
-    (flet ((time-it ()
-             ;; evaluate THUNK several times (according to NUM-TRIES)
-             (handler-bind ((error (lambda (e)
-                                     ;; this handler explicitly declines to handle the error
-                                     ;; thus the variable TIME-IT-ERROR will be set as a side
-                                     ;; effect, and th-observer will be destroyed, and the system will
-                                     ;; continue to search for another handler, probably the
-                                     ;; debugger.
-                                     (setf time-it-error e)
-                                     (when th-observer
-                                       (warn "killing thread ~A because of error ~A" th-observer e)
-                                       (ignore-errors (bordeaux-threads:destroy-thread th-observer))))))
-               (setf result1 (best-time num-tries thunk))
-               (when th-observer
-                 ;; if we reach this line, that means the THUNK evaluated NUM-TRIES no of times before
-                 ;;   TH-OBSERVER finshed.  So we need to kill TH-OBSERVER
-                 (setf th-worker-destroyed-observer
-                       (bordeaux-threads:destroy-thread th-observer))))))
-      (setf th-observer
-            (bordeaux-threads:make-thread
-             (lambda (&aux elapsed (real-time (get-internal-real-time)) (run-time (get-internal-run-time)))
-               (block waiting
-                 (dotimes (i time-out)
-                   (setf run-time (get-internal-run-time))
-                   (setf real-time (get-internal-real-time))
-                   (when (plusp (setf elapsed (/ (- real-time start-real-time) internal-time-units-per-second)))
-                     (when (> elapsed time-out)
-                       (return-from waiting)))
-                   (sleep 2)))
-               (setf result2 (list :wall-time (/ (- real-time start-real-time) internal-time-units-per-second)
-                                   :run-time  (/ (- run-time start-run-time) internal-time-units-per-second)
-                                   :time-out time-out))
-               (format t "killing thread ~A~%" th-worker)
-               (bordeaux-threads:destroy-thread th-worker))
-             :name "th-observer stop-watch"))
-      (setf th-worker (bordeaux-threads:make-thread #'time-it :name "th-handle thunk"))
-      (handler-case (print-conditions (bordeaux-threads:join-thread th-worker))
-        #+sbcl(SB-THREAD:JOIN-THREAD-ERROR (e)
-                (setf th-worker-join-failed e)
-                nil))
-      (handler-case (bordeaux-threads:join-thread th-observer)
-        #+sbcl(SB-THREAD:JOIN-THREAD-ERROR (e)
-                (setf th-observer-join-failed e)
-                nil)))
-    (assert (typep (or result1 result2) 'cons)
-            (th-worker th-observer th-worker-destroyed-observer time-it-error th-worker-join-failed th-observer-join-failed result1 result2 time-out))
-    (the cons (or result1 result2))))
+  (let ((start-run-time (get-internal-run-time))
+        (start-real-time (get-internal-real-time)))
+    (handler-bind ((sb-ext:timeout (lambda (c)
+                                     (declare (ignore c))
+                                     (let ((run-time (get-internal-run-time))
+                                           (real-time (get-internal-real-time)))
+                                       (return-from %call-with-timeout
+                                         (list :wall-time (/ (- real-time start-real-time) internal-time-units-per-second)
+                                               :run-time  (/ (- run-time start-run-time) internal-time-units-per-second)
+                                               :time-out time-out))))))
+      (sb-ext:with-timeout time-out
+        (best-time num-tries thunk :profile profile)))))
 
 (defvar *perf-results* nil)
-(defun types/cmp-perf (&key types (decompose 'bdd-decompose-types-weak) (time-out 15) (num-tries 2) &aux (f (symbol-function decompose)))
+(defun types/cmp-perf (&key types (decompose 'bdd-decompose-types-weak) (time-out 15) (num-tries 2) profile
+                       &aux (f (symbol-function decompose)))
   (declare (type list types)
            (type symbol decompose)
            (type function f))
@@ -456,7 +430,8 @@
      (let ((result (call-with-timeout time-out
                                       (lambda ()
                                         (funcall f types))
-                                      num-tries))
+                                      num-tries
+                                      :profile profile))
            (num-unknown 0)
            (num-known 0))
        (declare (type (and unsigned-byte fixnum) num-known num-unknown))
@@ -469,10 +444,11 @@
                    (incf num-known))))))
        (assert (or (typep (getf result :run-time) 'number )
                    (getf result :time-out)) (result))
-       (destructuring-bind (&key time-out (run-time 0) (wall-time 0) value) result
+       (destructuring-bind (&key time-out (run-time 0) (wall-time 0) value profile-plists) result
          (declare (type (or null fixnum) time-out)
                   (type list value)
-                  (type number run-time wall-time))
+                  (type number run-time wall-time)
+                  (type (or cons null) profile-plists))
          (push
           (cond
             (time-out
@@ -500,6 +476,7 @@
                    :wall-time (/ wall-time 1.0)
                    :run-time (/ run-time 1.0)
                    :calculated (length value)
+                   :profile-plists profile-plists
                    ;; :value value
                    )))
           *perf-results*))
@@ -1108,12 +1085,14 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
                            (length time-outs))
                    (format stream ":GIVEN ~A)"
                            (mapcar (getter :given) time-outs)))
-               (dolist (tag `(:given :calculated :run-time :wall-time :known :unknown))
+               (dolist (tag `(:given :calculated :run-time :wall-time :known :unknown :profile-plists))
                    (format stream "~%~S (" tag)
                    (when no-time-out
                      (format stream "~S" (getf (car no-time-out) tag)))
                    (dolist (item (cdr no-time-out))
-                     (format stream " ~A" (getf item tag)))
+                     (when (consp (getf item tag))
+                       (format stream "~%"))
+                     (format stream " ~S" (getf item tag)))
                    (format stream ")")))
                (format stream ")~%"))))
       (when (car groups)
@@ -1257,7 +1236,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
 
 (defvar *destination-dir* "/Users/jnewton/newton.16.edtchs/src")
 (defun test-report (&key sample (prefix "") (re-run t) (suite-time-out (* 60 60 4))  (time-out (* 3 60)) normalize (destination-dir *destination-dir*)
-                      types file-name (limit 15) tag hilite-min (num-tries 2)
+                      types file-name (limit 15) tag hilite-min (num-tries 2) profile
                     &allow-other-keys)
   "TIME-OUT is the number of seconds to allow for one call to a single decompose function.
 SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
@@ -1277,6 +1256,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                              :sample sample
                              :num-tries num-tries
                              :hilite-min hilite-min
+                             :profile profile
                              (when file-name
                                (list
                                 :ltxdat-name (format nil "~A/~A~A.ltxdat" destination-dir prefix file-name)
@@ -1465,210 +1445,6 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                      :types (valid-subtypes t)
                      :file-name "subtypes-of-t")
 
-(defun display-theta (n theta)
-  (flet ((e2 (theta)
-           (- (expt 2 (expt 2 theta))
-              (expt 2 (expt 2 (1- theta)))))
-         (e1 (theta)
-           (expt 2 (- n theta 1)))
-         (pr (n fn)
-           (format t " ~A=" fn)
-           (if (< (log n) 10)
-               (format t "~D" n)
-               (format t "2^~A" (log n 2)))))
-    (loop for i from (1- theta) to (1+ theta)
-          do (format t "n=~D log_2(~D)=~D theta=~D" n n (floor (log n 2)) i)
-          do (pr (e2 i) "e2")
-          do (format t " ~A"
-                     (cond
-                       ((< (e2 i) (e1 i))
-                        "<")
-                       ((= (e2 i) (e1 i))
-                        "=")
-                       (t ">")))
-          do (pr (e1 i) "e1")
-          do (terpri))))
-
-
-(defun delta (i n)
-  (labels ((e2 (i)
-             (- (expt 2 (expt 2 (1+ (- n i))))
-                (expt 2 (expt 2 (- n i)))))
-           (e1 (i)
-             (expt 2 (1- i)))
-           (delta-bar (i)
-             (- (e2 i) (e1 i))))
-    (format t "     n=~A e1=~A   e2=~A~%" n (e1 (- n 1)) (e2 (- n 1)))
-    (delta-bar (- n i))))
-
-(defun delta-print-table (n)
-  (let ((d -1)
-        (i 0))
-
-    (loop :while  (< d 0)
-          :do (setf d (delta i n))
-          :do (format t "i=~A  delta= ~A~%" i d)
-          :do (incf i)
-          :finally (format t "n = ~A theta=~A~%" n (1- i)))
-    ))
-
-
-(defun theta-bounds (n)
-  (list
-   (if (< (log n 2) (1- n))
-       (ceiling (log (- n (log n 2) 1) 2))
-       0)
-   (floor (log n 2))))
-
-
-
-
-(defun 2^ (n) (expt 2 n))
-(defun 2^^ (n) (2^ (2^ n)))
-
-(defun power-diff (n)
-  (- (2^^ n)
-     (2^^ (1- n))))
-
-(defun cmp-power-diff (n)
-  (let ((theta (floor (log n 2))))
-    (- (power-diff theta)
-       (expt 2 (- n theta 1)))))
-
-(defun row-r (n i)
-  (declare (ignore n))
-  (2^ (1- i)))
-
-(assert (= 2 (row-r 3 2)) ())
-(assert (= 4 (row-r 3 3)) ())
-(assert (= 1 (row-r 2 1)) ())
-
-
-
-(defun row-RR (n i)
-  (- (2^^ (+ n (- i) 1))
-     (2^^ (- n i))))
-
-(assert (= 12 (row-RR 3 2)) ())
-(assert (= 2 (row-RR 3 3)) ())
-(assert (= 12 (row-RR 2 1)) ())
-(assert (= 2 (row-RR 2 2)) ())
-
-(defun log2 (n)
-  (log n 2))
-
-(defun theta (n)
-  (let ((max (floor (log2 n))))
-    ;;(format t "log=~A~%" max)
-    (case max
-      ((0)
-       (values 0 0))
-      (t
-       (loop :for theta :downfrom max :downto 0
-             :for r = (row-r n (- n theta))
-             :for RR = (row-RR n (- n theta))
-             :for iterations = 1 :then (1+ iterations)
-             ;; :do (format t "n=~A theta=~A n-theta=~A r<=R?  ~A ~A ~A?~%"
-             ;;             n theta (- n theta) r
-             ;;             (cond ((< r RR) "<")
-             ;;                   ((= r RR) "=")
-             ;;                   (t ">"))
-             ;;             RR)
-             :do (when (>= r RR)
-                   (return-from theta (values (1+ theta) iterations))))))))
-
-(defun find-theta (limit)
-  (let ((hash-iterations (make-hash-table)))
-    (loop for n from 2 to limit
-          do (multiple-value-bind (theta iterations) (theta n)
-               (declare (ignore theta))
-               (incf (gethash iterations hash-iterations 0))))
-    (maphash (lambda (key value)
-               (format t "iterations=~D occurances=~D~%" key value))
-             hash-iterations)))
-
-(defun estim (n nterms)
-  (labels ((rec (l i accum)
-             (if (zerop i)
-                 accum
-                 (rec (log (- n l) 2) (1- i) (cons l accum)))))
-    (let ((seq (nreverse (rec (log n 2) nterms nil))))
-      (maplist (lambda (tail)
-                 (if (cdr tail)
-                     (destructuring-bind (a b &rest ignored) tail
-                       (declare (ignore ignored))
-                       (list a (cond ((< a b) 1)
-                                     ((= a b) 0)
-                                     (t -1)) (- a b)))
-                     (car tail)))
-               seq))))
-
-(defun robdd-size (n)
-  (let* ((theta (theta n))
-         (robdd-size (+ (1- (2^ (- n theta)))
-                        (2^^ theta)))
-         (bdd-size (1- (2^ (1+ n)))))
-    (list :n n :theta theta :robdd robdd-size :bdd bdd-size :compression (float (/ (+ 1d0 robdd-size) bdd-size) 1.0))))
-
-(defun log-based-compression (min max)
-  (loop :for n :from min :to max
-        :collect (list n (let ((theta (float (log n 2))))
-                           (/ (+ (expt 2d0 (expt 2d0 theta)) (expt 2d0 (- n theta)) -1)
-                              (1- (expt 2d0 (1+ (float n) ))))))))
-  
-(defun robdd-compressions (min max)
-  (loop :for n :from min :to max
-        :collect (destructuring-bind (&key compression &allow-other-keys) (robdd-size n)
-                   (list n compression))))
-
-(defun theta-latex-table (n-min n-max) ;; normally 1 21
-  (format t "$~A$ & $~A$ & $~A$ & $~A$ & $~A$ & $~A$ & $~A$\\\\~%"
-          "\\numvars"
-          "\\lfloor \\log_2\\numvars \\rfloor"
-          "\\theta"
-          "2^{\\numvars -\\theta}-1"
-          "2^{2^\\theta}"
-          "|ROBDD_{\\numvars}|"
-          "\\frac{|ROBDD_{\\numvars}|}{|UOBDD_{\\numvars}|}"
-          )
-  (loop :for n :from n-min :to n-max
-        :do (let* ((theta (theta n))
-                   (theta-max (floor (log2 n)))
-                   (|ROBDD_n| (+ (1- (2^ (- n theta)))
-                                 (2^ (2^ theta))))
-                   (|UOBDD_n| (1- (2^ (1+ n))))
-                   (compression (/ (float |ROBDD_n|)
-                                   |UOBDD_n|)))
-              (format t "~A & ~A & ~A & ~A & ~A & ~A & ~6,3f\\%\\\\~%"
-                      n
-                      theta-max
-                      theta
-                      (1- (2^ (- n theta))) 
-                     (2^ (2^ theta))
-                      |ROBDD_n|
-                      (* 100 compression)))))
-                           
-(defun compression (n)
-  (let ((theta (theta n)))
-    (format t "theta = ~A~%" theta)
-    (format t "(2^^~A + 2^(~A - ~A) - 1) / (2^~A - 1)~%" theta n theta (1+ n))
-    (format t "= (2^~A + 2^(~A - ~A) - 1) / (2^~A - 1)~%" (2^ theta) n theta (1+ n))
-    (format t " = (~A + ~A - 1) / (~A - 1)~%" (2^^ theta) (2^ (- n theta)) (2^ (1+ n)))
-    (format t " = ~A / ~A~%" (+ (2^^ theta) (2^ (- n theta)) -1) (1- (2^ (1+ n))))
-    (format t " = ~A~%" (/ (+ (2^^ (float theta)) (2^ (- n (float theta))) -1) (1- (2^ (1+ (float n))))))))
-
-(defun graph-theta (n-min n-max)
-  (loop :for n :from n-min :to n-max
-        :for theta = (theta n)
-        :do (format t "(~A, ~A)~%" n theta))
-  (format t "~%")
-  (loop :for n :from n-min :to n-max
-        :do (format t "(~A, ~A)~%" n (log2 n)))
-  (format t "~%")
-
-  (loop :for n :from n-min :to n-max
-        :do (format t "(~A, ~A)~%" n (- (log2 (- n 2 (log2 n))) 2))))
-
 (defun call-with-caffeinate (thunk)
   (let ((caff (sb-ext:run-program "caffeinate"
                                   '("-i" "sleep" "31449600") ;; sleep for 1 year or until killed
@@ -1694,8 +1470,9 @@ sleeping before the code finishes evaluating."
 (defun big-test-report (&rest options &key (num-tries 2) (multiplier 1) (prefix "") (re-run t)
                                         (suite-time-out (* 60 60 4)) (time-out 100) normalize hilite-min
                                         (decomposition-functions *decomposition-functions*)
+                                        profile
                                         (destination-dir *destination-dir*))
-  (declare (ignore prefix re-run suite-time-out time-out num-tries hilite-min))
+  (declare (ignore prefix re-run suite-time-out time-out num-tries hilite-min profile))
   (when normalize
     (assert (member normalize decomposition-functions) (normalize decomposition-functions)))
   (dolist (df decomposition-functions)
@@ -1718,7 +1495,7 @@ sleeping before the code finishes evaluating."
                    :destination-dir destination-dir
                    :multiplier multiplier
                    :decomposition-functions (cons 'decompose-types-bdd-graph
-                                                  *decompose-fun-names*)))
+                                                  *decompose-fun-parameterized-names*)))
 
 (defun best-2-report (&key (re-run t) (multiplier 1.8) (destination-dir *destination-dir*))
   (big-test-report :re-run re-run
@@ -1753,3 +1530,18 @@ sleeping before the code finishes evaluating."
                                               bdd-decompose-types-strong
                                               bdd-decompose-types-weak
                                               bdd-decompose-types-weak-dynamic)))
+
+
+(defun bdd-report-profile (&key (re-run t) (multiplier 1.5) (destination-dir *destination-dir*)
+                             (prefix "bdd-profile-1") (decomposition-functions *decomposition-functions*))
+  (big-test-report :re-run re-run
+                   :profile t
+                   :prefix prefix
+                   :multiplier multiplier
+                   :normalize nil
+                   :time-out 20
+                   :num-tries 4
+                   :hilite-min nil
+                   :destination-dir destination-dir
+                   :decomposition-functions decomposition-functions))
+

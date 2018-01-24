@@ -519,7 +519,7 @@
                       fun-defs)))))))
     (setf fun-names (mapcar #'cadr fun-defs))
     `(progn
-       (defvar *decompose-fun-names* ',fun-names)
+       (defvar *decompose-fun-parameterized-names* ',fun-names)
        ,@prop-defs
        ,@fun-defs)))
 
