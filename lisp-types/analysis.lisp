@@ -326,7 +326,6 @@
   (declare (type (and fixnum unsigned-byte) num-tries)
            (type (function () t) thunk))
   (let (result)
-    (assert profile)
     (dotimes (try num-tries)
       (let* ((run-time-t1 (get-internal-run-time))
              (start-real-time (get-internal-real-time))
@@ -342,7 +341,6 @@
              (run-time-t2 (get-internal-run-time))
              (wall-time (/ (- (get-internal-real-time) start-real-time) internal-time-units-per-second n-times))
              (run-time (/ (- run-time-t2 run-time-t1) internal-time-units-per-second n-times)))
-        ;;(assert profile-plists)
         (setf result
               (cond
                 ((not result) ; if first time through dotime/try loop
