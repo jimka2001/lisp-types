@@ -1531,19 +1531,17 @@ sleeping before the code finishes evaluating."
                                               bdd-decompose-types-weak
                                               bdd-decompose-types-weak-dynamic)))
 
-(defun bdd-report-profile (&key (re-run t) (multiplier 0.3)  (destination-dir *destination-dir*))
+
+(defun bdd-report-profile (&key (re-run t) (multiplier 1.5) (destination-dir *destination-dir*)
+                             (prefix "bdd-profile-1") (decomposition-functions *decomposition-functions*))
   (big-test-report :re-run re-run
                    :profile t
-                   :prefix "bdd-profile-"
+                   :prefix prefix
                    :multiplier multiplier
                    :normalize nil
                    :time-out 20
                    :num-tries 4
                    :hilite-min nil
                    :destination-dir destination-dir
-                   :decomposition-functions '(decompose-types-bdd-graph-strong
-                                              decompose-types-bdd-graph-weak
-                                              decompose-types-bdd-graph-weak-dynamic
-                                              bdd-decompose-types-strong
-                                              bdd-decompose-types-weak
-                                              bdd-decompose-types-weak-dynamic)))
+                   :decomposition-functions decomposition-functions))
+

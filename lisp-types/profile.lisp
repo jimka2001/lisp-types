@@ -33,7 +33,7 @@
       (format t "1 importing name=~A into  :lisp-types.test~%" name)
       (shadowing-import name :lisp-types.test))))
 
-#nil(defun gather-profiling (thunk)
+#-nil(defun gather-profiling (thunk)
   (let* ((graph       (sb-sprof::make-call-graph most-positive-fixnum))
          (interesting (map 'list (lambda (name)
                                    (find name (sb-sprof::call-graph-vertices graph)
