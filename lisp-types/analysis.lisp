@@ -723,13 +723,15 @@
                 (format stream "set logscale xy~%"))
               (labels ((xys (curve)
                          (declare #+sbcl (notinline sort))
-                         (remove-duplicates (sort (copy-list (getf curve key))
-                                                  (lambda (a b)
-                                                    (if (= (car a) (car b))
-                                                        (< (cadr a) (cadr b))
-                                                        (< (car a) (car b)))))
-                                            :key #'car
-                                            :test #'equal)))
+                         (if (atom (getf curve key))
+                             nil
+                             (remove-duplicates (sort (copy-list (getf curve key))
+                                                      (lambda (a b)
+                                                        (if (= (car a) (car b))
+                                                            (< (cadr a) (cadr b))
+                                                            (< (car a) (car b)))))
+                                                :key #'car
+                                                :test #'equal))))
                 (let* ((line-style 0)
                        (mapping (mapcar (lambda (descr)
                                           (incf line-style)
