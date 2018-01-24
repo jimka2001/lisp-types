@@ -40,7 +40,10 @@
                (dotimes (b 100)
                  (pushnew (random 1.0) nums)))
              (sort nums #'<))))
-    (let ((profiling (call-with-profiling (lambda () (test-function)))))
+    (let (profiling )
+      (call-with-profiling (lambda () (test-function))
+                           (lambda (plists)
+                             (setf profiling plists)))
       (forall item profiling
         (assert-true (numberp (getf item :nr))))
       (forall item profiling

@@ -55,41 +55,43 @@
     :when beg :collect (subseq string beg end)
       :while end))
 
-(defun call-with-profiling (thunk)
+(defun call-with-profiling (thunk consume)
+  (declare (type (function () t) thunk)
+           (type (function (list) t) consume))
   (sb-sprof:reset)
   (sb-sprof:start-profiling)
-  (funcall thunk)
-  (sb-sprof:stop-profiling)
-  (flet ((dashes (str)
-           (every (lambda (c)
-                    (char= c #\-)) str)))
-    
-    (let* ((lines-str (with-output-to-string (str)
-                        (let ((*standard-output* str))
-                          (sb-sprof:report :type :flat))))
-           (dash-1 (member-if #'dashes (split-str lines-str)))
-           (dash-2 (member-if #'dashes (cdr dash-1)))
-           (profile-lines (ldiff (cdr dash-1) dash-2)))
+  (prog1 (funcall thunk)
+    (sb-sprof:stop-profiling)
+    (flet ((dashes (str)
+             (every (lambda (c)
+                      (char= c #\-)) str)))
+      (let* ((lines-str (with-output-to-string (str)
+                          (let ((*standard-output* str))
+                            (sb-sprof:report :type :flat))))
+             (dash-1 (member-if #'dashes (split-str lines-str)))
+             (dash-2 (member-if #'dashes (cdr dash-1)))
+             (profile-lines (ldiff (cdr dash-1) dash-2)))
            
-      ;; "           Self        Total        Cumul"
-      ;; "  Nr  Count     %  Count     %  Count     %    Calls  Function"
-      ;; "------------------------------------------------------------------------"
-      ;; "   1    121  15.6    121  15.6    121  15.6        -  LDIFF"
-      ;; "   2    113  14.5    176  22.6    234  30.1        -  (LABELS TO-DNF :IN TYPE-TO-DNF)"
-      ;; "   3     69   8.9    553  71.1    303  38.9        -  DISJOINT-TYPES-P"
-      ;; "   4     66   8.5    199  25.6    369  47.4        -  CACHED-SUBTYPEP"
-      ;; "------------------------------------------------------------------------"
-      ;; "          0   0.0                                     elsewhere")
-      (loop :for line :in profile-lines
-            :for stream = (make-string-input-stream line)
-            :collect (prog1 (list :nr (read stream nil nil)
-                                  :self (list :count (read stream nil nil)
-                                              :percent (read stream nil nil))
-                                  :total (list :count (read stream nil nil)
-                                               :percent (read stream nil nil))
-                                  :cumul (list :count (read stream nil nil)
-                                               :percent (read stream nil nil))
-                                  :calls (read stream nil nil)
-                                  :function (read stream nil nil))
-                       (close stream))))))
+        ;; "           Self        Total        Cumul"
+        ;; "  Nr  Count     %  Count     %  Count     %    Calls  Function"
+        ;; "------------------------------------------------------------------------"
+        ;; "   1    121  15.6    121  15.6    121  15.6        -  LDIFF"
+        ;; "   2    113  14.5    176  22.6    234  30.1        -  (LABELS TO-DNF :IN TYPE-TO-DNF)"
+        ;; "   3     69   8.9    553  71.1    303  38.9        -  DISJOINT-TYPES-P"
+        ;; "   4     66   8.5    199  25.6    369  47.4        -  CACHED-SUBTYPEP"
+        ;; "------------------------------------------------------------------------"
+        ;; "          0   0.0                                     elsewhere")
+        (funcall consume
+                 (loop :for line :in profile-lines
+                       :for stream = (make-string-input-stream line)
+                       :collect (prog1 (list :nr (read stream nil nil)
+                                             :self (list :count (read stream nil nil)
+                                                         :percent (read stream nil nil))
+                                             :total (list :count (read stream nil nil)
+                                                          :percent (read stream nil nil))
+                                             :cumul (list :count (read stream nil nil)
+                                                          :percent (read stream nil nil))
+                                             :calls (read stream nil nil)
+                                             :function (read stream nil nil))
+                                  (close stream))))))))
     
