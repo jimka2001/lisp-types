@@ -252,6 +252,7 @@
           (format stream "  )~%"))))))
 
 (defun read-data (prefix &key (min 1) (max 8) vars)
+  (declare (ignore vars))
   (loop for var from min to max
         for data-file = (format nil "~A/bdd-distribution-data-~D.sexp" prefix var)
         nconc (with-open-file (stream data-file

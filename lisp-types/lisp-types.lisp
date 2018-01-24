@@ -108,7 +108,8 @@ If N > (length of data) then a permutation of DATA is returned"
 
 
 (defun slow-smarter-subtypep (t1 t2)
-  (declare (optimize (speed 3) (compilation-speed 0)))
+  (declare ;;(optimize (speed 3) (compilation-speed 0))
+   )
   (cond
     ((and *reduce-member-type*
           (typep t1 '(cons (member eql member)))) ; (eql obj) or (member obj1 ...)
@@ -167,7 +168,8 @@ If N > (length of data) then a permutation of DATA is returned"
 (def-cache-fun (smarter-subtypep call-with-subtype-hash) (t1 t2)
   "The sbcl subtypep function does not know that (eql :x) is a subtype of keyword,
 this function SMARTER-SUBTYPEP understands this."
-  (declare (optimize (speed 3) (compilation-speed 0)))
+  (declare ;;(optimize (speed 3) (compilation-speed 0))
+   )
   (let ((t1 (type-to-dnf t1))
         (t2 (type-to-dnf t2)))
     (multiple-value-bind (T1<=T2 OK) (cached-subtypep t1 t2)
@@ -368,7 +370,8 @@ symbol _ somewhere (recursively)."
   (sort (copy-list patterns) #'cmp-objects))
 
 (defun alphabetize-type (type)
-  (declare (optimize (speed 3) (compilation-speed 0)))
+  (declare ;;(optimize (speed 3) (compilation-speed 0))
+   )
   (cond
     ((atom type)
      type)
@@ -425,7 +428,8 @@ E.g.  (rule-case 12 ;; OBJECT
 (proclaim '(inline sub-super))
 
 (defun sub-super (types)
-  (declare (optimize (speed 3) (compilation-speed 0)))
+  (declare ;;(optimize (speed 3) (compilation-speed 0))
+   )
   (loop :for tail :on types
 	:do (when (cdr types)
 	      (loop :for t1 :in (cdr tail)
