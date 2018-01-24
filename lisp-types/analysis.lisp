@@ -184,7 +184,7 @@
       (:names (bdd-decompose-types-strong)  :gnu-color ,(nth (incf color) *colors*) :color "orange" :legend t)
       (:names (bdd-decompose-types-weak) :gnu-color ,(nth (incf color) *colors*) :color "gold" :legend t)
       (:names (bdd-decompose-types-weak-dynamic) :gnu-color ,(nth (incf color) *colors*) :color "gold" :legend t)
-      (:names ,*decompose-fun-names*  :gnu-color ,(nth (incf color) *colors*) :color "light-blue" :legend nil)
+      (:names ,*decompose-fun-parameterized-names*  :gnu-color ,(nth (incf color) *colors*) :color "light-blue" :legend nil)
       (:names (decompose-types-bdd-graph-strong)  :gnu-color ,(nth (incf color) *colors*) :color "red" :linewidth 1  :legend t)
       (:names (decompose-types-bdd-graph-weak-dynamic)  :gnu-color ,(nth (incf color) *colors*) :color "rust" :linewidth 1  :legend t)
       (:names (decompose-types-bdd-graph-weak)  :gnu-color ,(nth (incf color) *colors*) :color "rust" :linewidth 1  :legend t)
@@ -194,7 +194,7 @@
 (defvar *decomposition-functions*
   (set-difference (mapcan (lambda (plist)
                             (copy-list (getf plist :names))) *decomposition-function-descriptors*)
-                  (cons 'local-minimum *decompose-fun-names*)))
+                  (cons 'local-minimum *decompose-fun-parameterized-names*)))
 
 (defun encode-time (time &aux (decoded-time (multiple-value-list (decode-universal-time time))))
   "Create a string similar to the UNIX date command: e.g., \"Thu Aug  3 10:39:18 2017\""
@@ -1495,7 +1495,7 @@ sleeping before the code finishes evaluating."
                    :destination-dir destination-dir
                    :multiplier multiplier
                    :decomposition-functions (cons 'decompose-types-bdd-graph
-                                                  *decompose-fun-names*)))
+                                                  *decompose-fun-parameterized-names*)))
 
 (defun best-2-report (&key (re-run t) (multiplier 1.8) (destination-dir *destination-dir*))
   (big-test-report :re-run re-run
