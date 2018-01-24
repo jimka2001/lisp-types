@@ -326,18 +326,23 @@
   (declare (type (and fixnum unsigned-byte) num-tries)
            (type (function () t) thunk))
   (let (result)
+    (assert profile)
     (dotimes (try num-tries)
       (let* ((run-time-t1 (get-internal-run-time))
              (start-real-time (get-internal-real-time))
              profile-plists
+             (n-times 1)
              (s2 (if profile
                      (call-with-profiling thunk
                                           (lambda (plists)
-                                            (setf profile-plists plists)))
+                                            (setf profile-plists plists))
+                                          (lambda (n)
+                                            (setf n-times n)))
                      (funcall thunk)))
              (run-time-t2 (get-internal-run-time))
-             (wall-time (/ (- (get-internal-real-time) start-real-time) internal-time-units-per-second))
-             (run-time (/ (- run-time-t2 run-time-t1) internal-time-units-per-second)))
+             (wall-time (/ (- (get-internal-real-time) start-real-time) internal-time-units-per-second n-times))
+             (run-time (/ (- run-time-t2 run-time-t1) internal-time-units-per-second n-times)))
+        ;;(assert profile-plists)
         (setf result
               (cond
                 ((not result) ; if first time through dotime/try loop
@@ -1080,12 +1085,14 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
                            (length time-outs))
                    (format stream ":GIVEN ~A)"
                            (mapcar (getter :given) time-outs)))
-               (dolist (tag `(:given :calculated :run-time :wall-time :known :unknown))
+               (dolist (tag `(:given :calculated :run-time :wall-time :known :unknown :profile-plists))
                    (format stream "~%~S (" tag)
                    (when no-time-out
                      (format stream "~S" (getf (car no-time-out) tag)))
                    (dolist (item (cdr no-time-out))
-                     (format stream " ~A" (getf item tag)))
+                     (when (consp (getf item tag))
+                       (format stream "~%"))
+                     (format stream " ~S" (getf item tag)))
                    (format stream ")")))
                (format stream ")~%"))))
       (when (car groups)
