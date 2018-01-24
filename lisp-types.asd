@@ -20,7 +20,7 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 (asdf:defsystem :lisp-types
-  :depends-on (:dispatch)
+  :depends-on (:dispatch :sb-sprof)
   :components
   ((:module "lisp-types"
     :components
