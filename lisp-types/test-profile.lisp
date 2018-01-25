@@ -41,12 +41,12 @@
                  (pushnew (random 1.0) nums)))
              (sort nums #'<))))
     (let (profiling )
-      (call-with-profiling (lambda ()
-                             (test-function))
-                           (lambda (plists)
-                             (setf profiling plists))
-                           (lambda (n)
-                             (assert-true (typep n 'fixnum))))
+      (call-with-sprofiling (lambda ()
+                              (test-function))
+                            (lambda (plists)
+                              (setf profiling plists))
+                            (lambda (n)
+                              (assert-true (typep n 'fixnum))))
       (forall item profiling
         (assert-true (numberp (getf item :nr))))
       (forall item profiling

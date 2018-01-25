@@ -336,31 +336,40 @@ than as keywords."
     (dotimes (try num-tries)
       (let* ((run-time-t1 (get-internal-run-time))
              (start-real-time (get-internal-real-time))
-             profile-plists
-             (n-times 1)
+             sprofile-plists
+             (n-stimes 1)
              (s2 (if profile
-                     (call-with-profiling thunk
-                                          (lambda (plists)
-                                            (setf profile-plists plists))
-                                          (lambda (n)
-                                            (setf n-times n)))
+                     (call-with-sprofiling thunk
+                                           (lambda (plists)
+                                             (setf sprofile-plists plists))
+                                           (lambda (n)
+                                             (setf n-stimes n)))
                      (funcall thunk)))
              (run-time-t2 (get-internal-run-time))
-             (wall-time (/ (- (get-internal-real-time) start-real-time) internal-time-units-per-second n-times))
-             (run-time (/ (- run-time-t2 run-time-t1) internal-time-units-per-second n-times)))
+             (wall-time (/ (- (get-internal-real-time) start-real-time) internal-time-units-per-second n-stimes))
+             (run-time (/ (- run-time-t2 run-time-t1) internal-time-units-per-second n-stimes))
+             (n-dtimes 1)
+             dprofile-plists)
+        (when profile
+          (call-with-dprofiling thunk
+                                '("LISP-TYPES")
+                                (lambda (plists)
+                                  (setf dprofile-plists plists))
+                                (lambda (n)
+                                  (setf n-dtimes n))))
         (setf result
               (cond
                 ((not result) ; if first time through dotime/try loop
                  (list :wall-time (the real wall-time)
                        :run-time run-time
                        :value s2
-                       :profile-plists profile-plists))
+                       :profile-plists (list :sprof sprofile-plists :dprof dprofile-plists)))
                 ((< run-time (the real (getf result :run-time)))
                  ;;(format t "[try ~D] found faster ~A < ~A~%" try run-time (getf result :run-time))
                  (list :wall-time wall-time
                        :run-time run-time
                        :value s2
-                       :profile-plists profile-plists))
+                       :profile-plists (list :sprof sprofile-plists :dprof dprofile-plists)))
                 (t
                  result)))))
     result))
