@@ -66,7 +66,8 @@
            (dash-1 (member-if #'dashes (split-str lines-str)))
            (dash-2 (member-if #'dashes (cdr dash-1)))
            ;; profile-lines is the list of lines between the dashes
-           (profile-lines (ldiff (cdr dash-1) dash-2)))
+           (profile-lines (ldiff (cdr dash-1) dash-2))
+           (*package* (find-package :cl-user)))
            
       ;; "           Self        Total        Cumul"
       ;; "  Nr  Count     %  Count     %  Count     %    Calls  Function"

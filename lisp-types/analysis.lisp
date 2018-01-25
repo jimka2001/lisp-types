@@ -39,6 +39,13 @@
 ;;(do-symbols (name :lisp-types)
 ;;  (shadowing-import name :lisp-types.test))
 
+(defun user-read (&rest args)
+  "Calls read with the specified ARGS, but with *PACKAGE* bound to the CL-USER package.  
+The effect of this is that symbols like NIL and - get read as COMMON-LISP:NIL and COMMON-LISP:- rather 
+than as keywords."
+  (let ((*package* (find-package :cl-user)))
+    (apply #'read args)))
+
 (defun locate-symbol (name)
   "Return a list of symbols which is a collection of symbols from all packages which have the given symbol-name"
   (let (symbols)
@@ -684,7 +691,7 @@
   (declare (type (member :smooth :xys) key))
   (let ((content (with-open-file (stream sorted-file :direction :input)
                    (format t "reading    ~A~%" sorted-file)
-                   (read stream nil nil))))
+                   (user-read stream nil nil))))
     (with-open-file (stream gnuplot-file :direction :output :if-exists :supersede :if-does-not-exist :create)
       (format t "[writing to ~A~%" gnuplot-file)
       (destructuring-bind (&key summary sorted &allow-other-keys &aux min-curve min-curve-line-style) content
@@ -980,7 +987,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
     ((eq out :return)
      ;; (reduce (lambda (num string) (format nil "~D~S" num string)) '(1 2 3) :initial-value "")
      (destructuring-bind (&key summary limit data time-out-count run-count time-out-run-time run-time wall-time unknown known)
-         (read in nil nil)
+         (user-read in nil nil)
        (let (observed-max-time observed-min-time observed-min-prod observed-max-prod)
          (dolist (plist data)
            (mapc (lambda (given calculated time)
@@ -1105,7 +1112,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
 
 (defun print-ltxdat (ltxdat-name sorted-name include-decompose legendp tag)
   (let ((content (with-open-file (stream sorted-name :direction :input :if-does-not-exist :error)
-                   (read stream))))
+                   (user-read stream))))
     (destructuring-bind (&key sorted &allow-other-keys) content
       (ensure-directories-exist ltxdat-name)
       (with-open-file (stream ltxdat-name :direction :output :if-exists :supersede :if-does-not-exist :create)
@@ -1324,7 +1331,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
         (table (make-hash-table :test #'eq))
         (data (sort (mapcan (lambda (file-name)
                               (with-open-file (stream file-name)
-                                (destructuring-bind (&key summary sorted &allow-other-keys) (read stream)
+                                (destructuring-bind (&key summary sorted &allow-other-keys) (user-read stream)
                                   (mapcar (lambda (sorted-plist)
                                             (destructuring-bind (&key score integral arguments &allow-other-keys) sorted-plist
                                               (dolist (measure measures)
@@ -1532,8 +1539,10 @@ sleeping before the code finishes evaluating."
                                               bdd-decompose-types-weak-dynamic)))
 
 
+
+
 (defun bdd-report-profile (&key (re-run t) (multiplier 1.5) (destination-dir *destination-dir*)
-                             (prefix "bdd-profile-1") (decomposition-functions *decomposition-functions*))
+                             (prefix "bdd-profile-1-") (decomposition-functions *decomposition-functions*))
   (big-test-report :re-run re-run
                    :profile t
                    :prefix prefix

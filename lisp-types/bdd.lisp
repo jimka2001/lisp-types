@@ -155,8 +155,8 @@
       (let ((old (bdd-recent-count))
             (new (hash-table-count (bdd-hash))))
         (unless (= old new)
-          (format t "generation=~D Before GC hash count was ~A, after GC is ~A, lossage=~A~%"
-                  *bdd-generation* old new (- old new))
+          ;; (format t "generation=~D Before GC hash count was ~A, after GC is ~A, lossage=~A~%"
+          ;;         *bdd-generation* old new (- old new))
           (setf (bdd-recent-count) new)))))
   (pushnew 'report-hash-lossage sb-ext:*after-gc-hooks*))
 
