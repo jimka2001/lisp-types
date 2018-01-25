@@ -1539,8 +1539,10 @@ sleeping before the code finishes evaluating."
                                               bdd-decompose-types-weak-dynamic)))
 
 
+
+
 (defun bdd-report-profile (&key (re-run t) (multiplier 1.5) (destination-dir *destination-dir*)
-                             (prefix "bdd-profile-1") (decomposition-functions *decomposition-functions*))
+                             (prefix "bdd-profile-1-") (decomposition-functions *decomposition-functions*))
   (big-test-report :re-run re-run
                    :profile t
                    :prefix prefix
