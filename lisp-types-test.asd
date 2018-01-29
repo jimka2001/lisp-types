@@ -25,7 +25,7 @@
                :bordeaux-threads
                :closer-mop
 	       (:version :lisp-unit "0.9.0")
-               :sb-profile
+               ;; :sb-profile
                :sb-sprof)
   :components
   ((:module "lisp-types"
