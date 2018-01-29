@@ -281,7 +281,7 @@ than as keywords."
                  (let ((now (get-universal-time)))
                    (format t "    date:  ~A" (encode-time now))
                    (when (plusp fraction-completion)
-                     (format t "  estim finish:  ~A" (encode-time
+                     (format t "  estim finish:  ~A~%" (encode-time
                                                       (truncate (+ start-time
                                                                    (/ (- now start-time)
                                                                       fraction-completion))))))
