@@ -24,7 +24,9 @@
   :depends-on (:lisp-types
                :bordeaux-threads
                :closer-mop
-	       (:version :lisp-unit "0.9.0"))
+	       (:version :lisp-unit "0.9.0")
+               :sb-sprof
+               :sb-profile)
   :components
   ((:module "lisp-types"
     :components
