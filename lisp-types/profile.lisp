@@ -87,8 +87,8 @@
                                                :percent (read stream nil nil))
                                   :cumul (list :count (truncate (read stream nil nil) n-times)
                                                :percent (read stream nil nil))
-                                  ;; :calls (read stream nil nil) ;; don't know whether to call / or truncate
-                                  :function (format nil "~A" (read stream nil nil)))
+                                  :function (progn (read stream nil nil) ;; skip calls because don't know whether to call / or truncate
+                                                   (format nil "~A" (read stream nil nil))))
                        (close stream))))))
 
 (defun call-with-sprofiling (thunk consume-prof consume-n)

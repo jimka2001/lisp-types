@@ -365,7 +365,6 @@ than as keywords."
                        :value s2
                        :profile-plists (list :sprof sprofile-plists :dprof dprofile-plists)))
                 ((< run-time (the real (getf result :run-time)))
-                 ;;(format t "[try ~D] found faster ~A < ~A~%" try run-time (getf result :run-time))
                  (list :wall-time wall-time
                        :run-time run-time
                        :value s2
@@ -1550,7 +1549,7 @@ sleeping before the code finishes evaluating."
 
 
 
-(defun bdd-report-profile (&key (re-run t) (multiplier 1.5) (destination-dir *destination-dir*)
+(defun bdd-report-profile (&key (re-run t) (multiplier 0.2) (destination-dir *destination-dir*)
                              (prefix "bdd-profile-1-") (decomposition-functions *decomposition-functions*))
   (big-test-report :re-run re-run
                    :profile t
