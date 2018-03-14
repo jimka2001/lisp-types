@@ -1557,7 +1557,7 @@ sleeping before the code finishes evaluating."
                    :prefix prefix
                    :multiplier multiplier
                    :normalize nil
-                   :time-out 20
+                   :time-out 200
                    :num-tries 4
                    :hilite-min nil
                    :destination-dir destination-dir
