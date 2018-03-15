@@ -57,6 +57,7 @@
 
 (defun parse-sprofiler-output (profiler-text n-times)
   "PROFILER-TEXT is the string printed by sb-sprof:report"
+  (format t "sprofiler profiler-text=~%~A~%" profiler-text)
   (flet ((dashes (str)
            (every (lambda (c)
                     (char= c #\-)) str)))
@@ -124,6 +125,7 @@
 
 (defun parse-dprofiler-output (profiler-text n-times)
   "PROFILER-TEXT is the string printed by sb-sprof:report"
+  (format t "dprofiler profiler-text=~%~A~%" profiler-text)
   (flet ((dashes (str)
            (every (lambda (c)
                     (char= c #\-)) str)))
