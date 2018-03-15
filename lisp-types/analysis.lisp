@@ -328,31 +328,34 @@ than as keywords."
       (log-data)))
   t)
 
-(defun best-time (num-tries thunk &key profile get-profile-plists set-sprofile-plists set-dprofile-plists)
+(defun best-time (num-tries thunk &key profile get-profile-plists set-sprofile-plists set-dprofile-plists
+                                    set-n-stimes get-n-stimes set-n-dtimes get-n-dtimes)
   "returns a plist with the fields :wall-time :run-time :value"
   (declare (type (and fixnum unsigned-byte) num-tries)
            (type (function () t) thunk))
   (let (result)
     (dotimes (try num-tries)
+      (funcall set-n-stimes 1)
+      (funcall set-n-dtimes 1)
       (let* ((run-time-t1 (get-internal-run-time))
              (start-real-time (get-internal-real-time))
-             (n-stimes 1)
              (s2 (if profile
                      (call-with-sprofiling thunk
                                            set-sprofile-plists
-                                           (lambda (n)
-                                             (setf n-stimes n)))
+                                           set-n-stimes
+                                           get-n-stimes)
                      (funcall thunk)))
              (run-time-t2 (get-internal-run-time))
-             (wall-time (/ (- (get-internal-real-time) start-real-time) internal-time-units-per-second n-stimes))
-             (run-time  (/ (- run-time-t2 run-time-t1) internal-time-units-per-second n-stimes))
-             (n-dtimes 1))
+             (wall-time (/ (- (get-internal-real-time) start-real-time) internal-time-units-per-second
+                           (1+ (funcall get-n-stimes))))
+             (run-time  (/ (- run-time-t2 run-time-t1) internal-time-units-per-second
+                           (1+ (funcall get-n-stimes)))))
         (when profile
           (call-with-dprofiling thunk
-                                '("LISP-TYPES")
+                                '("LISP-TYPES" "LISP-TYPES.TEST")
                                 set-dprofile-plists
-                                (lambda (n)
-                                  (setf n-dtimes n))))
+                                set-n-dtimes
+                                get-n-dtimes))
         (setf result
               (cond
                 ((not result) ; if first time through dotimes loop
@@ -384,9 +387,44 @@ than as keywords."
   (declare (type (or null (and fixnum unsigned-byte)) time-out)
            (type (function () t) thunk)
            (type (and fixnum unsigned-byte) num-tries))
-  (if (not time-out)
-      (best-time num-tries thunk :profile profile)
-      (%call-with-timeout time-out thunk num-tries :profile profile)))
+  (let (sprofile-plists
+        dprofile-plists
+        (n-dtimes 1)
+        (n-stimes 1))
+    (labels ((get-profile-plists ()
+               (list :n-stimes (get-n-stimes)
+                     :n-dtimes (get-n-dtimes)
+                     :sprof sprofile-plists
+                     :dprof dprofile-plists))
+             (set-sprofile-plists (plists)
+               (setf sprofile-plists plists))
+             (set-dprofile-plists (plists)
+               (setf dprofile-plists plists))
+             (get-n-stimes ()
+               n-stimes)
+             (set-n-stimes (n)
+               (setf n-stimes n))
+             (get-n-dtimes ()
+               n-dtimes)
+             (set-n-dtimes (n)
+               (setf n-dtimes n)))
+      (if (not time-out)
+          (best-time num-tries thunk :profile profile
+                                     :get-profile-plists #'get-profile-plists
+                                     :set-sprofile-plists #'set-sprofile-plists
+                                     :set-dprofile-plists #'set-dprofile-plists
+                                     :get-n-stimes #'get-n-stimes
+                                     :get-n-dtimes #'get-n-dtimes
+                                     :set-n-stimes #'set-n-stimes
+                                     :set-n-dtimes #'set-n-dtimes)
+          (%call-with-timeout time-out thunk num-tries :profile profile
+                                                       :get-profile-plists #'get-profile-plists
+                                                       :set-sprofile-plists #'set-sprofile-plists
+                                                       :set-dprofile-plists #'set-dprofile-plists
+                                                       :get-n-stimes #'get-n-stimes
+                                                       :get-n-dtimes #'get-n-dtimes
+                                                       :set-n-stimes #'set-n-stimes
+                                                       :set-n-dtimes #'set-n-dtimes)))))
 
 #+allegro
 (defun %call-with-timeout (time-out thunk num-tries &key profile)
@@ -403,34 +441,22 @@ than as keywords."
       (best-time num-tries thunk :profile nil))))
 
 #+sbcl
-(defun %call-with-timeout (time-out thunk num-tries &key profile)
+(defun %call-with-timeout (time-out thunk num-tries &rest profiler-args &key profile get-profile-plists set-sprofile-plists set-dprofile-plists get-n-stimes get-n-dtimes set-n-stimes set-n-dtimes)
   (declare (type (and fixnum unsigned-byte) time-out num-tries)
            (type (function () t) thunk))
-  (let (sprofile-plists
-        dprofile-plists
-        (start-run-time (get-internal-run-time))
+  (let ((start-run-time (get-internal-run-time))
         (start-real-time (get-internal-real-time)))
-    (flet ((get-profile-plists ()
-             (list :sprof sprofile-plists
-                   :dprof dprofile-plists))
-           (set-sprofile-plists (plists)
-             (setf sprofile-plists plists))
-           (set-dprofile-plists (plists)
-             (setf dprofile-plists plists)))
-      (handler-bind ((sb-ext:timeout (lambda (c)
-                                       (declare (ignore c))
-                                       (let ((run-time (get-internal-run-time))
-                                             (real-time (get-internal-real-time)))
-                                         (return-from %call-with-timeout
-                                           (list :wall-time (/ (- real-time start-real-time) internal-time-units-per-second)
-                                                 :run-time  (/ (- run-time start-run-time) internal-time-units-per-second)
-                                                 :profile-plists (get-profile-plists)
-                                                 :time-out time-out))))))
-        (sb-ext:with-timeout time-out
-          (best-time num-tries thunk :profile profile
-                                     :get-profile-plists #'get-profile-plists
-                                     :set-sprofile-plists #'set-sprofile-plists
-                                     :set-dprofile-plists #'set-dprofile-plists))))))
+    (handler-bind ((sb-ext:timeout (lambda (c)
+                                     (declare (ignore c))
+                                     (let ((run-time (get-internal-run-time))
+                                           (real-time (get-internal-real-time)))
+                                       (return-from %call-with-timeout
+                                         (list :wall-time (/ (- real-time start-real-time) internal-time-units-per-second)
+                                               :run-time  (/ (- run-time start-run-time) internal-time-units-per-second)
+                                               :profile-plists (funcall get-profile-plists)
+                                               :time-out time-out))))))
+      (sb-ext:with-timeout time-out
+        (apply #'best-time num-tries thunk profiler-args)))))
 
 (defvar *perf-results* nil)
 (defun types/cmp-perf (&key types (decompose 'bdd-decompose-types-weak) (time-out 15) (num-tries 2) profile
@@ -498,9 +524,8 @@ than as keywords."
                    :wall-time (/ wall-time 1.0)
                    :run-time (/ run-time 1.0)
                    :calculated (length value)
-                   :profile-plists profile-plists
                    ;; :value value
-                   )))
+                   :profile-plists profile-plists)))
           *perf-results*))
        (car *perf-results*)))))
 
