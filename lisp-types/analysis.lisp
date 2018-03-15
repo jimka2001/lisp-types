@@ -441,7 +441,7 @@ than as keywords."
       (best-time num-tries thunk :profile nil))))
 
 #+sbcl
-(defun %call-with-timeout (time-out thunk num-tries &rest profiler-args &key profile get-profile-plists set-sprofile-plists set-dprofile-plists get-n-stimes get-n-dtimes set-n-stimes set-n-dtimes)
+(defun %call-with-timeout (time-out thunk num-tries &rest profiler-args &key get-profile-plists &allow-other-keys)
   (declare (type (and fixnum unsigned-byte) time-out num-tries)
            (type (function () t) thunk))
   (let ((start-run-time (get-internal-run-time))
@@ -731,7 +731,8 @@ than as keywords."
 
 (defun create-gnuplot (sorted-file gnuplot-file png-filename normalize hilite-min include-decompose key)
   (declare (type (member :smooth :xys) key))
-  (let ((content (with-open-file (stream sorted-file :direction :input)
+  (let ((min-num-points 1)
+        (content (with-open-file (stream sorted-file :direction :input)
                    (format t "reading    ~A~%" sorted-file)
                    (user-read stream nil nil))))
     (with-open-file (stream gnuplot-file :direction :output :if-exists :supersede :if-does-not-exist :create)
@@ -840,18 +841,22 @@ than as keywords."
                              (destructuring-bind (&key decompose
                                                   &allow-other-keys
                                                   &aux (color (or (getf (find-decomposition-function-descriptor decompose) :gnu-color)
-                                                                  (getf (find-decomposition-function-descriptor decompose) :color))))
+                                                                  (getf (find-decomposition-function-descriptor decompose) :color)))
+                                                    (num-points 0))
                                  curve
                                (format stream "# ~A ~A~%" color decompose)
                                (dolist (pair (xys curve))
                                  (destructuring-bind (x y) pair
                                    (cond
                                      (normalize
+                                      (incf num-points)
                                       (format stream "~A ~A~%" x (- y (the number (interpolate x)))))
                                      ((zerop y))
                                      (t
+                                      (incf num-points)
                                       (format stream "~A ~A~%" x y)))))
-                               (format stream "end~%"))))
+                               (setf min-num-points (min min-num-points num-points))
+                               (format stream "end #~D~%" num-points))))
                     (format stream "plot ~A"
                             (build-string (format nil ",\\~%")
                                           (mapcar (lambda (data-plist &aux (decompose (getf data-plist :decompose)))
@@ -873,11 +878,12 @@ than as keywords."
                       (plot-curve min-curve))))))))
       (format t "~A ]~%" gnuplot-file))
 
-    (run-program "gnuplot" (list gnuplot-file)
-                 :search t 
-                 :output png-filename
-                 :error *error-output*
-                 :if-output-exists :supersede)))
+    (when (plusp min-num-points)
+      (run-program "gnuplot" (list gnuplot-file)
+                   :search t 
+                   :output png-filename
+                   :error *error-output*
+                   :if-output-exists :supersede))))
 
 (defun integral (xys)
   "given a list of xy pairs (car cadr) calculate the area under the curve formed by the trapizoids.
