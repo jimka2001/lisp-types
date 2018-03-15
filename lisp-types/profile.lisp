@@ -57,7 +57,6 @@
 
 (defun parse-sprofiler-output (profiler-text n-times)
   "PROFILER-TEXT is the string printed by sb-sprof:report"
-  (format t "sprofiler profiler-text=~%~A~%" profiler-text)
   (flet ((dashes (str)
            (every (lambda (c)
                     (char= c #\-)) str)))
@@ -92,7 +91,7 @@
                                                    (format nil "~A" (read stream nil nil))))
                        (close stream))))))
 
-(defun call-with-sprofiling (thunk consume-prof consume-n)
+(defun call-with-sprofiling (thunk consume-prof consume-n get-n-stimes)
   (declare (type (function () t) thunk)
            (type (function (list) t) consume-prof)
            (type (function ((and fixnum unsigned-byte)) t) consume-n))
@@ -103,17 +102,17 @@
                                                     (declare (ignore w))
                                                     (return nil))))
                             (sb-sprof:with-profiling (:loop t)
-                              (dotimes (_ n-times)
+                              (dotimes (n n-times)
+                                (funcall consume-n n)
                                 (funcall thunk))))))
                    (prof (parse-sprofiler-output
                           (with-output-to-string (str)
                             (let ((*standard-output* str))
                               (sb-sprof:report :type :flat)))
-                          n-times)))
+                          (1+ (funcall get-n-stimes)))))
                (cond
                  (prof
                   (funcall consume-prof prof)
-                  (funcall consume-n n-times)
                   val)
                  (t
                   (recur (* 2 n-times)))))))
@@ -125,7 +124,6 @@
 
 (defun parse-dprofiler-output (profiler-text n-times)
   "PROFILER-TEXT is the string printed by sb-sprof:report"
-  (format t "dprofiler profiler-text=~%~A~%" profiler-text)
   (flet ((dashes (str)
            (every (lambda (c)
                     (char= c #\-)) str)))
@@ -137,7 +135,7 @@
            ;; profile-lines is the list of lines between the dashes
            (profile-lines (ldiff (cdr dash-1) dash-2))
            (*package* (find-package :cl-user)))
-           
+
       ;;   seconds  |     gc     |    consed   |  calls |  sec/call  |  name  
       ;; ----------------------------------------------------------
       ;;      1.314 |      0.000 | 763,854,800 | 14,718 |   0.000089 | RND-ELEMENT
@@ -175,7 +173,7 @@
                                   :name    (format nil "~A" (read stream nil nil)))
                        (close stream))))))
 
-(defun call-with-dprofiling (thunk packages consume-prof consume-n)
+(defun call-with-dprofiling (thunk packages consume-prof consume-n get-n-dtimes)
   (declare (type (function () t) thunk)
            (type list packages) ;; list of strings or symbols
            (type (function (list) t) consume-prof)
@@ -185,19 +183,22 @@
              (sb-profile:reset)
              ;;(sb-profile:profile "package")
              (sb-profile::mapc-on-named-funs #'sb-profile::profile-1-fun packages)
-             (let ((val (dotimes (_ n-times)
+             (let ((val (dotimes (n n-times)
+                          (funcall consume-n n)
                           (funcall thunk)))
                    (prof (parse-dprofiler-output
                           (with-output-to-string (str)
                             (let ((*trace-output* str))
                               (sb-profile:report :print-no-call-list nil)))
-                          n-times)))
+                          (1+ (funcall get-n-dtimes)))))
                (sb-profile:unprofile)
+               ;; did the profiler produce any output?
                (cond
                  (prof
+                  ;; if yes, then consume the lines
                   (funcall consume-prof prof)
-                  (funcall consume-n n-times)
                   val)
                  (t
+                  ;; if no, then try again by running the thunk twice as many times as before.
                   (recur (* 2 n-times)))))))
     (recur 1)))
