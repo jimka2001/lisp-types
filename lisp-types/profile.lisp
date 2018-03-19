@@ -131,6 +131,7 @@
   (flet ((dashes (str)
            (every (lambda (c)
                     (char= c #\-)) str)))
+    (format t "dprofiler-text=~%~A~%" profiler-text)
     (let* ((lines-str profiler-text)
            ;; dash-1 and dash-2 are lists starting with the  1st and 2nd
            ;; occurance of "-----..." in line-str after being split into a list of lines.
