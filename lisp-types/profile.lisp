@@ -113,6 +113,7 @@
                             (let ((*standard-output* str))
                               (sb-sprof:report :type :flat)))
                           (1+ (funcall get-n-stimes)))))
+               (format t " parsed sprofiler output into ~D objects~%" (length prof))
                (cond
                  (prof
                   (funcall consume-prof prof)
@@ -197,6 +198,7 @@
                               (sb-profile:report :print-no-call-list nil)))
                           (1+ (funcall get-n-dtimes)))))
                (sb-profile:unprofile)
+               (format t " parsed dprofiler output into ~D objects~%" (length prof))
                ;; did the profiler produce any output?
                (cond
                  (prof
