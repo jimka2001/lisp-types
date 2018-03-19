@@ -209,3 +209,52 @@
                   ;; if no, then try again by running the thunk twice as many times as before.
                   (recur (* 2 n-times)))))))
     (recur 1)))
+
+
+(defun test-profiler ()
+
+  (labels ((loc1 (x y)
+             (let ((z 0.0))
+               (dotimes (i 10000 z)
+                 (setf z (* z (max (abs (sin (* x i)))
+                                   (abs (cos (* y i))))))))))
+    (format t "test-profiler~%")
+    (let ((m 0.0))
+      (do ((x 1.1 (1+ x))
+           (y 2.1 (1+ y))
+           (n 0 (1+ n)))
+          ((> n 1000) m)
+        (setf m (max m (loc1 x y)))))))
+
+(defun test-profile ()
+  (let (s-prof-plists
+        d-prof-plists
+        (n-stimes 1)
+        (n-dtimes 1))
+    (labels ((set-sprofile-plists (plists)
+               (setf s-prof-plists plists))
+             (set-n-stimes (n)
+               (format t "set n-times=~D~%" n)
+               (setf n-stimes n))
+             (get-n-stimes ()
+               n-stimes)
+             (get-n-dtimes ()
+               n-dtimes)
+             (set-dprofile-plists (plists)
+               (setf d-prof-plists plists))
+             (set-n-dtimes (n)
+               (setf n-dtimes n)))
+             
+      (call-with-sprofiling (lambda ()
+                              (test-profiler))
+                            #'set-sprofile-plists
+                            #'set-n-stimes
+                            #'get-n-stimes)
+      
+      (call-with-dprofiling (lambda ()
+                              (test-profiler))
+                            '("LISP-TYPES" "LISP-TYPES.TEST" "CL")
+                            #'set-dprofile-plists
+                            #'set-n-dtimes
+                            #'get-n-dtimes)
+      )))
