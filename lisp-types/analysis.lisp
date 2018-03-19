@@ -856,27 +856,32 @@ than as keywords."
                                       (incf num-points)
                                       (format stream "~A ~A~%" x y)))))
                                (setf min-num-points (min min-num-points num-points))
-                               (format stream "end #~D~%" num-points))))
-                    (format stream "# plot ~D curves~%" (length sorted))
-                    (format stream "plot ~A"
-                            (build-string (format nil ",\\~%")
-                                          (mapcar (lambda (data-plist &aux (decompose (getf data-plist :decompose)))
-                                                    (let ((mapping-plist (find-if (lambda (mapping-plist)
-                                                                                    (exists name (getf mapping-plist :names)
-                                                                                      (string= decompose
-                                                                                               (symbol-name name))))
-                                                                                  mapping)))
-                                                      (with-output-to-string (str)
-                                                        (format str "   \"-\" using 1:2 with lines ls ~D"
-                                                                (getf mapping-plist :line-style))
-                                                        (format str " title ~S" (string-downcase decompose)))))
-                                                  sorted)))
-                    (when hilite-min
-                      (format stream ",\\~%\   \"-\" using 1:2 with lines ls ~D" min-curve-line-style)
-                      (format stream " title ~S~%" "unknown"))
-                    (mapc #'plot-curve sorted)
-                    (when hilite-min
-                      (plot-curve min-curve))))))))
+                               (format stream "end #~D~%" num-points)))
+                           (null-curves (curves)
+                             (or (null curves)
+                                     (forall curve curves
+                                       (null (getf curve :xys))))))
+                    (unless (null-curves sorted)
+                      (format stream "# plot ~D curves~%" (length sorted))
+                      (format stream "plot ~A"
+                              (build-string (format nil ",\\~%")
+                                            (mapcar (lambda (data-plist &aux (decompose (getf data-plist :decompose)))
+                                                      (let ((mapping-plist (find-if (lambda (mapping-plist)
+                                                                                      (exists name (getf mapping-plist :names)
+                                                                                        (string= decompose
+                                                                                                 (symbol-name name))))
+                                                                                    mapping)))
+                                                        (with-output-to-string (str)
+                                                          (format str "   \"-\" using 1:2 with lines ls ~D"
+                                                                  (getf mapping-plist :line-style))
+                                                          (format str " title ~S" (string-downcase decompose)))))
+                                                    sorted)))
+                      (when hilite-min
+                        (format stream ",\\~%\   \"-\" using 1:2 with lines ls ~D" min-curve-line-style)
+                        (format stream " title ~S~%" "unknown"))
+                      (mapc #'plot-curve sorted)
+                      (when hilite-min
+                        (plot-curve min-curve)))))))))
       (format t "~A ]~%" gnuplot-file))
 
     (when (plusp min-num-points)
