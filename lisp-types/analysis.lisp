@@ -335,7 +335,6 @@ than as keywords."
            (type (function () t) thunk))
   (let (result)
     (dotimes (try num-tries)
-      (format t "try=~D/~D of thunk=~A~%" try num-tries thunk)
       (funcall set-n-stimes 1)
       (funcall set-n-dtimes 1)
       (let* ((run-time-t1 (get-internal-run-time))
