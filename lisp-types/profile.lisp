@@ -115,6 +115,7 @@
                   (funcall consume-prof prof)
                   val)
                  (t
+                  (format t "obtained empty s profile data, re-trying with n-times=~D~%" (* 2 n-times))
                   (recur (* 2 n-times)))))))
     (recur 1)))
  
@@ -200,5 +201,6 @@
                   val)
                  (t
                   ;; if no, then try again by running the thunk twice as many times as before.
+                  (format t "obtained empty d profile data, re-trying with n-times=~D~%" (* 2 n-times))
                   (recur (* 2 n-times)))))))
     (recur 1)))
