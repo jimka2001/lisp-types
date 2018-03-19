@@ -69,6 +69,7 @@
            (profile-lines (ldiff (cdr dash-1) dash-2))
            (*package* (find-package :cl-user)))
            
+      (format t "sprofiler-text=~%~A~%" profiler-text)
       ;; "           Self        Total        Cumul"
       ;; "  Nr  Count     %  Count     %  Count     %    Calls  Function"
       ;; "------------------------------------------------------------------------"
@@ -96,6 +97,8 @@
            (type (function (list) t) consume-prof)
            (type (function ((and fixnum unsigned-byte)) t) consume-n))
   (labels ((recur (n-times)
+             (when (< 1 n-times)
+               (format t "obtained empty s profile data, re-trying with n-times=~D~%"  n-times))
              (sb-sprof:reset)
              (let ((val (block nil
                           (handler-bind ((warning (lambda (w)
@@ -115,7 +118,6 @@
                   (funcall consume-prof prof)
                   val)
                  (t
-                  (format t "obtained empty s profile data, re-trying with n-times=~D~%" (* 2 n-times))
                   (recur (* 2 n-times)))))))
     (recur 1)))
  
@@ -181,6 +183,8 @@
            (type (function ((and fixnum unsigned-byte)) t) consume-n))
   (labels ((recur (n-times)
              (sb-profile:unprofile)
+             (when (< 1 n-times)
+               (format t "obtained empty d profile data, re-trying with n-times=~D~%" (* 2 n-times)))
              (sb-profile:reset)
              ;;(sb-profile:profile "package")
              (sb-profile::mapc-on-named-funs #'sb-profile::profile-1-fun packages)
@@ -201,6 +205,5 @@
                   val)
                  (t
                   ;; if no, then try again by running the thunk twice as many times as before.
-                  (format t "obtained empty d profile data, re-trying with n-times=~D~%" (* 2 n-times))
                   (recur (* 2 n-times)))))))
     (recur 1)))
