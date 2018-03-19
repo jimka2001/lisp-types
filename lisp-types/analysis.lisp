@@ -857,6 +857,7 @@ than as keywords."
                                       (format stream "~A ~A~%" x y)))))
                                (setf min-num-points (min min-num-points num-points))
                                (format stream "end #~D~%" num-points))))
+                    (format stream "# plot ~D curves~%" (length sorted))
                     (format stream "plot ~A"
                             (build-string (format nil ",\\~%")
                                           (mapcar (lambda (data-plist &aux (decompose (getf data-plist :decompose)))
