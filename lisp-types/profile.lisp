@@ -69,7 +69,6 @@
            (profile-lines (ldiff (cdr dash-1) dash-2))
            (*package* (find-package :cl-user)))
            
-      (format t "sprofiler-text=~%~A~%" profiler-text)
       ;; "           Self        Total        Cumul"
       ;; "  Nr  Count     %  Count     %  Count     %    Calls  Function"
       ;; "------------------------------------------------------------------------"
@@ -97,6 +96,7 @@
            (type (function (list) t) consume-prof)
            (type (function ((and fixnum unsigned-byte)) t) consume-n))
   (labels ((recur (n-times)
+             ;;(format t "recur ~D~%" n-times)
              (when (< 1 n-times)
                (format t "obtained empty s profile data, re-trying with n-times=~D~%"  n-times))
              (sb-sprof:reset)
@@ -132,7 +132,6 @@
   (flet ((dashes (str)
            (every (lambda (c)
                     (char= c #\-)) str)))
-    (format t "dprofiler-text=~%~A~%" profiler-text)
     (let* ((lines-str profiler-text)
            ;; dash-1 and dash-2 are lists starting with the  1st and 2nd
            ;; occurance of "-----..." in line-str after being split into a list of lines.
@@ -200,7 +199,6 @@
                               (sb-profile:report :print-no-call-list nil)))
                           (1+ (funcall get-n-dtimes)))))
                (sb-profile:unprofile)
-               (format t " parsed dprofiler output into ~D objects~%" (length prof))
                ;; did the profiler produce any output?
                (cond
                  (prof
