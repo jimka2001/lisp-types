@@ -102,9 +102,10 @@
              (sb-sprof:reset)
              (let ((val (block nil
                           (handler-bind ((warning (lambda (w)
-                                                    (declare (ignore w))
+                                                    ;;(declare (ignore w))
+                                                    (format t "ignoring warning=~A~%" w)
                                                     (return nil))))
-                            (sb-sprof:with-profiling (:loop t)
+                            (sb-sprof:with-profiling (:loop nil)
                               (dotimes (n n-times)
                                 (funcall consume-n n)
                                 (funcall thunk))))))
