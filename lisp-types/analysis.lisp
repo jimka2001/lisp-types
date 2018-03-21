@@ -234,6 +234,7 @@ than as keywords."
                           (ltxdat-name "/dev/null")
                           (ltxdat-no-legend-name "/dev/null")
                           (sexp-name "/dev/null")
+                          (create-png-p t)
                           (gnuplot-name "/dev/null")
                           (gnuplot-normalized-name "/dev/null")
                           (png-name "/dev/null")
@@ -262,6 +263,7 @@ than as keywords."
                              :ltxdat-name ltxdat-name
                              :ltxdat-no-legend-name ltxdat-no-legend-name
                              :sexp-name sexp-name
+                             :create-png-p create-png-p
                              :gnuplot-name gnuplot-name
                              :gnuplot-normalized-name gnuplot-normalized-name
                              :png-name png-name
@@ -753,7 +755,7 @@ than as keywords."
        (dolist (next (cdr data))
          (format str "~A~A" delimiter next))))))
 
-(defun create-gnuplot (sorted-file gnuplot-file png-filename normalize hilite-min include-decompose key)
+(defun create-gnuplot (sorted-file gnuplot-file png-filename normalize hilite-min include-decompose key create-png-p)
   (declare (type (member :smooth :xys) key))
   (let ((min-num-points 1)
         (content (with-open-file (stream sorted-file :direction :input)
@@ -908,7 +910,8 @@ than as keywords."
                         (plot-curve min-curve)))))))))
       (format t "~A ]~%" gnuplot-file))
 
-    (when (plusp min-num-points)
+    (when (and create-png-p
+               (plusp min-num-points))
       (run-program "gnuplot" (list gnuplot-file)
                    :search t 
                    :output png-filename
@@ -1296,7 +1299,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
         (concatenate 'string head suffix tail)))))
 
 
-(defun print-report (&key (re-run t) limit (summary nil) normalize (dat-name "/dev/null") (ltxdat-name "/dev/null") (ltxdat-no-legend-name "/dev/null") (sorted-name "/dev/null") (sexp-name "/dev/null") (png-name "/dev/null") (png-normalized-name "/dev/null") (gnuplot-name "/dev/null") (gnuplot-normalized-name "/dev/null") (include-decompose *decomposition-functions*) (tag "NO TITLE") (hilite-min nil) &allow-other-keys)
+(defun print-report (&key (re-run t) limit (summary nil) normalize (dat-name "/dev/null") (ltxdat-name "/dev/null") (ltxdat-no-legend-name "/dev/null") (sorted-name "/dev/null") (sexp-name "/dev/null") (create-png-p t) (png-name "/dev/null") (png-normalized-name "/dev/null") (gnuplot-name "/dev/null") (gnuplot-normalized-name "/dev/null") (include-decompose *decomposition-functions*) (tag "NO TITLE") (hilite-min nil) &allow-other-keys)
   (format t "report ~A~%" summary)
   (when re-run
     (ensure-directories-exist sexp-name)
@@ -1306,22 +1309,22 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
   (sort-results sexp-name sorted-name)
   (unless (string= sorted-name "/dev/null")
     (create-gnuplot sorted-name gnuplot-name png-name
-                    nil hilite-min include-decompose :xys)
+                    nil hilite-min include-decompose :xys create-png-p)
     (create-gnuplot sorted-name (insert-suffix gnuplot-name "-smooth") (insert-suffix png-name "-smooth")
-                    nil hilite-min include-decompose :smooth)
+                    nil hilite-min include-decompose :smooth create-png-p)
     
     (when normalize
       (create-gnuplot sorted-name gnuplot-normalized-name png-normalized-name
-                      normalize hilite-min include-decompose :xys)
+                      normalize hilite-min include-decompose :xys create-png-p)
       (create-gnuplot sorted-name (insert-suffix gnuplot-normalized-name "-smooth") (insert-suffix png-normalized-name "-smooth")
-                      normalize hilite-min include-decompose :smooth))
+                      normalize hilite-min include-decompose :smooth create-png-p))
     (print-ltxdat ltxdat-name           sorted-name include-decompose t nil)
     (print-ltxdat ltxdat-no-legend-name sorted-name include-decompose nil tag))
   (print-dat dat-name include-decompose))
 
 (defvar *destination-dir* "/Users/jnewton/newton.16.edtchs/src")
 (defun test-report (&key sample (prefix "") (re-run t) (suite-time-out (* 60 60 4))  (time-out (* 3 60)) normalize (destination-dir *destination-dir*)
-                      types file-name (limit 15) tag hilite-min (num-tries 2) profile
+                      types file-name (limit 15) tag hilite-min (num-tries 2) profile (create-png-p t)
                     &allow-other-keys)
   "TIME-OUT is the number of seconds to allow for one call to a single decompose function.
 SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
@@ -1347,6 +1350,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                                 :ltxdat-name (format nil "~A/~A~A.ltxdat" destination-dir prefix file-name)
                                 :ltxdat-no-legend-name (format nil "~A/no-legend/~A~A.ltxdat" destination-dir prefix file-name)
                                 :dat-name (format nil "~A/~A~A.dat" destination-dir prefix file-name)
+                                :create-png-p create-png-p
                                 :png-name (format nil "~A/~A~A.png" destination-dir prefix file-name)
                                 :png-normalized-name (format nil "~A/~A~A-normalized.png" destination-dir prefix file-name)
                                 :gnuplot-name (format nil "~A/~A~A.gnu" destination-dir prefix file-name)
@@ -1456,12 +1460,13 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
 
 
 (defun make-bucket-reporter (&key tag scale types file-name)
-  (lambda (multiplier sample options &key (destination-dir *destination-dir*))
+  (lambda (multiplier sample options &key (create-png-p t) (destination-dir *destination-dir*))
     (apply #'test-report :limit (* multiplier scale)
                          :tag tag
                          :types types
                          :file-name file-name
                          :sample sample
+                         :create-png-p create-png-p
                          :destination-dir destination-dir
                          options)))
 
@@ -1556,6 +1561,7 @@ sleeping before the code finishes evaluating."
                                         (suite-time-out (* 60 60 4)) (time-out 100) normalize hilite-min
                                         (decomposition-functions *decomposition-functions*)
                                         profile
+                                        (create-png-p t)
                                         (destination-dir *destination-dir*))
   (declare (ignore prefix re-run suite-time-out time-out num-tries hilite-min profile))
   (when normalize
@@ -1570,19 +1576,20 @@ sleeping before the code finishes evaluating."
         (*decomposition-functions*  decomposition-functions))
     (loop for (tag bucket-reporter) in *bucket-reporters*
           for sample = (/ 1 (length *bucket-reporters*)) then (+ sample (/ 1 (length *bucket-reporters*)))
-          do (funcall bucket-reporter multiplier sample options :destination-dir destination-dir))))
+          do (funcall bucket-reporter multiplier sample options :create-png-p create-png-p :destination-dir destination-dir))))
 
-(defun parameterization-report (&key (re-run t) (multiplier 1) (destination-dir *destination-dir*))
+(defun parameterization-report (&key (re-run t) (multiplier 1) (create-png-p t) (destination-dir *destination-dir*))
   (big-test-report :re-run re-run
                    :prefix "param-"
                    :normalize 'decompose-types-bdd-graph
                    :hilite-min t
                    :destination-dir destination-dir
                    :multiplier multiplier
+                   :create-png-p create-png-p
                    :decomposition-functions (cons 'decompose-types-bdd-graph
                                                   *decompose-fun-parameterized-names*)))
 
-(defun best-2-report (&key (re-run t) (multiplier 1.8) (destination-dir *destination-dir*))
+(defun best-2-report (&key (re-run t) (multiplier 1.8) (create-png-p t) (destination-dir *destination-dir*))
   (big-test-report :re-run re-run
                    :prefix "best-2-" ;; should change to best-4-
                    :multiplier multiplier
@@ -1591,6 +1598,7 @@ sleeping before the code finishes evaluating."
                    :num-tries 4
                    :hilite-min nil
                    :destination-dir destination-dir
+                   :create-png-p create-png-p
                    :decomposition-functions '(decompose-types-bdd-graph-strong
                                               decompose-types-bdd-graph-weak
                                               decompose-types-bdd-graph-weak-dynamic
@@ -1600,7 +1608,7 @@ sleeping before the code finishes evaluating."
                                               decompose-types-rtev2
                                               decompose-types-graph)))
 
-(defun bdd-report (&key (re-run t) (multiplier 2.5)  (destination-dir *destination-dir*))
+(defun bdd-report (&key (re-run t) (multiplier 2.5) (create-png-p t) (destination-dir *destination-dir*))
   (big-test-report :re-run re-run
                    :prefix "bdd-ws-" ;; should change to best-4-
                    :multiplier multiplier
@@ -1609,6 +1617,7 @@ sleeping before the code finishes evaluating."
                    :num-tries 4
                    :hilite-min nil
                    :destination-dir destination-dir
+                   :create-png-p create-png-p
                    :decomposition-functions '(decompose-types-bdd-graph-strong
                                               decompose-types-bdd-graph-weak
                                               decompose-types-bdd-graph-weak-dynamic
@@ -1620,7 +1629,8 @@ sleeping before the code finishes evaluating."
 
 
 (defun bdd-report-profile (&key (re-run t) (multiplier 0.2) (destination-dir *destination-dir*)
-                             (num-tries 4) (prefix "bdd-profile-1-") (decomposition-functions *decomposition-functions*))
+                             (num-tries 4) (prefix "bdd-profile-1-") (decomposition-functions *decomposition-functions*)
+                             (create-png-p t))
   (big-test-report :re-run re-run
                    :profile t
                    :prefix prefix
@@ -1630,5 +1640,6 @@ sleeping before the code finishes evaluating."
                    :num-tries num-tries
                    :hilite-min nil
                    :destination-dir destination-dir
+                   :create-png-p create-png-p
                    :decomposition-functions decomposition-functions))
 
