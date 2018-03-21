@@ -328,8 +328,29 @@ than as keywords."
       (log-data)))
   t)
 
-(defun best-time (num-tries thunk &key profile get-profile-plists set-sprofile-plists set-dprofile-plists
-                                    set-n-stimes get-n-stimes set-n-dtimes get-n-dtimes)
+(defun best-time (num-tries thunk
+                  &key profile
+                    (sprofile-plists nil)
+                    (dprofile-plists nil)
+                    (set-sprofile-plists (lambda (plists)
+                                           (setf sprofile-plists plists)))
+                    (set-dprofile-plists (lambda (plists)
+                                           (setf dprofile-plists plists)))                    
+                    (n-stimes 1)
+                    (set-n-stimes (lambda (n)
+                                    (setf n-stimes n)))
+                    (get-n-stimes (lambda ()
+                                    n-stimes))
+                    (n-dtimes 1)
+                    (set-n-dtimes (lambda (n)
+                                    (setf n-dtimes n)))
+                    (get-n-dtimes (lambda ()
+                                    n-dtimes))
+                    (get-profile-plists (lambda ()
+                                          (list :n-stimes (funcall get-n-stimes)
+                                                :n-dtimes (funcall get-n-dtimes)
+                                                :sprof sprofile-plists
+                                                :dprof dprofile-plists))))
   "returns a plist with the fields :wall-time :run-time :value"
   (declare (type (and fixnum unsigned-byte) num-tries)
            (type (function () t) thunk))
