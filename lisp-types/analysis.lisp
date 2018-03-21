@@ -550,7 +550,7 @@ than as keywords."
                    :wall-time (/ wall-time 1.0)
                    :run-time (/ run-time 1.0)
                    :calculated (length value)
-                   ;; :value value
+                   :value value
                    :profile-plists profile-plists)))
           *perf-results*))
        (car *perf-results*)))))
@@ -1173,7 +1173,8 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
                            (length time-outs))
                    (format stream ":GIVEN ~A)"
                            (mapcar (getter :given) time-outs)))
-               (dolist (tag `(:given :calculated :run-time :wall-time :known :unknown :profile-plists))
+
+                 (dolist (tag `(:given :calculated :run-time :wall-time :known :unknown :profile-plists :value :types))
                    (format stream "~%~S (" tag)
                    (when no-time-out
                      (format stream "~S" (getf (car no-time-out) tag)))
@@ -1624,9 +1625,6 @@ sleeping before the code finishes evaluating."
                                               bdd-decompose-types-strong
                                               bdd-decompose-types-weak
                                               bdd-decompose-types-weak-dynamic)))
-
-
-
 
 (defun bdd-report-profile (&key (re-run t) (multiplier 0.2) (destination-dir *destination-dir*)
                              (num-tries 4) (prefix "bdd-profile-1-") (decomposition-functions *decomposition-functions*)
