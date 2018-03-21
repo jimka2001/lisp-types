@@ -181,7 +181,7 @@
                                   :name    (format nil "~A" (read stream nil nil)))
                        (close stream))))))
 
-(defun call-with-dprofiling (thunk packages consume-prof consume-n get-n-dtimes)
+(defun call-with-dprofiling (thunk packages consume-prof consume-n get-n-dtimes &key (time-thresh 0.1))
   (declare (type (function () t) thunk)
            (type list packages) ;; list of strings or symbols
            (type (function (list) t) consume-prof)
@@ -199,11 +199,16 @@
                            (with-output-to-string (str)
                              (let ((*trace-output* str))
                                (sb-profile:report :print-no-call-list nil)))
-                           (1+ (funcall get-n-dtimes)))))
+                           (1+ (funcall get-n-dtimes))))
+                    (total-time (loop :for plist :in prof
+                                      :summing (destructuring-bind (&key calls sec/call &allow-other-keys) plist
+                                                 (* calls sec/call)))))
                (sb-profile:unprofile)
                ;; did the profiler produce any output?
                (cond
-                 (prof
+                 ((and prof
+                       (or (> n-times 100)
+                           (> total-time time-thresh)))
                   ;; if yes, then consume the lines
                   (funcall consume-prof prof)
                   val)
