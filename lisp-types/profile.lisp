@@ -98,20 +98,21 @@
   (labels ((recur (n-times)
              ;;(format t "recur ~D~%" n-times)
              (sb-sprof:reset)
-             (let ((val (block nil
-                          (handler-bind ((warning (lambda (w &aux (filter-me "No sampling progress;"))
-                                                    ;; No sampling progress; run too short, sampling interval too
-                                                    ;; long, inappropriate set of sampled thread, or possibly a
-                                                    ;; profiler bug.
-                                                    (when (string= filter-me
-                                                                   (subseq (format nil "~A" w)
-                                                                           0
-                                                                           (length filter-me)))
-                                                      (return nil)))))
-                            (sb-sprof:with-profiling (:loop nil)
-                              (dotimes (n n-times)
-                                (funcall consume-n n)
-                                (funcall thunk))))))
+             (let* (thunk-ret-val
+                    (val (block nil
+                           (handler-bind ((warning (lambda (w &aux (filter-me "No sampling progress;"))
+                                                     ;; No sampling progress; run too short, sampling interval too
+                                                     ;; long, inappropriate set of sampled thread, or possibly a
+                                                     ;; profiler bug.
+                                                     (when (string= filter-me
+                                                                    (subseq (format nil "~A" w)
+                                                                            0
+                                                                            (length filter-me)))
+                                                       (return nil)))))
+                             (sb-sprof:with-profiling (:loop nil)
+                               (dotimes (n n-times thunk-ret-val)
+                                 (funcall consume-n n)
+                                 (setf thunk-ret-val (funcall thunk)))))))
                    (prof (parse-sprofiler-output
                           (with-output-to-string (str)
                             (let ((*standard-output* str))
@@ -190,14 +191,15 @@
              (sb-profile:reset)
              ;;(sb-profile:profile "package")
              (sb-profile::mapc-on-named-funs #'sb-profile::profile-1-fun packages)
-             (let ((val (dotimes (n n-times)
-                          (funcall consume-n n)
-                          (funcall thunk)))
-                   (prof (parse-dprofiler-output
-                          (with-output-to-string (str)
-                            (let ((*trace-output* str))
-                              (sb-profile:report :print-no-call-list nil)))
-                          (1+ (funcall get-n-dtimes)))))
+             (let* (thunk-ret-val
+                    (val (dotimes (n n-times thunk-ret-val)
+                           (funcall consume-n n)
+                           (setf thunk-ret-val (funcall thunk))))
+                    (prof (parse-dprofiler-output
+                           (with-output-to-string (str)
+                             (let ((*trace-output* str))
+                               (sb-profile:report :print-no-call-list nil)))
+                           (1+ (funcall get-n-dtimes)))))
                (sb-profile:unprofile)
                ;; did the profiler produce any output?
                (cond
