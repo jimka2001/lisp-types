@@ -376,26 +376,34 @@
   (the (member < > =)
        (funcall *bdd-cmp-function* t1 t2)))
 
-(defgeneric bdd-cmp-bdd (bdd1 bdd2))
-(defmethod bdd-cmp-bdd ((bdd1 bdd-node) (bdd2 bdd-node))
-  (bdd-cmp (bdd-label bdd1) (bdd-label bdd2)))
 
-(flet ((bdd-op (op b1 b2)
-         (declare (type bdd b1 b2))
-         (let ((a1 (bdd-label b1))
-               (c1 (bdd-left b1))
-               (d1 (bdd-right b1))
-               (a2 (bdd-label b2))
-               (c2 (bdd-left b2))
-               (d2 (bdd-right b2)))
-           (declare (type bdd c1 c2 d1 d2))
-           (ecase (bdd-cmp-bdd b1 b2)
+(flet ((bdd-op (op bdd-1 bdd-2)
+         (declare (type bdd bdd-1 bdd-2))
+         (let ((lab-1   (bdd-label bdd-1))
+               (left-1  (bdd-left bdd-1))
+               (right-1 (bdd-right bdd-1))
+               (lab-2   (bdd-label bdd-2))
+               (left-2  (bdd-left bdd-2))
+               (right-2 (bdd-right bdd-2)))
+           (declare (type bdd left-1 left-2 right-1 right-2))
+           (ecase (bdd-cmp lab-1 lab-2)
              ((=)
-              (%bdd-node a1 (funcall op c1 c2) (funcall op d1 d2) :bdd-node-class (class-of b1)))
+              ;; If the labels are equal, then the operations twice,
+              ;; once on the two left branches, and once on the two right branches.
+              (%bdd-node lab-1 (funcall op left-1 left-2) (funcall op right-1 right-2)
+                         :bdd-node-class (class-of bdd-1)))
+             ;; If the labels are not equal, then take the lesser label
+             ;; and perform the op on the lesser.left vs greater  and lesser.right vs greater,
+             ;; being careful not to change the order of the arguments as there is
+             ;; no guarantee that op is commutative, and in fact and-not is not commutative.
+             ;; This means (%bdd-node lesser.label (op lesser.left greater) (op lesser.right greater))
+             ;;   or       (%bdd-node lesser.label (op greater lesser.left) (op greater lesser.right))
              ((<)
-              (%bdd-node a1 (funcall op c1 b2) (funcall op d1 b2) :bdd-node-class (class-of b1)))
+              (%bdd-node lab-1 (funcall op left-1 bdd-2) (funcall op right-1 bdd-2)
+                         :bdd-node-class (class-of bdd-1)))
              ((>)
-              (%bdd-node a2 (funcall op b1 c2) (funcall op b1 d2) :bdd-node-class (class-of b2)))))))
+              (%bdd-node lab-2 (funcall op bdd-1 left-2) (funcall op bdd-1 right-2)
+                         :bdd-node-class (class-of bdd-2)))))))
 
   (defmethod bdd-or ((b1 bdd-node) (b2 bdd-node))
     (if (eq b1 b2)
