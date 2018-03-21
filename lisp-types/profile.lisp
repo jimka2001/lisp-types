@@ -101,10 +101,15 @@
                (format t "obtained empty s profile data, re-trying with n-times=~D~%"  n-times))
              (sb-sprof:reset)
              (let ((val (block nil
-                          (handler-bind ((warning (lambda (w)
-                                                    ;;(declare (ignore w))
-                                                    (format t "ignoring warning=~A~%" w)
-                                                    (return nil))))
+                          (handler-bind ((warning (lambda (w &aux (filter-me "No sampling progress;"))
+                                                    ;; No sampling progress; run too short, sampling interval too
+                                                    ;; long, inappropriate set of sampled thread, or possibly a
+                                                    ;; profiler bug.
+                                                    (when (string= filter-me
+                                                                   (subseq (format nil "~A" w)
+                                                                           0
+                                                                           (length filter-me)))
+                                                      (return nil)))))
                             (sb-sprof:with-profiling (:loop nil)
                               (dotimes (n n-times)
                                 (funcall consume-n n)
