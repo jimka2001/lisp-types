@@ -375,7 +375,7 @@ than as keywords."
                            (1+ (funcall get-n-stimes)))))
         (when profile
           (call-with-dprofiling thunk
-                                '("LISP-TYPES" "LISP-TYPES.TEST")
+                                '("LISP-TYPES" "LISP-TYPES.TEST" subtypep)
                                 set-dprofile-plists
                                 set-n-dtimes
                                 get-n-dtimes))
