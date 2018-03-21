@@ -97,8 +97,6 @@
            (type (function ((and fixnum unsigned-byte)) t) consume-n))
   (labels ((recur (n-times)
              ;;(format t "recur ~D~%" n-times)
-             (when (< 1 n-times)
-               (format t "obtained empty s profile data, re-trying with n-times=~D~%"  n-times))
              (sb-sprof:reset)
              (let ((val (block nil
                           (handler-bind ((warning (lambda (w &aux (filter-me "No sampling progress;"))
@@ -119,7 +117,6 @@
                             (let ((*standard-output* str))
                               (sb-sprof:report :type :flat)))
                           (1+ (funcall get-n-stimes)))))
-               (format t " parsed sprofiler output into ~D objects~%" (length prof))
                (cond
                  (prof
                   (funcall consume-prof prof)
@@ -190,8 +187,6 @@
            (type (function ((and fixnum unsigned-byte)) t) consume-n))
   (labels ((recur (n-times)
              (sb-profile:unprofile)
-             (when (< 1 n-times)
-               (format t "obtained empty d profile data, re-trying with n-times=~D~%" (* 2 n-times)))
              (sb-profile:reset)
              ;;(sb-profile:profile "package")
              (sb-profile::mapc-on-named-funs #'sb-profile::profile-1-fun packages)
