@@ -515,6 +515,9 @@ than as keywords."
                    :run-time (/ run-time 1.0)
                    :time-out time-out))
             (t
+             (unless value
+               (format t "   types: ~A~%" types)
+               (format t "   value: nil~%"))
              (list :given (length types)
                    :types types
                    :decompose decompose
