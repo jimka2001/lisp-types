@@ -541,17 +541,18 @@ than as keywords."
              (unless value
                (format t "   types: ~A~%" types)
                (format t "   value: nil~%"))
-             (list :given (length types)
-                   :types types
-                   :decompose decompose
-                   :known num-known
-                   :unknown num-unknown
-                   :time (/ run-time 1.0)
-                   :wall-time (/ wall-time 1.0)
-                   :run-time (/ run-time 1.0)
-                   :calculated (length value)
-                   :value value
-                   :profile-plists profile-plists)))
+             `(:given ,(length types)
+               :types ,types
+               :decompose ,decompose
+               :known ,num-known
+               :unknown ,num-unknown
+               :time ,(/ run-time 1.0)
+               :wall-time ,(/ wall-time 1.0)
+               :run-time ,(/ run-time 1.0)
+               :calculated ,(length value)
+               :value ,value
+               ,@(when profile
+                   (list :profile-plists profile-plists)))))
           *perf-results*))
        (car *perf-results*)))))
 
