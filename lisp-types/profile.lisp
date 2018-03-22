@@ -55,6 +55,29 @@
     :when beg :collect (subseq string beg end)
       :while end))
 
+
+(defun clean-sprofiling-plist (plist)
+  (flet ((clean-count-percent (key &aux (value (getf plist key)))
+           (let ((count (getf value :count 0))
+                 (percent (getf value :percent 0.0)))
+             (cond
+               ((and (= count 0)
+                     (= percent 0.0))
+                nil)
+               ((= count 0)
+                `(,key (:percent ,percent)))
+               ((= percent 0.0)
+                `(,key (:count ,count)))
+               (t
+                (list key plist))))))
+    `(,@(when (getf plist :nr)
+          (list :nr (getf plist :nr)))
+      ,@(when (getf plist :function)
+          (list :function (getf plist :function)))
+      ,@(clean-count-percent :self)
+      ,@(clean-count-percent :total)
+      ,@(clean-count-percent :cumul))))
+
 (defun parse-sprofiler-output (profiler-text n-times)
   "PROFILER-TEXT is the string printed by sb-sprof:report"
   (flet ((dashes (str)
@@ -80,16 +103,19 @@
       ;; "          0   0.0                                     elsewhere")
       (loop :for line :in profile-lines
             :for stream = (make-string-input-stream line)
-            :collect (prog1 (list :nr (read stream nil nil)
-                                  :self (list :count (truncate (read stream nil nil) n-times)
-                                              :percent (read stream nil nil))
-                                  :total (list :count (truncate (read stream nil nil) n-times)
+            :collect (prog1 (clean-sprofiling-plist
+                             (list :nr (read stream nil nil)
+                                   :self (list :count (truncate (read stream nil nil) n-times)
                                                :percent (read stream nil nil))
-                                  :cumul (list :count (truncate (read stream nil nil) n-times)
-                                               :percent (read stream nil nil))
-                                  :function (progn (read stream nil nil) ;; skip calls because don't know whether to call / or truncate
-                                                   (format nil "~A" (read stream nil nil))))
-                       (close stream))))))
+                                   :total (list :count (truncate (read stream nil nil) n-times)
+                                                :percent (read stream nil nil))
+                                   :cumul (list :count (truncate (read stream nil nil) n-times)
+                                                :percent (read stream nil nil))
+                                   :function (progn (read stream nil nil) ;; skip calls because don't know whether to call / or truncate
+                                                    (format nil "~A" (read stream nil nil)))))
+                       (close stream
+                              ))))))
+
 
 (defun call-with-sprofiling (thunk consume-prof consume-n get-n-stimes)
   (declare (type (function () t) thunk)
@@ -129,6 +155,20 @@
 (defun skip-char (stream c)
   (unless (char= c (read-char stream nil nil))
     (skip-char stream c)))
+
+(defun clean-dprofiling-plist (plist)
+  "remove key/value pairs if the value is 0 or 0.0"
+  (labels ((recur (left right)
+             (cond
+               (right
+                (destructuring-bind (key value &rest tail) right
+                  (if (member value '(0 0.0))
+                      (recur left tail)
+                      (recur `(,value ,key ,@left) tail))))
+               (t
+                (nreverse left)))))
+    (recur nil plist)))
+                    
 
 (defun parse-dprofiler-output (profiler-text n-times)
   "PROFILER-TEXT is the string printed by sb-sprof:report"
@@ -173,12 +213,13 @@
             :for stream = (make-string-input-stream
                            (remove #\| (remove #\,  line)
                                    :count 5))
-            :collect (prog1 (list :seconds (/ (read stream nil nil) n-times)
-                                  :gc      (/ (read stream nil nil) n-times)
-                                  :cons    (truncate (read stream nil nil) n-times)
-                                  :calls   (truncate (read stream nil nil) n-times)
-                                  :sec/call (read stream nil nil)
-                                  :name    (format nil "~A" (read stream nil nil)))
+            :collect (prog1 (clean-dprofiling-plist
+                             (list :seconds (/ (read stream nil nil) n-times)
+                                   :gc      (/ (read stream nil nil) n-times)
+                                   :cons    (truncate (read stream nil nil) n-times)
+                                   :calls   (truncate (read stream nil nil) n-times)
+                                   :sec/call (read stream nil nil)
+                                   :name    (format nil "~A" (read stream nil nil))))
                        (close stream))))))
 
 (defun call-with-dprofiling (thunk packages consume-prof consume-n get-n-dtimes &key (time-thresh 0.1))
@@ -201,7 +242,7 @@
                                (sb-profile:report :print-no-call-list nil)))
                            (1+ (funcall get-n-dtimes))))
                     (total-time (loop :for plist :in prof
-                                      :summing (destructuring-bind (&key calls sec/call &allow-other-keys) plist
+                                      :summing (destructuring-bind (&key (calls 0) (sec/call 0.0) &allow-other-keys) plist
                                                  (* calls sec/call)))))
                (sb-profile:unprofile)
                ;; did the profiler produce any output?
