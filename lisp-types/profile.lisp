@@ -69,7 +69,7 @@
                ((= percent 0.0)
                 `(,key (:count ,count)))
                (t
-                (list key plist))))))
+                (list key value))))))
     `(,@(when (getf plist :nr)
           (list :nr (getf plist :nr)))
       ,@(when (getf plist :function)
