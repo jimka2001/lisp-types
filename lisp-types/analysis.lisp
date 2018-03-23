@@ -1644,6 +1644,7 @@ sleeping before the code finishes evaluating."
 (defun big-test-report (&rest options &key (num-tries 2) (multiplier 1) (prefix "") (re-run t)
                                         (suite-time-out (* 60 60 4)) (time-out 100) normalize hilite-min
                                         (decomposition-functions *decomposition-functions*)
+                                        (bucket-reporters *bucket-reporters*)
                                         profile
                                         (create-png-p t)
                                         (destination-dir *destination-dir*))
@@ -1658,8 +1659,8 @@ sleeping before the code finishes evaluating."
                df *decomposition-function-descriptors*))))
   (let ((*bdd-hash-struct* (bdd-new-hash))
         (*decomposition-functions*  decomposition-functions))
-    (loop for (tag bucket-reporter) in *bucket-reporters*
-          for sample = (/ 1 (length *bucket-reporters*)) then (+ sample (/ 1 (length *bucket-reporters*)))
+    (loop for (tag bucket-reporter) in bucket-reporters
+          for sample = (/ 1 (length bucket-reporters)) then (+ sample (/ 1 (length bucket-reporters)))
           do (funcall bucket-reporter multiplier sample options :create-png-p create-png-p :destination-dir destination-dir))))
 
 (defun parameterization-report (&key (re-run t) (multiplier 1) (create-png-p t) (destination-dir *destination-dir*))
@@ -1711,11 +1712,13 @@ sleeping before the code finishes evaluating."
 
 (defun bdd-report-profile (&key (re-run t) (multiplier 0.2) (destination-dir *destination-dir*)
                              (num-tries 4) (prefix "bdd-profile-1-") (decomposition-functions *decomposition-functions*)
+                             (bucket-reporters *bucket-reporters*)
                              (create-png-p t))
   (big-test-report :re-run re-run
                    :profile t
                    :prefix prefix
                    :multiplier multiplier
+                   :bucket-reporters bucket-reporters
                    :normalize nil
                    :time-out 200
                    :num-tries num-tries
