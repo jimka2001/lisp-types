@@ -1320,6 +1320,7 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
     (with-open-file (stream sexp-name :direction :output :if-exists :supersede :if-does-not-exist :create)
       (format t "writing to ~A~%" sexp-name)
       (print-sexp stream summary limit)))
+  (sort-results sexp-name sorted-name)
   (create-gnuplot sorted-name gnuplot-name png-name
                   nil hilite-min include-decompose :xys create-png-p)
   (create-gnuplot sorted-name (insert-suffix gnuplot-name "-smooth") (insert-suffix png-name "-smooth")
