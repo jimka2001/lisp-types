@@ -252,6 +252,7 @@ than as keywords."
                   (funcall thunk))))
              (log-data ()
                (print-report :re-run re-run
+                             :profile profile
                              :include-decompose decompose
                              :destination-dir destination-dir
                              :prefix prefix
@@ -1302,7 +1303,8 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
         (concatenate 'string head suffix tail)))))
 
 
-(defun print-report (&key (re-run t) limit (summary nil) normalize destination-dir
+(defun print-report (&key (re-run t) (profile nil)
+                       limit (summary nil) normalize destination-dir
                        prefix file-name (create-png-p t) (include-decompose *decomposition-functions*) (tag "NO TITLE") (hilite-min nil)
                      &allow-other-keys
                      &aux
@@ -1326,7 +1328,8 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
   (create-gnuplot sorted-name (insert-suffix gnuplot-name "-smooth") (insert-suffix png-name "-smooth")
                   nil hilite-min include-decompose :smooth create-png-p)
 
-  (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p)
+  (when profile
+    (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p))
 
   (when normalize
     (create-gnuplot sorted-name gnuplot-normalized-name png-normalized-name
