@@ -1283,6 +1283,13 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
                        (length (set-difference value types :test #'equivalent-types-p)) ;; new
                        time decompose)))))))))
 
+(defun change-extension (filename new-extension)
+  "change file name extension:
+E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\""
+  (let ((index (search "." filename :from-end t)))
+    (when index
+      (let ((head (subseq filename 0 index)))
+        (concatenate 'string head "." new-extension)))))
 
 (defun insert-suffix (filename suffix)
   "insert the given SUFFIX before the filename extension: 
@@ -1318,7 +1325,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
   (create-gnuplot sorted-name (insert-suffix gnuplot-name "-smooth") (insert-suffix png-name "-smooth")
                   nil hilite-min include-decompose :smooth create-png-p)
 
-  (create-profile-scatter-plot sexp-name destination-dir prefix file-name)
+  (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p)
 
   (when normalize
     (create-gnuplot sorted-name gnuplot-normalized-name png-normalized-name
@@ -1329,7 +1336,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
   (print-ltxdat ltxdat-no-legend-name sorted-name include-decompose nil tag)
   (print-dat dat-name include-decompose))
 
-(defun create-profile-scatter-plot (sexp-name destination-dir prefix file-name)
+(defun create-profile-scatter-plot (sexp-name destination-dir prefix file-name create-png-p)
   (let ((sexp (with-open-file (stream sexp-name :direction :input)
                 (read stream nil nil))))
     (destructuring-bind (&key summary data &allow-other-keys) sexp
@@ -1344,17 +1351,42 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
               (format t "[writing to ~A~%" gnu-name)
               (format gnu "# scatter plot for ~A ~S~%" summary decompose)
               (format gnu "set term png~%")
-              (format gnu "plot ~S with labels~%" "-")
-              (dolist (profile-plist profile-plists)
-                (destructuring-bind (&key n-dtimes dprofile-total dprof &allow-other-keys) profile-plist
-                  (dolist (dprof-plist dprof)
-                    (destructuring-bind (&key (seconds 0.0) name &allow-other-keys) dprof-plist
-                      (when (plusp seconds)
-                        (let ((x (/ dprofile-total n-dtimes))
-                              (y (/ seconds dprofile-total)))
-                          (format gnu "~A ~A ~S~%" x y name)))))))
-              (format gnu "end~%"))
-            (format t "   ~A]~%" gnu-name)))))))
+              (format gnu "plot ")
+              (let ((hash (make-hash-table :test #'equal)))
+                (dolist (profile-plist profile-plists)
+                  (destructuring-bind (&key n-dtimes dprofile-total dprof &allow-other-keys) profile-plist
+                    (dolist (dprof-plist dprof)
+                      (destructuring-bind (&key (seconds 0.0) name &allow-other-keys) dprof-plist
+                        (when (plusp seconds)
+                          (let ((x (/ dprofile-total n-dtimes))
+                                (y (/ seconds dprofile-total)))
+                            (push (list x y) (gethash name hash nil))))))))
+                (let ((function-names (loop for key being the hash-keys of hash
+                                            collect key))
+                      (header (make-string-output-stream))
+                      (footer (make-string-output-stream)))
+                  (flet ((plot (key)
+                           (declare (notinline sort))
+                           (format header "~S notitle" "-")
+                           (when (cdr (gethash key hash))
+                             (format header " with linespoints"))
+                           (format footer "# ~S~%" key)
+                           (dolist (xy (sort (gethash key hash) #'< :key #'car))
+                             (format footer "~A ~A~%" (car xy) (cadr xy)))
+                           (format footer "end~%")))
+                    (plot (car function-names))
+                    (dolist (function-name (cdr function-names))
+                      (format header ", ")
+                      (plot function-name)))
+                  (format gnu "~A~%" (get-output-stream-string header))
+                  (format gnu "~A" (get-output-stream-string footer)))))
+            (format t "   ~A]~%" gnu-name)
+            (when create-png-p
+              (run-program "gnuplot" (list gnu-name)
+                           :search t
+                           :output (change-extension gnu-name "png")
+                           :error *error-output*
+                           :if-output-exists :supersede))))))))
 
 (defvar *destination-dir* "/Users/jnewton/newton.16.edtchs/src")
 (defun test-report (&key sample (prefix "") (re-run t) (suite-time-out (* 60 60 4))
@@ -1692,3 +1724,6 @@ sleeping before the code finishes evaluating."
                    :create-png-p create-png-p
                    :decomposition-functions decomposition-functions))
 
+
+
+;; (bdd-report-profile :num-tries 1 :multiplier 0.2 :create-png-p nil)
