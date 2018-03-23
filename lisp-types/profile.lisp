@@ -78,7 +78,7 @@
       ,@(clean-count-percent :total)
       ,@(clean-count-percent :cumul))))
 
-(defun parse-sprofiler-output (profiler-text n-times)
+(defun parse-sprofiler-output (profiler-text)
   "PROFILER-TEXT is the string printed by sb-sprof:report"
   (flet ((dashes (str)
            (every (lambda (c)
@@ -105,25 +105,25 @@
             :for stream = (make-string-input-stream line)
             :collect (prog1 (clean-sprofiling-plist
                              (list :nr (read stream nil nil)
-                                   :self (list :count (truncate (read stream nil nil) n-times)
+                                   :self (list :count (read stream nil nil)
                                                :percent (read stream nil nil))
-                                   :total (list :count (truncate (read stream nil nil) n-times)
+                                   :total (list :count (read stream nil nil)
                                                 :percent (read stream nil nil))
-                                   :cumul (list :count (truncate (read stream nil nil) n-times)
+                                   :cumul (list :count (read stream nil nil)
                                                 :percent (read stream nil nil))
                                    :function (progn (read stream nil nil) ;; skip calls because don't know whether to call / or truncate
                                                     (format nil "~A" (read stream nil nil)))))
-                       (close stream
-                              ))))))
+                       (close stream))))))
 
 
-(defun call-with-sprofiling (thunk consume-prof consume-n get-n-stimes)
+(defun call-with-sprofiling (thunk consume-prof consume-n)
   (declare (type (function () t) thunk)
            (type (function (list) t) consume-prof)
            (type (function ((and fixnum unsigned-byte)) t) consume-n))
   (labels ((recur (n-times)
              ;;(format t "recur ~D~%" n-times)
              (sb-sprof:reset)
+             (funcall consume-n 0)
              (let* (thunk-ret-val
                     (val (block nil
                            (handler-bind ((warning (lambda (w &aux (filter-me "No sampling progress;"))
@@ -137,13 +137,12 @@
                                                        (return nil)))))
                              (sb-sprof:with-profiling (:loop nil)
                                (dotimes (n n-times thunk-ret-val)
-                                 (funcall consume-n n)
+                                 (funcall consume-n (1+ n))
                                  (setf thunk-ret-val (funcall thunk)))))))
                    (prof (parse-sprofiler-output
                           (with-output-to-string (str)
                             (let ((*standard-output* str))
-                              (sb-sprof:report :type :flat)))
-                          (1+ (funcall get-n-stimes)))))
+                              (sb-sprof:report :type :flat))))))
                (cond
                  (prof
                   (funcall consume-prof prof)
@@ -170,7 +169,7 @@
     (recur nil plist)))
                     
 
-(defun parse-dprofiler-output (profiler-text n-times)
+(defun parse-dprofiler-output (profiler-text)
   "PROFILER-TEXT is the string printed by sb-sprof:report"
   (flet ((dashes (str)
            (every (lambda (c)
@@ -180,6 +179,7 @@
            ;; occurance of "-----..." in line-str after being split into a list of lines.
            (dash-1 (member-if #'dashes (split-str lines-str)))
            (dash-2 (member-if #'dashes (cdr dash-1)))
+           (total-line-str (cadr dash-2))
            ;; profile-lines is the list of lines between the dashes
            (profile-lines (ldiff (cdr dash-1) dash-2))
            (*package* (find-package :cl-user)))
@@ -209,24 +209,38 @@
       ;; ----------------------------------------------------------
       ;;      2.618 |      0.967 | 766,131,472 | 26,699 |            | Total
 
-      (loop :for line :in profile-lines
-            :for stream = (make-string-input-stream
-                           (remove #\| (remove #\,  line)
-                                   :count 5))
-            :collect (prog1 (clean-dprofiling-plist
-                             (list :seconds (/ (read stream nil nil) n-times)
-                                   :gc      (/ (read stream nil nil) n-times)
-                                   :cons    (truncate (read stream nil nil) n-times)
-                                   :calls   (truncate (read stream nil nil) n-times)
-                                   :sec/call (read stream nil nil)
-                                   :name    (format nil "~A" (read stream nil nil))))
-                       (close stream))))))
+      
+      (values
 
-(defun call-with-dprofiling (thunk packages consume-prof consume-n get-n-dtimes &key (time-thresh 0.1))
+       ;; value-0
+       (loop :for line :in profile-lines
+             :for stream = (make-string-input-stream
+                            (remove #\| (remove #\,  line)
+                                    :count 5))
+             :collect (prog1 (clean-dprofiling-plist
+                              (list :seconds (read stream nil nil)
+                                    :gc      (read stream nil nil)
+                                    :cons    (read stream nil nil)
+                                    :calls   (read stream nil nil)
+                                    :sec/call (read stream nil nil)
+                                    :name    (format nil "~A" (read stream nil nil))))
+                        (close stream)))
+       ;; value-1
+       (let ((stream (make-string-input-stream (remove #\| (remove #\,  total-line-str)
+                                                       :count 5))))
+         (prog1
+             (list :seconds (read stream nil nil)
+                   :gc (read stream nil nil)
+                   :consed (read stream nil nil)
+                   :calls  (read stream nil nil))
+           (close stream)))))))
+
+(defun call-with-dprofiling (thunk packages consume-prof consume-n &key (time-thresh 0.1))
   (declare (type (function () t) thunk)
            (type list packages) ;; list of strings or symbols
-           (type (function (list) t) consume-prof)
+           (type (function (list number) t) consume-prof)
            (type (function ((and fixnum unsigned-byte)) t) consume-n))
+  (funcall consume-n 0)
   (labels ((recur (n-times)
              (sb-profile:unprofile)
              (sb-profile:reset)
@@ -234,24 +248,23 @@
              (sb-profile::mapc-on-named-funs #'sb-profile::profile-1-fun packages)
              (let* (thunk-ret-val
                     (val (dotimes (n n-times thunk-ret-val)
-                           (funcall consume-n n)
+                           (funcall consume-n (1+ n))
                            (setf thunk-ret-val (funcall thunk))))
-                    (prof (parse-dprofiler-output
-                           (with-output-to-string (str)
-                             (let ((*trace-output* str))
-                               (sb-profile:report :print-no-call-list nil)))
-                           (1+ (funcall get-n-dtimes))))
-                    (total-time (loop :for plist :in prof
-                                      :summing (destructuring-bind (&key (calls 0) (sec/call 0.0) &allow-other-keys) plist
-                                                 (* calls sec/call)))))
+                    (prof-total (multiple-value-list
+                                 (parse-dprofiler-output
+                                  (with-output-to-string (str)
+                                    (let ((*trace-output* str))
+                                      (sb-profile:report :print-no-call-list nil))))))
+                    (prof (car prof-total))
+                    (total (cadr prof-total)))
                (sb-profile:unprofile)
                ;; did the profiler produce any output?
                (cond
                  ((and prof
-                       (or (> n-times 100)
-                           (> total-time time-thresh)))
+                       (or (> n-times 200)
+                           (> (getf total :seconds 0) time-thresh)))
                   ;; if yes, then consume the lines
-                  (funcall consume-prof prof)
+                  (funcall consume-prof prof (getf total :seconds 0))
                   val)
                  (t
                   ;; if no, then try again by running the thunk twice as many times as before.
@@ -277,6 +290,7 @@
 (defun test-profile ()
   (let (s-prof-plists
         d-prof-plists
+        d-prof-seconds
         (n-stimes 1)
         (n-dtimes 1))
     (labels ((set-sprofile-plists (plists)
@@ -284,11 +298,8 @@
              (set-n-stimes (n)
                (format t "set n-times=~D~%" n)
                (setf n-stimes n))
-             (get-n-stimes ()
-               n-stimes)
-             (get-n-dtimes ()
-               n-dtimes)
-             (set-dprofile-plists (plists)
+             (set-dprofile-plists (plists total-seconds)
+               (setf d-prof-seconds total-seconds)
                (setf d-prof-plists plists))
              (set-n-dtimes (n)
                (setf n-dtimes n)))
@@ -296,13 +307,11 @@
       (call-with-sprofiling (lambda ()
                               (test-profiler))
                             #'set-sprofile-plists
-                            #'set-n-stimes
-                            #'get-n-stimes)
+                            #'set-n-stimes)
       
       (call-with-dprofiling (lambda ()
                               (test-profiler))
                             '("LISP-TYPES" "LISP-TYPES.TEST" "CL")
                             #'set-dprofile-plists
-                            #'set-n-dtimes
-                            #'get-n-dtimes)
+                            #'set-n-dtimes)
       )))

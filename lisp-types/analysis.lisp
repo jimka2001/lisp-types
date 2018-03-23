@@ -230,17 +230,11 @@ than as keywords."
                           (decompose *decomposition-functions*)
                           normalize
                           hilite-min
-                          (sorted-name "/dev/null")
-                          (ltxdat-name "/dev/null")
-                          (ltxdat-no-legend-name "/dev/null")
-                          (sexp-name "/dev/null")
                           (create-png-p t)
-                          (gnuplot-name "/dev/null")
-                          (gnuplot-normalized-name "/dev/null")
-                          (png-name "/dev/null")
-                          (png-normalized-name "/dev/null")
-                          (dat-name "/dev/null")
-                          (profile nil))
+                          (profile nil)
+                          destination-dir
+                          prefix
+                          file-name)
   (declare (type (or list (and symbol (satisfies symbol-function))) decompose))
   (let ((*package* (find-package "KEYWORD"))
         (start-time (get-universal-time))
@@ -259,16 +253,10 @@ than as keywords."
              (log-data ()
                (print-report :re-run re-run
                              :include-decompose decompose
-                             :dat-name dat-name
-                             :ltxdat-name ltxdat-name
-                             :ltxdat-no-legend-name ltxdat-no-legend-name
-                             :sexp-name sexp-name
+                             :destination-dir destination-dir
+                             :prefix prefix
+                             :file-name file-name
                              :create-png-p create-png-p
-                             :gnuplot-name gnuplot-name
-                             :gnuplot-normalized-name gnuplot-normalized-name
-                             :png-name png-name
-                             :png-normalized-name png-normalized-name
-                             :sorted-name sorted-name
                              :summary summary
                              :normalize normalize
                              :time-out time-out
@@ -334,9 +322,11 @@ than as keywords."
                   &key profile
                     (sprofile-plists nil)
                     (dprofile-plists nil)
+                    (dprofile-total-seconds 0)
                     (set-sprofile-plists (lambda (plists)
                                            (setf sprofile-plists plists)))
-                    (set-dprofile-plists (lambda (plists)
+                    (set-dprofile-plists (lambda (plists total-seconds)
+                                           (setf dprofile-total-seconds total-seconds)
                                            (setf dprofile-plists plists)))                    
                     (n-stimes 1)
                     (set-n-stimes (lambda (n)
@@ -351,8 +341,9 @@ than as keywords."
                     (get-profile-plists (lambda ()
                                           (list :n-stimes (funcall get-n-stimes)
                                                 :n-dtimes (funcall get-n-dtimes)
-                                                :sprof sprofile-plists
-                                                :dprof dprofile-plists))))
+                                                :dprofile-total dprofile-total-seconds
+                                                :dprof dprofile-plists
+                                                :sprof sprofile-plists))))
   "returns a plist with the fields :wall-time :run-time :value"
   (declare (type (and fixnum unsigned-byte) num-tries)
            (type (function () t) thunk))
@@ -365,8 +356,7 @@ than as keywords."
              (s2 (if profile
                      (call-with-sprofiling thunk
                                            set-sprofile-plists
-                                           set-n-stimes
-                                           get-n-stimes)
+                                           set-n-stimes)
                      (funcall thunk)))
              (run-time-t2 (get-internal-run-time))
              (wall-time (/ (- (get-internal-real-time) start-real-time) internal-time-units-per-second
@@ -377,8 +367,7 @@ than as keywords."
           (call-with-dprofiling thunk
                                 '("LISP-TYPES" "LISP-TYPES.TEST" subtypep)
                                 set-dprofile-plists
-                                set-n-dtimes
-                                get-n-dtimes))
+                                set-n-dtimes))
         (setf result
               (cond
                 ((not result) ; if first time through dotimes loop
@@ -412,16 +401,19 @@ than as keywords."
            (type (and fixnum unsigned-byte) num-tries))
   (let (sprofile-plists
         dprofile-plists
+        (dprofile-total-seconds 0)
         (n-dtimes 1)
         (n-stimes 1))
     (labels ((get-profile-plists ()
                (list :n-stimes (get-n-stimes)
                      :n-dtimes (get-n-dtimes)
-                     :sprof sprofile-plists
-                     :dprof dprofile-plists))
+                     :dprofile-total dprofile-total-seconds
+                     :dprof dprofile-plists
+                     :sprof sprofile-plists))
              (set-sprofile-plists (plists)
                (setf sprofile-plists plists))
-             (set-dprofile-plists (plists)
+             (set-dprofile-plists (plists total-seconds)
+               (setf dprofile-total-seconds total-seconds)
                (setf dprofile-plists plists))
              (get-n-stimes ()
                n-stimes)
@@ -1291,6 +1283,13 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
                        (length (set-difference value types :test #'equivalent-types-p)) ;; new
                        time decompose)))))))))
 
+(defun change-extension (filename new-extension)
+  "change file name extension:
+E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\""
+  (let ((index (search "." filename :from-end t)))
+    (when index
+      (let ((head (subseq filename 0 index)))
+        (concatenate 'string head "." new-extension)))))
 
 (defun insert-suffix (filename suffix)
   "insert the given SUFFIX before the filename extension: 
@@ -1303,31 +1302,95 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
         (concatenate 'string head suffix tail)))))
 
 
-(defun print-report (&key (re-run t) limit (summary nil) normalize (dat-name "/dev/null") (ltxdat-name "/dev/null") (ltxdat-no-legend-name "/dev/null") (sorted-name "/dev/null") (sexp-name "/dev/null") (create-png-p t) (png-name "/dev/null") (png-normalized-name "/dev/null") (gnuplot-name "/dev/null") (gnuplot-normalized-name "/dev/null") (include-decompose *decomposition-functions*) (tag "NO TITLE") (hilite-min nil) &allow-other-keys)
+(defun print-report (&key (re-run t) limit (summary nil) normalize destination-dir
+                       prefix file-name (create-png-p t) (include-decompose *decomposition-functions*) (tag "NO TITLE") (hilite-min nil)
+                     &allow-other-keys
+                     &aux
+                       (sexp-name (make-output-file-name :sexp-name destination-dir prefix file-name))
+                       (sorted-name (make-output-file-name :sorted-name destination-dir prefix file-name))
+                       (gnuplot-name (make-output-file-name :gnuplot-name destination-dir prefix file-name))
+                       (ltxdat-name  (make-output-file-name :ltxdat-name destination-dir prefix file-name))
+                       (ltxdat-no-legend-name (make-output-file-name :ltxdat-no-legend-name destination-dir prefix file-name))
+                       (dat-name (make-output-file-name :dat-name destination-dir prefix file-name))
+                       (png-name (make-output-file-name :png-name destination-dir prefix file-name))
+                       (gnuplot-normalized-name (make-output-file-name :gnuplot-normalized-name destination-dir prefix file-name))
+                       (png-normalized-name (make-output-file-name :png-normalized-name destination-dir prefix file-name)))
   (format t "report ~A~%" summary)
   (when re-run
-    (ensure-directories-exist sexp-name)
     (with-open-file (stream sexp-name :direction :output :if-exists :supersede :if-does-not-exist :create)
       (format t "writing to ~A~%" sexp-name)
       (print-sexp stream summary limit)))
-  (sort-results sexp-name sorted-name)
-  (unless (string= sorted-name "/dev/null")
-    (create-gnuplot sorted-name gnuplot-name png-name
-                    nil hilite-min include-decompose :xys create-png-p)
-    (create-gnuplot sorted-name (insert-suffix gnuplot-name "-smooth") (insert-suffix png-name "-smooth")
-                    nil hilite-min include-decompose :smooth create-png-p)
-    
-    (when normalize
-      (create-gnuplot sorted-name gnuplot-normalized-name png-normalized-name
-                      normalize hilite-min include-decompose :xys create-png-p)
-      (create-gnuplot sorted-name (insert-suffix gnuplot-normalized-name "-smooth") (insert-suffix png-normalized-name "-smooth")
-                      normalize hilite-min include-decompose :smooth create-png-p))
-    (print-ltxdat ltxdat-name           sorted-name include-decompose t nil)
-    (print-ltxdat ltxdat-no-legend-name sorted-name include-decompose nil tag))
+  (create-gnuplot sorted-name gnuplot-name png-name
+                  nil hilite-min include-decompose :xys create-png-p)
+  (create-gnuplot sorted-name (insert-suffix gnuplot-name "-smooth") (insert-suffix png-name "-smooth")
+                  nil hilite-min include-decompose :smooth create-png-p)
+
+  (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p)
+
+  (when normalize
+    (create-gnuplot sorted-name gnuplot-normalized-name png-normalized-name
+                    normalize hilite-min include-decompose :xys create-png-p)
+    (create-gnuplot sorted-name (insert-suffix gnuplot-normalized-name "-smooth") (insert-suffix png-normalized-name "-smooth")
+                    normalize hilite-min include-decompose :smooth create-png-p))
+  (print-ltxdat ltxdat-name           sorted-name include-decompose t nil)
+  (print-ltxdat ltxdat-no-legend-name sorted-name include-decompose nil tag)
   (print-dat dat-name include-decompose))
 
+(defun create-profile-scatter-plot (sexp-name destination-dir prefix file-name create-png-p)
+  (let ((sexp (with-open-file (stream sexp-name :direction :input)
+                (read stream nil nil))))
+    (destructuring-bind (&key summary data &allow-other-keys) sexp
+      (dolist (data-plist data)
+        (destructuring-bind (&key decompose profile-plists &allow-other-keys) data-plist
+          (let ((gnu-name (insert-suffix (make-output-file-name :gnuscatter-name destination-dir prefix file-name)
+                                         (concatenate 'string "-" decompose))))
+            (with-open-file (gnu gnu-name
+                                 :direction :output
+                                 :if-exists :supersede
+                                 :if-does-not-exist :create)
+              (format t "[writing to ~A~%" gnu-name)
+              (format gnu "# scatter plot for ~A ~S~%" summary decompose)
+              (format gnu "set term png~%")
+              (format gnu "plot ")
+              (let ((hash (make-hash-table :test #'equal)))
+                (dolist (profile-plist profile-plists)
+                  (destructuring-bind (&key n-dtimes dprofile-total dprof &allow-other-keys) profile-plist
+                    (dolist (dprof-plist dprof)
+                      (destructuring-bind (&key (seconds 0.0) name &allow-other-keys) dprof-plist
+                        (when (plusp seconds)
+                          (let ((x (/ dprofile-total n-dtimes))
+                                (y (/ seconds dprofile-total)))
+                            (push (list x y) (gethash name hash nil))))))))
+                (let ((function-names (loop for key being the hash-keys of hash
+                                            collect key))
+                      (header (make-string-output-stream))
+                      (footer (make-string-output-stream)))
+                  (flet ((plot (key)
+                           (declare (notinline sort))
+                           (format header "~S notitle" "-")
+                           (when (cdr (gethash key hash))
+                             (format header " with linespoints"))
+                           (format footer "# ~S~%" key)
+                           (dolist (xy (sort (gethash key hash) #'< :key #'car))
+                             (format footer "~A ~A~%" (car xy) (cadr xy)))
+                           (format footer "end~%")))
+                    (plot (car function-names))
+                    (dolist (function-name (cdr function-names))
+                      (format header ", ")
+                      (plot function-name)))
+                  (format gnu "~A~%" (get-output-stream-string header))
+                  (format gnu "~A" (get-output-stream-string footer)))))
+            (format t "   ~A]~%" gnu-name)
+            (when create-png-p
+              (run-program "gnuplot" (list gnu-name)
+                           :search t
+                           :output (change-extension gnu-name "png")
+                           :error *error-output*
+                           :if-output-exists :supersede))))))))
+
 (defvar *destination-dir* "/Users/jnewton/newton.16.edtchs/src")
-(defun test-report (&key sample (prefix "") (re-run t) (suite-time-out (* 60 60 4))  (time-out (* 3 60)) normalize (destination-dir *destination-dir*)
+(defun test-report (&key sample (prefix "") (re-run t) (suite-time-out (* 60 60 4))
+                      (time-out (* 3 60)) normalize (destination-dir *destination-dir*)
                       types file-name (limit 15) tag hilite-min (num-tries 2) profile (create-png-p t)
                     &allow-other-keys)
   "TIME-OUT is the number of seconds to allow for one call to a single decompose function.
@@ -1335,32 +1398,49 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
   (when re-run
     (setf *perf-results* nil))
   (let ((type-specifiers (shuffle-list types)))
-    (apply #'types/cmp-perfs :re-run re-run
-                             :types type-specifiers
-                             :suite-time-out suite-time-out
-                             :randomize t
-                             :limit (truncate limit)
-                             :tag tag
-                             :summary file-name
-                             :time-out time-out
-                             :decompose  *decomposition-functions*
-                             :normalize normalize
-                             :sample sample
-                             :num-tries num-tries
-                             :hilite-min hilite-min
-                             :profile profile
-                             (when file-name
-                               (list
-                                :ltxdat-name (format nil "~A/~A~A.ltxdat" destination-dir prefix file-name)
-                                :ltxdat-no-legend-name (format nil "~A/no-legend/~A~A.ltxdat" destination-dir prefix file-name)
-                                :dat-name (format nil "~A/~A~A.dat" destination-dir prefix file-name)
-                                :create-png-p create-png-p
-                                :png-name (format nil "~A/~A~A.png" destination-dir prefix file-name)
-                                :png-normalized-name (format nil "~A/~A~A-normalized.png" destination-dir prefix file-name)
-                                :gnuplot-name (format nil "~A/~A~A.gnu" destination-dir prefix file-name)
-                                :gnuplot-normalized-name (format nil "~A/~A~A-normalized.gnu" destination-dir prefix file-name)
-                                :sexp-name (format nil "~A/~A~A.sexp" destination-dir prefix file-name)
-                                :sorted-name (format nil "~A/~A~A.sorted" destination-dir prefix file-name))))))
+    (types/cmp-perfs :re-run re-run
+                     :types type-specifiers
+                     :suite-time-out suite-time-out
+                     :randomize t
+                     :limit (truncate limit)
+                     :tag tag
+                     :summary file-name
+                     :time-out time-out
+                     :decompose  *decomposition-functions*
+                     :normalize normalize
+                     :sample sample
+                     :num-tries num-tries
+                     :hilite-min hilite-min
+                     :profile profile
+                     :create-png-p create-png-p
+                     :destination-dir destination-dir
+                     :prefix prefix
+                     :file-name file-name)))
+
+(defun make-output-file-name (purpose destination-dir prefix file-name)
+  (ensure-directories-exist
+   (format nil (ecase purpose
+                 (:ltxdat-name
+                  "~A/~A~A.ltxdat")
+                 (:ltxdat-no-legend-name
+                  "~A/no-legend/~A~A.ltxdat")
+                 (:dat-name
+                  "~A/~A~A.dat")
+                 (:png-name
+                  "~A/~A~A.png")
+                 (:png-normalized-name
+                  "~A/~A~A-normalized.png")
+                 (:gnuscatter-name
+                  "~A/~A~A-scatter.gnu")
+                 (:gnuplot-name
+                  "~A/~A~A.gnu")
+                 (:gnuplot-normalized-name
+                  "~A/~A~A-normalized.gnu")
+                 (:sexp-name
+                  "~A/~A~A.sexp")
+                 (:sorted-name
+                  "~A/~A~A.sorted"))
+           destination-dir prefix file-name)))
 
 (defun random-subset-of-range (min max)
   (loop for i from min to max
@@ -1644,3 +1724,6 @@ sleeping before the code finishes evaluating."
                    :create-png-p create-png-p
                    :decomposition-functions decomposition-functions))
 
+
+
+;; (bdd-report-profile :num-tries 1 :multiplier 0.2 :create-png-p nil)
