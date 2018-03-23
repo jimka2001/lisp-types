@@ -1342,7 +1342,7 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
 
 (defun create-profile-scatter-plot (sexp-name destination-dir prefix file-name create-png-p)
   (let ((sexp (with-open-file (stream sexp-name :direction :input)
-                (read stream nil nil))))
+                (user-read stream nil nil))))
     (destructuring-bind (&key summary data &allow-other-keys) sexp
       (dolist (data-plist data)
         (destructuring-bind (&key decompose profile-plists &allow-other-keys) data-plist
