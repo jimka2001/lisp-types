@@ -322,9 +322,11 @@ than as keywords."
                   &key profile
                     (sprofile-plists nil)
                     (dprofile-plists nil)
+                    (dprofile-total-seconds 0)
                     (set-sprofile-plists (lambda (plists)
                                            (setf sprofile-plists plists)))
-                    (set-dprofile-plists (lambda (plists)
+                    (set-dprofile-plists (lambda (plists total-seconds)
+                                           (setf dprofile-total-seconds total-seconds)
                                            (setf dprofile-plists plists)))                    
                     (n-stimes 1)
                     (set-n-stimes (lambda (n)
@@ -339,8 +341,9 @@ than as keywords."
                     (get-profile-plists (lambda ()
                                           (list :n-stimes (funcall get-n-stimes)
                                                 :n-dtimes (funcall get-n-dtimes)
-                                                :sprof sprofile-plists
-                                                :dprof dprofile-plists))))
+                                                :dprofile-total dprofile-total-seconds
+                                                :dprof dprofile-plists
+                                                :sprof sprofile-plists))))
   "returns a plist with the fields :wall-time :run-time :value"
   (declare (type (and fixnum unsigned-byte) num-tries)
            (type (function () t) thunk))
@@ -353,8 +356,7 @@ than as keywords."
              (s2 (if profile
                      (call-with-sprofiling thunk
                                            set-sprofile-plists
-                                           set-n-stimes
-                                           get-n-stimes)
+                                           set-n-stimes)
                      (funcall thunk)))
              (run-time-t2 (get-internal-run-time))
              (wall-time (/ (- (get-internal-real-time) start-real-time) internal-time-units-per-second
@@ -365,8 +367,7 @@ than as keywords."
           (call-with-dprofiling thunk
                                 '("LISP-TYPES" "LISP-TYPES.TEST" subtypep)
                                 set-dprofile-plists
-                                set-n-dtimes
-                                get-n-dtimes))
+                                set-n-dtimes))
         (setf result
               (cond
                 ((not result) ; if first time through dotimes loop
@@ -400,16 +401,19 @@ than as keywords."
            (type (and fixnum unsigned-byte) num-tries))
   (let (sprofile-plists
         dprofile-plists
+        (dprofile-total-seconds 0)
         (n-dtimes 1)
         (n-stimes 1))
     (labels ((get-profile-plists ()
                (list :n-stimes (get-n-stimes)
                      :n-dtimes (get-n-dtimes)
-                     :sprof sprofile-plists
-                     :dprof dprofile-plists))
+                     :dprofile-total dprofile-total-seconds
+                     :dprof dprofile-plists
+                     :sprof sprofile-plists))
              (set-sprofile-plists (plists)
                (setf sprofile-plists plists))
-             (set-dprofile-plists (plists)
+             (set-dprofile-plists (plists total-seconds)
+               (setf dprofile-total-seconds total-seconds)
                (setf dprofile-plists plists))
              (get-n-stimes ()
                n-stimes)
