@@ -97,9 +97,9 @@
                          (cdr type-spec))))
        ;; found the (MEMBER ...) or (EQL ...)
        (if hit ;; now remove all the elements of the (MEMBER ...) or (EQL ...) which fail to match the type
-           `(member ,@(remove-if-not (lambda (obj)
-                                       (typep obj type-spec))
-                                     (cdr hit)))
+           (cons 'member (remove-if-not (lambda (obj)
+                                          (typep obj type-spec))
+                                        (cdr hit)))
            type-spec)))
     (t
      type-spec)))

@@ -39,6 +39,7 @@
 
 (defvar *verbose-caching* nil)
 (defvar *caching-thresh* 2048)
+(defvar *secret-default-value* (list nil))
 
 (defun caching-call (thunk key hash fun-name access increment)
   "Helper function used by the expansion of DEF-CACHE-FUN.  This function
@@ -56,11 +57,19 @@
                 (= 0 (mod (funcall increment) *caching-thresh*)))
        (format t "~D ~A ~A~%" (funcall access) fun-name hash))
      (apply #'values
-            (multiple-value-bind (value foundp) (gethash key hash)
-              (cond
-                (foundp value)
-                (t
-                 (setf (gethash key hash) (multiple-value-list (funcall thunk))))))))))
+            ;; (multiple-value-bind (value foundp) (gethash key hash)
+            ;;   (cond
+            ;;     (foundp value)
+            ;;     (t
+            ;;      (setf (gethash key hash) (multiple-value-list (funcall thunk))))))
+
+            ;; trying this optimization to see if it is faster.
+            (let ((value (gethash key hash *secret-default-value*)))
+              (if (eq value *secret-default-value*)
+                  (setf (gethash key hash) (multiple-value-list (funcall thunk)))
+                  value))
+
+            ))))
 
 (defmacro def-cache-fun ((fun-name with-name &key (hash (gensym "hash")) (access-count (gensym "count"))) lam-list doc-string  &body body)
   "Define two functions named by FUN-NAME and WITH-NAME.  The lambda list of the 
