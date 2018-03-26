@@ -1302,7 +1302,6 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
             (head (subseq filename 0 index)))
         (concatenate 'string head suffix tail)))))
 
-
 (defun print-report (&key (re-run t) (profile nil)
                        limit (summary nil) normalize destination-dir
                        prefix file-name (create-png-p t) (include-decompose *decomposition-functions*) (tag "NO TITLE") (hilite-min nil)
@@ -1340,7 +1339,8 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
   (print-ltxdat ltxdat-no-legend-name sorted-name include-decompose nil tag)
   (print-dat dat-name include-decompose))
 
-(defun create-profile-scatter-plot (sexp-name destination-dir prefix file-name create-png-p)
+(defun create-profile-scatter-plot (sexp-name destination-dir prefix file-name create-png-p
+                                    &key (threshold 0.15))
   (let ((sexp (with-open-file (stream sexp-name :direction :input)
                 (user-read stream nil nil))))
     (destructuring-bind (&key summary data &allow-other-keys) sexp
@@ -1355,32 +1355,51 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
               (format t "[writing to ~A~%" gnu-name)
               (format gnu "# scatter plot for ~A ~S~%" summary decompose)
               (format gnu "set term png~%")
-              (format gnu "plot ")
-              (let ((hash (make-hash-table :test #'equal)))
+              (format gnu "set logscale x~%")
+              (format gnu "set xlabel ~S~%" "execution time (seconds)")
+              (format gnu "set ylabel ~S~%" "profile percentage")
+              (format gnu "set key tmargin~%")
+              (format gnu "set title ~S~%" (format nil "~A ~A" summary decompose))
+              (let ((hash (make-hash-table :test #'equal))
+                    top-names)
+                (dolist (profile-plist profile-plists)
+                  (destructuring-bind (&key dprofile-total dprof &allow-other-keys) profile-plist
+                    (dolist (dprof-plist (subseq dprof 0 1))
+                      (destructuring-bind (&key (seconds 0.0) name &allow-other-keys) dprof-plist
+                        (when (plusp seconds)
+                          (let ((y (/ seconds dprofile-total)))
+                            (when (> y threshold)
+                              (pushnew name top-names :test #'string=))))))))
                 (dolist (profile-plist profile-plists)
                   (destructuring-bind (&key n-dtimes dprofile-total dprof &allow-other-keys) profile-plist
                     (dolist (dprof-plist dprof)
                       (destructuring-bind (&key (seconds 0.0) name &allow-other-keys) dprof-plist
-                        (when (plusp seconds)
+                        (when (and (plusp seconds)
+                                   (member name top-names :test #'string=))
                           (let ((x (/ dprofile-total n-dtimes))
                                 (y (/ seconds dprofile-total)))
                             (push (list x y) (gethash name hash nil))))))))
+                (when top-names
+                  (format gnu "plot "))
                 (let ((function-names (loop for key being the hash-keys of hash
                                             collect key))
                       (header (make-string-output-stream))
                       (footer (make-string-output-stream)))
-                  (flet ((plot (key)
-                           (declare (notinline sort))
-                           (format header "~S notitle" "-")
-                           (when (cdr (gethash key hash))
-                             (format header " with linespoints"))
-                           (format footer "# ~S~%" key)
-                           (dolist (xy (sort (gethash key hash) #'< :key #'car))
-                             (format footer "~A ~A~%" (car xy) (cadr xy)))
+                  (flet ((plot (function-name)
+                           (declare (notinline sort) (type string function-name))
+                           (format header "~S using 1:2" "-")
+                           (if (cdr (gethash function-name hash))
+                               (format header " with linespoints")
+                               (format header " with points"))
+                           (format header " title ~S" function-name)
+                           (format footer "# ~S~%" function-name)
+                           (dolist (xy (sort (gethash function-name hash) #'< :key #'car))
+                             (format footer "~A ~A~%" (car xy) (* 100 (cadr xy))))
                            (format footer "end~%")))
-                    (plot (car function-names))
+                    (when function-names
+                      (plot (car function-names)))
                     (dolist (function-name (cdr function-names))
-                      (format header ", ")
+                      (format header ",\\~%    ")
                       (plot function-name)))
                   (format gnu "~A~%" (get-output-stream-string header))
                   (format gnu "~A" (get-output-stream-string footer)))))
@@ -1731,6 +1750,17 @@ sleeping before the code finishes evaluating."
                    :create-png-p create-png-p
                    :decomposition-functions decomposition-functions))
 
+
+(defun rebuild-scatter-plots ()
+  (dotimes (decompose-function-index (length *decomposition-functions*))
+    (dotimes (bucket-index (length *bucket-reporters*))
+      (big-test-report :re-run nil
+                       :profile t
+                       :decomposition-functions (list (nth decompose-function-index *decomposition-functions*))
+                       :bucket-reporters (list (nth bucket-index *bucket-reporters*))
+                       :create-png-p t
+                       :destination-dir "/Users/jnewton/analysis"
+                       :prefix (format nil "bdd-profile-~D-~D-" decompose-function-index bucket-index)))))
 
 
 ;; (bdd-report-profile :num-tries 1 :multiplier 0.2 :create-png-p nil)
