@@ -1339,7 +1339,7 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
               (format gnu "set logscale x~%")
               (format gnu "set xlabel ~S~%" "execution time (seconds)")
               (format gnu "set ylabel ~S~%" "profile percentage")
-              (format gnu "set key tmargin~%")
+              (format gnu "set key bmargin~%")
               (format gnu "set title ~S~%" (format nil "~A ~A" summary decompose))
               (let ((hash (make-hash-table :test #'equal))
                     top-names)
