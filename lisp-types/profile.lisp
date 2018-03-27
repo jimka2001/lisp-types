@@ -80,7 +80,12 @@
 
 (defun parse-sprofiler-output (profiler-text)
   "PROFILER-TEXT is the string printed by sb-sprof:report"
-  (flet ((dashes (str)
+  (flet ((read-next (stream)
+           (handler-case (read stream nil nil)
+             (error (e)
+               (error "Error ~S encountered while reading the string profiler-text=~S"
+                      e profiler-text))))
+         (dashes (str)
            (every (lambda (c)
                     (char= c #\-)) str)))
     (let* ((lines-str profiler-text)
@@ -104,15 +109,15 @@
       (loop :for line :in profile-lines
             :for stream = (make-string-input-stream line)
             :collect (prog1 (clean-sprofiling-plist
-                             (list :nr (read stream nil nil)
-                                   :self (list :count (read stream nil nil)
-                                               :percent (read stream nil nil))
-                                   :total (list :count (read stream nil nil)
-                                                :percent (read stream nil nil))
-                                   :cumul (list :count (read stream nil nil)
-                                                :percent (read stream nil nil))
-                                   :function (progn (read stream nil nil) ;; skip calls because don't know whether to call / or truncate
-                                                    (format nil "~A" (read stream nil nil)))))
+                             (list :nr (read-next stream)
+                                   :self (list :count (read-next stream)
+                                               :percent (read-next stream))
+                                   :total (list :count (read-next stream)
+                                                :percent (read-next stream))
+                                   :cumul (list :count (read-next stream)
+                                                :percent (read-next stream))
+                                   :function (progn (read-next stream) ;; skip calls because don't know whether to call / or truncate
+                                                    (format nil "~A" (read-next stream)))))
                        (close stream))))))
 
 
@@ -171,7 +176,12 @@
 
 (defun parse-dprofiler-output (profiler-text)
   "PROFILER-TEXT is the string printed by sb-sprof:report"
-  (flet ((dashes (str)
+  (flet ((read-next (stream)
+           (handler-case (read stream nil nil)
+             (error (e)
+               (error "Error ~S encountered while reading the string profiler-text=~S"
+                      e profiler-text))))
+         (dashes (str)
            (every (lambda (c)
                     (char= c #\-)) str)))
     (let* ((lines-str profiler-text)
@@ -218,21 +228,21 @@
                             (remove #\| (remove #\,  line)
                                     :count 5))
              :collect (prog1 (clean-dprofiling-plist
-                              (list :seconds (read stream nil nil)
-                                    :gc      (read stream nil nil)
-                                    :cons    (read stream nil nil)
-                                    :calls   (read stream nil nil)
-                                    :sec/call (read stream nil nil)
-                                    :name    (format nil "~A" (read stream nil nil))))
+                              (list :seconds (read-next stream)
+                                    :gc      (read-next stream)
+                                    :cons    (read-next stream)
+                                    :calls   (read-next stream)
+                                    :sec/call (read-next stream)
+                                    :name    (format nil "~A" (read-next stream))))
                         (close stream)))
        ;; value-1
        (let ((stream (make-string-input-stream (remove #\| (remove #\,  total-line-str)
                                                        :count 5))))
          (prog1
-             (list :seconds (read stream nil nil)
-                   :gc (read stream nil nil)
-                   :consed (read stream nil nil)
-                   :calls  (read stream nil nil))
+             (list :seconds (read-next stream)
+                   :gc (read-next stream)
+                   :consed (read-next stream)
+                   :calls  (read-next stream))
            (close stream)))))))
 
 (defun call-with-dprofiling (thunk packages consume-prof consume-n &key (time-thresh 0.1))
