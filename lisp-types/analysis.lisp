@@ -912,7 +912,7 @@ than as keywords."
                    :error *error-output*
                    :if-output-exists :supersede))))
 
-(defun integral (xys)
+(defun integral (xys &key logx)
   "given a list of xy pairs (car cadr) calculate the area under the curve formed by the trapizoids.
 the list of xys need not be already ordered."
   (let ((acc 0.0)
@@ -923,10 +923,11 @@ the list of xys need not be already ordered."
                                                (< x1 x2)))))))
     (mapl (lambda (xys-tail)
             (destructuring-bind ((x1 y1) &optional ((x2 y2) '(nil nil)) &rest tail) xys-tail
-              (declare (ignore x1 x2))
               (when tail
                 ;; increment by trapizoid area
-                (incf acc (* 1.0 ;;(- x2 x1)
+                (incf acc (* (if logx
+                                 (log (/ x2 x1) 10)
+                                 (- x2 x1))
                              (/ (+ y2 y1) 2))))))
           sorted)
     (when (minusp acc)
@@ -999,28 +1000,6 @@ the list of xys need not be already ordered."
 
 
 ;; (reduce (lambda (string num) (format nil "~D~S" num string)) '(1 2 3) :initial-value "")
-
-
-(defun smoothen-2 (xys)
-  "takes a list of (x y) pairs and returns a new list of (x y) pairs with some of the noise filtered out.
-The smoothening method is simply a weighted averages of the 2 closest neighbors below and the 2 closest neighbors above."
-  (let* ((weights '(1 2 5 2 1))
-         (weight-sum (apply #'+ weights))
-         (num-weights (length weights))
-         (mid-index (truncate num-weights 2))
-         (data (list nil nil)))
-    (dotimes (i mid-index)
-      (tconc data (nth i xys)))
-    (while (nthcdr num-weights xys)
-      (tconc data (list (car (nth mid-index xys))
-                        (/ (float (reduce #'+ (mapcar (lambda (weight xy)
-                                                        (* weight (cadr xy))) weights xys))) weight-sum)))
-      (pop xys))
-    (pop xys)
-    (pop xys)
-    (dotimes (i mid-index)
-      (tconc data (nth i xys)))
-    (car data)))
 
 
 (defun smoothen (xys)
@@ -1328,7 +1307,8 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
                   nil hilite-min include-decompose :smooth create-png-p)
 
   (when profile
-    (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p))
+    (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p :smooth nil)
+    (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p :smooth t))
 
   (when normalize
     (create-gnuplot sorted-name gnuplot-normalized-name png-normalized-name
@@ -1340,14 +1320,15 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
   (print-dat dat-name include-decompose))
 
 (defun create-profile-scatter-plot (sexp-name destination-dir prefix file-name create-png-p
-                                    &key (threshold 0.15))
+                                    &key smooth (threshold 0.15))
   (let ((sexp (with-open-file (stream sexp-name :direction :input)
                 (user-read stream nil nil))))
     (destructuring-bind (&key summary data &allow-other-keys) sexp
       (dolist (data-plist data)
         (destructuring-bind (&key decompose profile-plists &allow-other-keys) data-plist
           (let ((gnu-name (insert-suffix (make-output-file-name :gnuscatter-name destination-dir prefix file-name)
-                                         (concatenate 'string "-" decompose))))
+                                         (concatenate 'string "-" decompose
+                                                      (if smooth "-smooth" "")))))
             (with-open-file (gnu gnu-name
                                  :direction :output
                                  :if-exists :supersede
@@ -1362,6 +1343,7 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
               (format gnu "set title ~S~%" (format nil "~A ~A" summary decompose))
               (let ((hash (make-hash-table :test #'equal))
                     top-names)
+                (declare (notinline sort))
                 (dolist (profile-plist profile-plists)
                   (destructuring-bind (&key dprofile-total dprof &allow-other-keys) profile-plist
                     (dolist (dprof-plist (subseq dprof 0 1))
@@ -1370,6 +1352,7 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
                           (let ((y (/ seconds dprofile-total)))
                             (when (> y threshold)
                               (pushnew name top-names :test #'string=))))))))
+
                 (dolist (profile-plist profile-plists)
                   (destructuring-bind (&key n-dtimes dprofile-total dprof &allow-other-keys) profile-plist
                     (dolist (dprof-plist dprof)
@@ -1379,30 +1362,33 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
                           (let ((x (/ dprofile-total n-dtimes))
                                 (y (/ seconds dprofile-total)))
                             (push (list x y) (gethash name hash nil))))))))
+                (when (< 6 (length top-names))
+                  (setf top-names (subseq (sort top-names #'> :key (lambda (name)
+                                                                     (unless (gethash name hash nil)
+                                                                       (format t "~A has no xy points~%" name))
+                                                                     (integral (gethash name hash nil) :logx t))) 0 5)))
                 (when top-names
-                  (format gnu "plot "))
-                (let ((function-names (loop for key being the hash-keys of hash
-                                            collect key))
-                      (header (make-string-output-stream))
-                      (footer (make-string-output-stream)))
-                  (flet ((plot (function-name)
-                           (declare (notinline sort) (type string function-name))
-                           (format header "~S using 1:2" "-")
-                           (if (cdr (gethash function-name hash))
-                               (format header " with linespoints")
-                               (format header " with points"))
-                           (format header " title ~S" function-name)
-                           (format footer "# ~S~%" function-name)
-                           (dolist (xy (sort (gethash function-name hash) #'< :key #'car))
-                             (format footer "~A ~A~%" (car xy) (* 100 (cadr xy))))
-                           (format footer "end~%")))
-                    (when function-names
-                      (plot (car function-names)))
-                    (dolist (function-name (cdr function-names))
-                      (format header ",\\~%    ")
-                      (plot function-name)))
-                  (format gnu "~A~%" (get-output-stream-string header))
-                  (format gnu "~A" (get-output-stream-string footer)))))
+                  (format gnu "plot ")
+                  (let ((header (make-string-output-stream))
+                        (footer (make-string-output-stream)))
+                    (flet ((plot (function-name)
+                             (declare (notinline sort) (type string function-name))
+                             (format header "~S using 1:2" "-")
+                             (if (cdr (gethash function-name hash))
+                                 (format header " with linespoints")
+                                 (format header " with points"))
+                             (format header " title ~S" function-name)
+                             (format footer "# ~S~%" function-name)
+                             (let ((xys (sort (gethash function-name hash) #'< :key #'car)))
+                               (dolist (xy (if smooth (smoothen xys) xys))
+                                 (format footer "~A ~A~%" (car xy) (* 100 (cadr xy)))))
+                             (format footer "end~%")))
+                      (plot (car top-names))
+                      (dolist (function-name (cdr top-names))
+                        (format header ",\\~%    ")
+                        (plot function-name)))
+                    (format gnu "~A~%" (get-output-stream-string header))
+                    (format gnu "~A" (get-output-stream-string footer))))))
             (format t "   ~A]~%" gnu-name)
             (when create-png-p
               (run-program "gnuplot" (list gnu-name)

@@ -71,18 +71,52 @@
 
             ))))
 
-(defmacro def-cache-fun ((fun-name with-name &key (hash (gensym "hash")) (access-count (gensym "count"))) lam-list doc-string  &body body)
-  "Define two functions named by FUN-NAME and WITH-NAME.  The lambda list of the 
+(defmacro def-cache-fun ((fun-name with-name
+                          &key (hash (gensym "hash"))
+                            (access-count (gensym "count"))
+                            (caching-call (intern (concatenate 'string (symbol-name fun-name) "-CACHING-CALL")
+                                                  (symbol-package fun-name))))
+                         lam-list doc-string  &body body)
+  "Define three functions named by FUN-NAME and WITH-NAME a derived name.  The lambda list of the 
  first function is given by LAM-LIST.  The semantics of the first function will be
  to normally simply return the value of BODY.  However, if the call site to the
  first function is within the dymamic extent of the second function, the
  the return value will be cached, and the arguments are found in the cache
  BODY is not evaluated but simply the cached value of the return value will be
  returned."
-  (declare (type string doc-string))
+  (declare (type string doc-string)
+           (type symbol fun-name with-name access-count))
   `(progn
      (defvar ,hash nil)
      (defvar ,access-count 0)
+     (defun ,caching-call (thunk key hash fun-name access increment)
+       "Helper function used by the expansion of DEF-CACHE-FUN.  This function
+ manages the caching and cache search of the function defined by DEF-CACHE-FUN."
+       (declare (type (function () t) thunk)
+                (type (function () unsigned-byte) access increment)
+                (type symbol fun-name)
+                (type list key)
+                (type (or null hash-table) hash))
+       (cond
+         ((null hash)
+          (funcall thunk))
+         (t
+          (when (and *verbose-caching*
+                     (= 0 (mod (funcall increment) *caching-thresh*)))
+            (format t "~D ~A ~A~%" (funcall access) fun-name hash))
+          (apply #'values
+                 ;; (multiple-value-bind (value foundp) (gethash key hash)
+                 ;;   (cond
+                 ;;     (foundp value)
+                 ;;     (t
+                 ;;      (setf (gethash key hash) (multiple-value-list (funcall thunk))))))
+
+                 ;; trying this optimization to see if it is faster.
+                 (let ((value (gethash key hash *secret-default-value*)))
+                   (if (eq value *secret-default-value*)
+                       (setf (gethash key hash) (multiple-value-list (funcall thunk)))
+                       value))
+                 ))))
      (defun ,with-name (thunk)
        (declare (type (function () t) thunk))
        (if (null ,hash)
@@ -96,7 +130,7 @@
      (defun ,fun-name (&rest arg)
        ,doc-string
        (destructuring-bind ,lam-list arg
-         (caching-call (lambda () ,@body)
+         (,caching-call (lambda () ,@body)
                        arg
                        ,hash
                        ',fun-name
