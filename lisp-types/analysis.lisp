@@ -1674,7 +1674,8 @@ sleeping before the code finishes evaluating."
           for sample = (/ 1 (length bucket-reporters)) then (+ sample (/ 1 (length bucket-reporters)))
           do (funcall bucket-reporter multiplier sample options :create-png-p create-png-p :destination-dir destination-dir))))
 
-(defun parameterization-report (&key (re-run t) (multiplier 1) (create-png-p t) (destination-dir *destination-dir*))
+(defun parameterization-report (&key (re-run t) (multiplier 1) (create-png-p t) (destination-dir *destination-dir*)
+                                  (bucket-reporters *bucket-reporters*))
   (big-test-report :re-run re-run
                    :prefix "param-"
                    :normalize 'decompose-types-bdd-graph
@@ -1682,10 +1683,12 @@ sleeping before the code finishes evaluating."
                    :destination-dir destination-dir
                    :multiplier multiplier
                    :create-png-p create-png-p
+                   :bucket-reporters bucket-reporters
                    :decomposition-functions (cons 'decompose-types-bdd-graph
                                                   *decompose-fun-parameterized-names*)))
 
-(defun best-2-report (&key (re-run t) (multiplier 1.8) (create-png-p t) (destination-dir *destination-dir*))
+(defun best-2-report (&key (re-run t) (multiplier 1.8) (create-png-p t) (destination-dir *destination-dir*)
+                        (bucket-reporters *bucket-reporters*))
   (big-test-report :re-run re-run
                    :prefix "best-2-" ;; should change to best-4-
                    :multiplier multiplier
@@ -1695,6 +1698,7 @@ sleeping before the code finishes evaluating."
                    :hilite-min nil
                    :destination-dir destination-dir
                    :create-png-p create-png-p
+                   :bucket-reporters bucket-reporters
                    :decomposition-functions '(decompose-types-bdd-graph-strong
                                               decompose-types-bdd-graph-weak
                                               decompose-types-bdd-graph-weak-dynamic
