@@ -82,7 +82,10 @@ than as keywords."
                      cell-error                        nil                 standard-method            
                      character                         null                standard-object            
                      class                             number              storage-condition          
-                     compiled-function                 package             stream                     
+                     ;;compiled-function  ;; ignoring compiled-function because sbcl has lots
+                     ;;  of problems with this type.  E.g., (subtypep 'compiled-function 'error) ==> nil,nil
+                     ;;  but it should return nil,t
+                     package             stream                     
                      complex                           package-error       stream-error               
                      concatenated-stream               parse-error         string                     
                      condition                         pathname            string-stream              
@@ -551,7 +554,9 @@ than as keywords."
 
 
 (defun get-all-types ()
-  (set-difference (valid-subtypes t) '(t nil class built-in-class )))
+  (set-difference (valid-subtypes t) '(t nil class built-in-class
+                                       compiled-function ;; sbcl has problems with compiled-function, so lets ignore this one
+                                       )))
 
 (defun find-decomposition-function-descriptor (name)
   (typecase name
@@ -1627,7 +1632,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
     
 (add-bucket-reporter :scale 22
                      :tag "Subtypes of T"
-                     :types (valid-subtypes t)
+                     :types (remove 'compiled-function (valid-subtypes t))
                      :file-name "subtypes-of-t")
 
 (defun call-with-caffeinate (thunk)
