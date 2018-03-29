@@ -1708,7 +1708,7 @@ sleeping before the code finishes evaluating."
                                               decompose-types-rtev2
                                               decompose-types-graph)))
 
-(defun bdd-report (&key (re-run t) (multiplier 2.5) (create-png-p t) (destination-dir *destination-dir*))
+(defun bdd-report (&key (re-run t) (multiplier 2.5) (create-png-p t) (bucket-reporters *bucket-reporters*) (destination-dir *destination-dir*))
   (big-test-report :re-run re-run
                    :prefix "bdd-ws-" ;; should change to best-4-
                    :multiplier multiplier
@@ -1718,6 +1718,7 @@ sleeping before the code finishes evaluating."
                    :hilite-min nil
                    :destination-dir destination-dir
                    :create-png-p create-png-p
+                   :bucket-reporters bucket-reporters
                    :decomposition-functions '(decompose-types-bdd-graph-strong
                                               decompose-types-bdd-graph-weak
                                               decompose-types-bdd-graph-weak-dynamic
@@ -1742,17 +1743,34 @@ sleeping before the code finishes evaluating."
                    :create-png-p create-png-p
                    :decomposition-functions decomposition-functions))
 
-
 (defun rebuild-scatter-plots ()
-  (dotimes (decompose-function-index (length *decomposition-functions*))
-    (dotimes (bucket-index (length *bucket-reporters*))
+  (dotimes (bucket-index (length *bucket-reporters*))
+    (let ((*bucket-reporters* (list (nth bucket-index *bucket-reporters*))))
       (big-test-report :re-run nil
-                       :profile t
-                       :decomposition-functions (list (nth decompose-function-index *decomposition-functions*))
-                       :bucket-reporters (list (nth bucket-index *bucket-reporters*))
                        :create-png-p t
-                       :destination-dir "/Users/jnewton/analysis"
-                       :prefix (format nil "bdd-profile-~D-~D-" decompose-function-index bucket-index)))))
+                       :bucket-reporters *bucket-reporters*
+                       :prefix "big-"
+                       :destination-dir "/Users/jnewton/analysis")
+      (best-2-report :re-run nil
+                     :create-png-p t
+                     :bucket-reporters *bucket-reporters*
+                     :destination-dir  "/Users/jnewton/analysis")
+      (parameterization-report :re-run nil
+                               :create-png-p t
+                               :bucket-reporters *bucket-reporters*
+                               :destination-dir  "/Users/jnewton/analysis")
+      (bdd-report :re-run nil
+                  :create-png-p nil
+                  :bucket-reporters *bucket-reporters*
+                  :destination-dir  "/Users/jnewton/analysis")
+      (dotimes (decompose-function-index (length *decomposition-functions*))
+        (big-test-report :re-run nil
+                         :profile t
+                         :decomposition-functions (list (nth decompose-function-index *decomposition-functions*))
+                         :bucket-reporters *bucket-reporters*
+                         :create-png-p t
+                         :destination-dir "/Users/jnewton/analysis"
+                         :prefix (format nil "bdd-profile-~D-~D-" decompose-function-index bucket-index))))))
 
 
 ;; (bdd-report-profile :num-tries 1 :multiplier 0.2 :create-png-p nil)
