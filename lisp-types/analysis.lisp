@@ -73,7 +73,8 @@ than as keywords."
                      array                             generic-function    simple-error               
                      atom                              hash-table          simple-string              
                      base-char                         integer             simple-type-error          
-                     base-string                       keyword             simple-vector              
+                     base-string                       ;;keyword ;; sbcl has problems with keyword so let's remove it from this list
+                     simple-vector              
                      bignum                            list                simple-warning             
                      bit                               logical-pathname    single-float               
                      bit-vector                        long-float          standard-char              
@@ -555,7 +556,7 @@ than as keywords."
 
 (defun get-all-types ()
   (set-difference (valid-subtypes t) '(t nil class built-in-class
-                                       compiled-function ;; sbcl has problems with compiled-function, so lets ignore this one
+                                       keyword compiled-function ;; sbcl has problems with keyword and compiled-function, so lets ignore these
                                        )))
 
 (defun find-decomposition-function-descriptor (name)
@@ -1632,7 +1633,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
     
 (add-bucket-reporter :scale 22
                      :tag "Subtypes of T"
-                     :types (remove 'compiled-function (valid-subtypes t))
+                     :types (set-difference (valid-subtypes t) '(keyword compiled-function) :test #'eq)
                      :file-name "subtypes-of-t")
 
 (defun call-with-caffeinate (thunk)
