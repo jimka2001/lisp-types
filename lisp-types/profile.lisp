@@ -154,7 +154,8 @@
                   val)
                  (t
                   (recur (* 2 n-times)))))))
-    (recur 1)))
+    (let ((*debug-io* *standard-output*))
+      (recur 1))))
  
 (defun skip-char (stream c)
   (unless (char= c (read-char stream nil nil))
@@ -279,7 +280,8 @@
                  (t
                   ;; if no, then try again by running the thunk twice as many times as before.
                   (recur (* 2 n-times)))))))
-    (recur 1)))
+    (let ((*debug-io* *standard-output*))
+      (recur 1))))
 
 
 (defun test-profiler ()
