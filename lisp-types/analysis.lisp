@@ -1798,7 +1798,7 @@ is replaced with replacement."
 
 (defun qstat-f ()
   (let ((pbs-jobid (sb-posix:getenv "PBS_JOBID"))
-        (delimeter (format nil "~%~T")))
+        (delimeter (format nil "~%~a" '#\Tab )))
     (sb-ext:run-program "qstat" (list "-f" pbs-jobid)
                         :search t
                         :output t)
