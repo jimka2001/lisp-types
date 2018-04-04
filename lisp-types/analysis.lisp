@@ -1779,4 +1779,41 @@ sleeping before the code finishes evaluating."
                          :prefix (format nil "bdd-profile-~D-~D-" decompose-function-index bucket-index))))))
 
 
+
+
+(defun replace-all (string part replacement &key (test #'char=))
+  "Returns a new string in which all the occurences of the part 
+is replaced with replacement."
+  (with-output-to-string (out)
+    (loop with part-length = (length part)
+          for old-pos = 0 then (+ pos part-length)
+          for pos = (search part string
+                            :start2 old-pos
+                            :test test)
+          do (write-string string out
+                           :start old-pos
+                           :end (or pos (length string)))
+          when pos do (write-string replacement out)
+            while pos)))
+
+(defun qstat-f ()
+  (let ((pbs-jobid (sb-posix:getenv "PBS_JOBID"))
+        (delimeter (format nil "~%~T")))
+    (sb-ext:run-program "qstat" (list "-f" pbs-jobid)
+                        :search t
+                        :output t)
+    (with-open-file (stream "test-list.status"
+                            :direction :output
+                            :if-exists :supersede
+                            :if-does-not-exist :create)
+      (let ((qstat-out (with-output-to-string (str)
+                         (sb-ext:run-program "qstat" (list "-f" pbs-jobid)
+                                             :search t
+                                             :output str))))
+        (write-line (replace-all qstat-out delimeter "")
+                    stream)))))
+
+
+
+
 ;; (bdd-report-profile :num-tries 1 :multiplier 0.2 :create-png-p nil)
