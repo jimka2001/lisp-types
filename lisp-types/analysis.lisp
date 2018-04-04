@@ -1802,16 +1802,30 @@ is replaced with replacement."
     (sb-ext:run-program "qstat" (list "-f" pbs-jobid)
                         :search t
                         :output t)
-    (with-open-file (stream "test-list.status"
-                            :direction :output
-                            :if-exists :supersede
-                            :if-does-not-exist :create)
-      (let ((qstat-out (with-output-to-string (str)
-                         (sb-ext:run-program "qstat" (list "-f" pbs-jobid)
-                                             :search t
-                                             :output str))))
-        (write-line (replace-all qstat-out delimeter "")
-                    stream)))))
+    (let* ((qstat-out (replace-all (with-output-to-string (str)
+                                    (sb-ext:run-program "qstat" (list "-f" pbs-jobid)
+                                                        :search t
+                                                        :output str))
+                                  delimeter ""))
+           (pos-host (search "Output_Path = " qstat-out))
+           (pos-path (search ":" qstat-out :start1 pos-host))
+           (pos-eol  (search (format nil "~%") qstat-out :start1 pos-host))
+           ;; output-path = "/path/to/file.oXXXXXX"
+           (output-path (subseq qstat-out (1+ pos-path) pos-eol))
+           (pos-extension (1+ (search "." output-path :from-end t)))
+           ;; extension = "XXXXXX" ; excluding the ".o"
+           (extension (subseq output-path (1+ pos-extension)))
+           ;; leading = "/path/to/file." ;; including the "."
+           (leading   (subseq output-path 0 pos-extension))
+           ;; status-filename = "/path/to/file.sXXXXXX"
+           (status-filename (concatenate 'string leading "s" extension)))
+      
+      (with-open-file (stream status-filename
+                              :direction :output
+                              :if-exists :supersede
+                              :if-does-not-exist :create)
+        (format stream "~%")
+        (write-line qstat-out stream)))))
 
 
 
