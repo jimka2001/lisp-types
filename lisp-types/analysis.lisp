@@ -1810,7 +1810,7 @@ is replaced with replacement."
            (pos-host (progn (format t "qstat-out=~S~%" qstat-out)
                             (search "Output_Path = " qstat-out)))
            (pos-path (progn (format t "pos-host=~D~%" pos-host)
-                            (search ":" qstat-out :start1 pos-host)))
+                            (search ":" qstat-out :start2 pos-host)))
            (pos-eol  (progn (format t "pos-path=~D~%" pos-path)
                             (search (format nil "~%") qstat-out :start1 pos-host)))
            ;; output-path = "/path/to/file.oXXXXXX"
