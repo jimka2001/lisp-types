@@ -755,7 +755,7 @@ than as keywords."
        (dolist (next (cdr data))
          (format str "~A~A" delimiter next))))))
 
-(defun create-gnuplot (sorted-file gnuplot-file png-filename normalize hilite-min include-decompose key create-png-p)
+(defun create-gnuplot (sorted-file gnuplot-file png-filename normalize hilite-min include-decompose key create-png-p comment)
   (declare (type (member :smooth :xys) key))
   (let ((min-num-points 1)
         (content (with-open-file (stream sorted-file :direction :input)
@@ -792,6 +792,7 @@ than as keywords."
                   ;; this is one of the 45 curves of the parameterized functions
                   (setf min-curve `(:decompose "LOCAL-MINIMUM" ,@min-curve))))
               (format stream "# summary ~A~%" summary)
+              (format stream "# ~A~%" comment)
               (format stream "set term png~%")
               (format stream "set key below~%") ;; enable legend
               (format stream "set title ~S~%" summary)
@@ -1307,26 +1308,29 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
       (format t "writing to ~A~%" sexp-name)
       (print-sexp stream summary limit)))
   (sort-results sexp-name sorted-name)
-  (create-gnuplot sorted-name gnuplot-name png-name
-                  nil hilite-min include-decompose :xys create-png-p)
-  (create-gnuplot sorted-name (insert-suffix gnuplot-name "-smooth") (insert-suffix png-name "-smooth")
-                  nil hilite-min include-decompose :smooth create-png-p)
+
+  (unless profile
+    (create-gnuplot sorted-name gnuplot-name png-name
+                    nil hilite-min include-decompose :xys create-png-p "1314")
+    (create-gnuplot sorted-name (insert-suffix gnuplot-name "-smooth") (insert-suffix png-name "-smooth")
+                    nil hilite-min include-decompose :smooth create-png-p "1316")
+    (when normalize
+      (create-gnuplot sorted-name gnuplot-normalized-name png-normalized-name
+                      normalize hilite-min include-decompose :xys create-png-p "1319")
+      (create-gnuplot sorted-name (insert-suffix gnuplot-normalized-name "-smooth") (insert-suffix png-normalized-name "-smooth")
+                      normalize hilite-min include-decompose :smooth create-png-p "1321")))
 
   (when profile
-    (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p :smooth nil)
-    (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p :smooth t))
+    (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p :smooth nil :comment "1324")
+    (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p :smooth t   :comment "1325"))
 
-  (when normalize
-    (create-gnuplot sorted-name gnuplot-normalized-name png-normalized-name
-                    normalize hilite-min include-decompose :xys create-png-p)
-    (create-gnuplot sorted-name (insert-suffix gnuplot-normalized-name "-smooth") (insert-suffix png-normalized-name "-smooth")
-                    normalize hilite-min include-decompose :smooth create-png-p))
+
   (print-ltxdat ltxdat-name           sorted-name include-decompose t nil)
   (print-ltxdat ltxdat-no-legend-name sorted-name include-decompose nil tag)
   (print-dat dat-name include-decompose))
 
 (defun create-profile-scatter-plot (sexp-name destination-dir prefix file-name create-png-p
-                                    &key smooth (threshold 0.15))
+                                    &key smooth (threshold 0.15) (comment ""))
   (let ((sexp (with-open-file (stream sexp-name :direction :input)
                 (user-read stream nil nil))))
     (destructuring-bind (&key summary data &allow-other-keys) sexp
@@ -1340,6 +1344,7 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
                                  :if-exists :supersede
                                  :if-does-not-exist :create)
               (format t "[writing to ~A~%" gnu-name)
+              (format gnu "# ~A~%" comment)
               (format gnu "# scatter plot for ~A ~S~%" summary decompose)
               (format gnu "set term png~%")
               (format gnu "set logscale x~%")
