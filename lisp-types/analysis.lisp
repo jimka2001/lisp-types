@@ -1807,14 +1807,20 @@ is replaced with replacement."
                                                         :search t
                                                         :output str))
                                   delimeter ""))
-           (pos-host (search "Output_Path = " qstat-out))
-           (pos-path (search ":" qstat-out :start1 pos-host))
-           (pos-eol  (search (format nil "~%") qstat-out :start1 pos-host))
+           (pos-host (progn (format t "qstat-out=~S~%" qstat-out)
+                            (search "Output_Path = " qstat-out)))
+           (pos-path (progn (format t "pos-host=~D~%" pos-host)
+                            (search ":" qstat-out :start1 pos-host)))
+           (pos-eol  (progn (format t "pos-path=~D~%" pos-path)
+                            (search (format nil "~%") qstat-out :start1 pos-host)))
            ;; output-path = "/path/to/file.oXXXXXX"
-           (output-path (subseq qstat-out (1+ pos-path) pos-eol))
-           (pos-extension (1+ (search "." output-path :from-end t)))
+           (output-path (progn (format t "pos-eol=~D~%" pos-eol)
+                               (subseq qstat-out (1+ pos-path) pos-eol)))
+           (pos-extension (progn (format t "output-path=~S~%" output-path)
+                                 (1+ (search "." output-path :from-end t))))
            ;; extension = "XXXXXX" ; excluding the ".o"
-           (extension (subseq output-path (1+ pos-extension)))
+           (extension (progn (format t "pos-extension=~D~%" pos-extension)
+                             (subseq output-path (1+ pos-extension))))
            ;; leading = "/path/to/file." ;; including the "."
            (leading   (subseq output-path 0 pos-extension))
            ;; status-filename = "/path/to/file.sXXXXXX"
