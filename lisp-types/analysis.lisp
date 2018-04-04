@@ -1797,30 +1797,29 @@ is replaced with replacement."
             while pos)))
 
 (defun qstat-f ()
+  "call qstat -f and write the output to a file with the .sXXXX extension
+similar to where current Output_Path is indicating."
   (let ((pbs-jobid (sb-posix:getenv "PBS_JOBID"))
         (delimeter (format nil "~%~a" '#\Tab )))
-    (sb-ext:run-program "qstat" (list "-f" pbs-jobid)
-                        :search t
-                        :output t)
+    ;; call qstat -f and get the output;
+    ;; qstat -f wraps long lines, so we first have to unwrap them by finding
+    ;; "\n\t" and replacing with ""
     (let* ((qstat-out (replace-all (with-output-to-string (str)
                                     (sb-ext:run-program "qstat" (list "-f" pbs-jobid)
                                                         :search t
                                                         :output str))
-                                  delimeter ""))
-           (pos-host (progn (format t "qstat-out=~S~%" qstat-out)
-                            (search "Output_Path = " qstat-out)))
-           (pos-path (progn (format t "pos-host=~D~%" pos-host)
-                            (search ":" qstat-out :start2 pos-host)))
-           (pos-eol  (progn (format t "pos-path=~D~%" pos-path)
-                            (search (format nil "~%") qstat-out :start2 pos-host)))
+                                   delimeter ""))
+           ;; we want to write into file.sXXXXX, so we have to
+           ;; find the Output_Path = /path/to/file.oXXXXXX and parse that
+           ;; to get the desired name of the new status output file.
+           (pos-host (search "Output_Path = " qstat-out))
+           (pos-path (search ":" qstat-out :start2 pos-host))
+           (pos-eol  (search (format nil "~%") qstat-out :start2 pos-host))
            ;; output-path = "/path/to/file.oXXXXXX"
-           (output-path (progn (format t "pos-eol=~D~%" pos-eol)
-                               (subseq qstat-out (1+ pos-path) pos-eol)))
-           (pos-extension (progn (format t "output-path=~S~%" output-path)
-                                 (1+ (search "." output-path :from-end t))))
+           (output-path (subseq qstat-out (1+ pos-path) pos-eol))
+           (pos-extension (1+ (search "." output-path :from-end t)))
            ;; extension = "XXXXXX" ; excluding the ".o"
-           (extension (progn (format t "pos-extension=~D~%" pos-extension)
-                             (subseq output-path (1+ pos-extension))))
+           (extension (subseq output-path (1+ pos-extension)))
            ;; leading = "/path/to/file." ;; including the "."
            (leading   (subseq output-path 0 pos-extension))
            ;; status-filename = "/path/to/file.sXXXXXX"
@@ -1832,8 +1831,5 @@ is replaced with replacement."
                               :if-does-not-exist :create)
         (format stream "~%")
         (write-line qstat-out stream)))))
-
-
-
 
 ;; (bdd-report-profile :num-tries 1 :multiplier 0.2 :create-png-p nil)
