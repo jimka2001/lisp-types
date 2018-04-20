@@ -71,11 +71,6 @@
                                          :key #'car))))))
     (values (caar a-list) a-list)))
 
-(assert (= 1 (median-a-list '((1 3)))))
-(assert (= 1 (median-a-list '((0 1) (1 3) (2 1)))))
-(assert (= 1 (median-a-list '((0 2) (1 3) (2 1)))))
-(assert (= 1/2 (median-a-list '((0 2) (1 2)))))
-
 (defun make-announcement-timer (min max interval announce)
   (declare (type (function (integer number) t))
            (type integer min max)

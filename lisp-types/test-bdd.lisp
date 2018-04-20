@@ -323,3 +323,10 @@
   (ensure-directories-exist "/tmp/jnewton/graph/bdd-distribution.ltxdat")
   (test-with-z1-z6 "/tmp/jnewton/graph" 10 ;; 4000
                    ))
+
+(define-test test/median
+  (assert-true (= 1 (median-a-list '((1 3)))))
+  (assert-true (= 1 (median-a-list '((0 1) (1 3) (2 1)))))
+  (assert-true (= 1 (median-a-list '((0 2) (1 3) (2 1)))))
+  (assert-true (= 1/2 (median-a-list '((0 2) (1 2)))))
+  )
