@@ -23,6 +23,32 @@
 
 
 (defun int-to-boolean-expression (n vars)
+  "Returns a Boolean expression which is a Boolean combination of the given variable names.
+VARS is a list of symbols indicating Boolean variable names
+N is an integer: 0 <= N < 2^2^(length vars)
+
+Denote M = (length VARS)
+The truth table for a Boolean function of M has 2^M rows
+   e.g., a 3 variable truth table has 8 rows.
+If we want to generate such a truth table, we must supply 8 bits, i.e., an integer between
+   0 and 255 (inclusive), i.e., 0 <= N < 2^2^M.
+This function, INT-TO-BOOLEAN-EXPRESSION, iterates from 0 to 2^M - 1, and for each
+iteration generates a min-term, by calling local function GEN-MIN-TERM.
+E.g., (INT-TO-BOOLEAN-EXPRESSION #b00010011 '(a b c))
+--> (OR (AND (NOT A) (NOT B) (NOT C)) 
+        (AND A       (NOT B) (NOT C))
+        (AND (NOT A) (NOT B) C))
+Why?  Because the truth table of this function is:
+ CBA|
+ 000|1
+ 001|1
+ 010|0
+ 011|0
+ 100|1
+ 101|0
+ 110|0
+ 111|1
+"
   (let ((num-vars (length vars)))
     (let ((max-n (expt 2 (expt 2 num-vars))))
       (assert (< n max-n) (n vars)
@@ -33,17 +59,18 @@
              ;; and generate an (AND ...) expression
              ;; the arguments of AND are the symbols in order in VAR
              ;; either as is or wrapped in (NOT ...)
-             ;; e.g. if VAR='(a b), then 2 with bitmask 10 -> (and A (not B))
-             ;; bits from right to left correspond to variables from left to rith
+             ;; e.g. if VARS='(a b), then 2 with bitmask 10 -> (and A (not B))
+             ;; bits from right to left correspond to variables from left to right
              (prog1
                  (when (oddp n)
                    (list (cons 'and (mapcar (lambda (var)
                                               (prog1 (if (oddp i)
                                                          var
                                                          `(not ,var))
-                                                (setf i (ash i -1)))) vars))))
+                                                (setf i (ash i -1))))
+                                            vars))))
                (setf n (ash n -1)))))
-      (cons 'or (loop for i from 0 to (expt 2 num-vars)
+      (cons 'or (loop for i from 0 below (expt 2 num-vars)
                       nconc (gen-min-term i))))))
 
 (defun random-boolean-combination (vars)
