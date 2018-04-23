@@ -370,7 +370,7 @@ than as keywords."
                            (1+ (funcall get-n-stimes)))))
         (when profile
           (call-with-dprofiling thunk
-                                '("LISP-TYPES" "LISP-TYPES.TEST" subtypep)
+                                '("LISP-TYPES" "LISP-TYPES.TEST" subtypep sb-kernel:specifier-type)
                                 set-dprofile-plists
                                 set-n-dtimes))
         (setf result
