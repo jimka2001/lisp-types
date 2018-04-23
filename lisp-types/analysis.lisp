@@ -370,7 +370,7 @@ than as keywords."
                            (1+ (funcall get-n-stimes)))))
         (when profile
           (call-with-dprofiling thunk
-                                '("LISP-TYPES" "LISP-TYPES.TEST" subtypep)
+                                '("LISP-TYPES" "LISP-TYPES.TEST" subtypep sb-kernel:specifier-type)
                                 set-dprofile-plists
                                 set-n-dtimes))
         (setf result
@@ -1511,8 +1511,6 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                                                'null))))
                         :test #'equal))
 
-
-
 (defun analysis (file-names)
   (declare #+sbcl (notinline sort))
   (let* ((measures '(:recursive :inner-loop :sort-strategy :do-break-sub :do-break-loop))
@@ -1560,10 +1558,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
               "/Users/jnewton/newton.16.edtchs/src/bdd-graph-subtypes-of-number.sorted"
               "/Users/jnewton/newton.16.edtchs/src/bdd-graph-subtypes-of-t.sorted")))
 
-
-
 (defvar *bucket-reporters* nil)
-
 
 (defun make-bucket-reporter (&key tag scale types file-name)
   (lambda (multiplier sample options &key (create-png-p t) (destination-dir *destination-dir*))
@@ -1754,7 +1749,7 @@ sleeping before the code finishes evaluating."
                    :create-png-p create-png-p
                    :decomposition-functions decomposition-functions))
 
-(defun rebuild-scatter-plots ()
+(defun rebuild-plots ()
   (dotimes (bucket-index (length *bucket-reporters*))
     (let ((*bucket-reporters* (list (nth bucket-index *bucket-reporters*))))
       (big-test-report :re-run nil
@@ -1782,9 +1777,6 @@ sleeping before the code finishes evaluating."
                          :create-png-p t
                          :destination-dir "/Users/jnewton/analysis"
                          :prefix (format nil "bdd-profile-~D-~D-" decompose-function-index bucket-index))))))
-
-
-
 
 (defun replace-all (string part replacement &key (test #'char=))
   "Returns a new string in which all the occurences of the part 
