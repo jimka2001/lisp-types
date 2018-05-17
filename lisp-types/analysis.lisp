@@ -225,7 +225,7 @@ than as keywords."
                           (num-tries 2)
                           (suite-time-out (* 60 10))
                           (randomize nil)
-                          (summary nil)
+                          (summary "")
                           (limit 15)
                           sample
                           (types (choose-randomly (valid-subtypes 'number) limit))
@@ -237,9 +237,10 @@ than as keywords."
                           (create-png-p t)
                           (profile nil)
                           destination-dir
-                          prefix
+                          (prefix "")
                           file-name)
-  (declare (type (or list (and symbol (satisfies symbol-function))) decompose))
+  (declare (type (or list (and symbol (satisfies symbol-function))) decompose)
+           (type string file-name prefix destination-dir))
   (let ((*package* (find-package "KEYWORD"))
         (start-time (get-universal-time))
         (fraction-completion 0)
@@ -764,6 +765,7 @@ than as keywords."
     (with-open-file (stream gnuplot-file :direction :output :if-exists :supersede :if-does-not-exist :create)
       (format t "[writing to ~A~%" gnuplot-file)
       (destructuring-bind (&key summary sorted &allow-other-keys &aux min-curve min-curve-line-style) content
+        (declare (type string summary))
         (if (not sorted)
             (warn "skipping ~S too few points" summary)
             (progn
@@ -1049,6 +1051,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
      ;; (reduce (lambda (num string) (format nil "~D~S" num string)) '(1 2 3) :initial-value "")
      (destructuring-bind (&key summary limit data time-out-count run-count time-out-run-time run-time wall-time unknown known)
          (user-read in nil nil)
+       (declare (type string summary))
        (let (observed-max-time observed-min-time observed-min-prod observed-max-prod)
          (dolist (plist data)
            (mapc (lambda (given calculated time)
@@ -1302,6 +1305,7 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
                        (png-name (make-output-file-name :png-name destination-dir prefix file-name))
                        (gnuplot-normalized-name (make-output-file-name :gnuplot-normalized-name destination-dir prefix file-name))
                        (png-normalized-name (make-output-file-name :png-normalized-name destination-dir prefix file-name)))
+  (declare (type string prefix destination-dir))
   (format t "report ~A~%" summary)
   (when re-run
     (with-open-file (stream sexp-name :direction :output :if-exists :supersede :if-does-not-exist :create)
@@ -1417,6 +1421,7 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
                     &allow-other-keys)
   "TIME-OUT is the number of seconds to allow for one call to a single decompose function.
 SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
+  (declare (type string file-name prefix))
   (when re-run
     (setf *perf-results* nil))
   (let ((type-specifiers (shuffle-list types)))
@@ -1440,6 +1445,8 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                      :file-name file-name)))
 
 (defun make-output-file-name (purpose destination-dir prefix file-name)
+  (declare (type keyword purpose)
+           (type string destination-dir prefix file-name))
   (ensure-directories-exist
    (format nil (ecase purpose
                  (:ltxdat-name
@@ -1561,6 +1568,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
 (defvar *bucket-reporters* nil)
 
 (defun make-bucket-reporter (&key tag scale types file-name)
+  (declare (type string file-name))
   (lambda (multiplier sample options &key (create-png-p t) (destination-dir *destination-dir*))
     (apply #'test-report :limit (* multiplier scale)
                          :tag tag
@@ -1572,6 +1580,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                          options)))
 
 (defun add-bucket-reporter (&key tag scale types file-name)
+  (declare (type string file-name))
   (let ((pair (assoc tag *bucket-reporters* :test #'equal)))
     (setf *bucket-reporters* (remove pair *bucket-reporters*))
     (push (list tag (make-bucket-reporter :tag tag :scale scale :types types :file-name file-name))
@@ -1630,7 +1639,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                      :tag "CL combinations"
                      :types (choose-randomly  *cl-type-combos* 13850)
                      :file-name "cl-combos")
-    
+
 (add-bucket-reporter :scale 22
                      :tag "Subtypes of T"
                      :types (set-difference (valid-subtypes t) '(keyword compiled-function) :test #'eq)
