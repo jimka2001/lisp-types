@@ -219,22 +219,44 @@
 
 (defgeneric bdd-list-to-bdd (head tail))
 
-(defmethod bdd-list-to-bdd ((head (eql 'and)) tail)
-  (reduce #'bdd-and (mapcar #'bdd tail) :initial-value *bdd-true*))
+(defvar *bdd-operation-order* (the (member :divide-and-conquer
+                                           :reduce) :divide-and-conquer ))
+(flet ((bdd-list-to-bdd-helper (len bdds zero op)
+         (labels ((divide-and-conquer (len bdds)
+                    ;; len is the length of the bdds list, this is redunant but prevents re-counting each time
+                    (case len
+                      ((0)
+                       zero)
+                      ((1)
+                       (car bdds))
+                      (t
+                       (let* ((half-length (truncate len 2))
+                              (trailing (nthcdr half-length bdds))
+                              (leading (ldiff bdds trailing)))
+                         (funcall op (divide-and-conquer half-length leading)
+                                  (divide-and-conquer (- len half-length) trailing)))))))
+           (ecase *bdd-operation-order*
+             ((:reduce)
+              (reduce op bdds :initial-value zero))
+             ((:divide-and-conquer)
+              (divide-and-conquer len bdds))))))
 
-(defmethod bdd-list-to-bdd ((head (eql 'or)) tail)
-  (reduce #'bdd-or (mapcar #'bdd tail) :initial-value *bdd-false*))
+  (defmethod bdd-list-to-bdd ((head (eql 'and)) tail)
+    (bdd-list-to-bdd-helper (length tail) (mapcar #'bdd tail) *bdd-true* #'bdd-and))
 
-(defmethod bdd-list-to-bdd ((head (eql 'not)) tail)
-  ;; (assert (null (cdr tail)) ()
-  ;;         "NOT takes exactly one argument: cannot convert ~A to a BDD" expr)
-  (bdd-and-not *bdd-true* (bdd (car tail))))
+  (defmethod bdd-list-to-bdd ((head (eql 'or)) tail)
+    (bdd-list-to-bdd-helper (length tail) (mapcar #'bdd tail) *bdd-false* #'bdd-or)))
 
 (defmethod bdd-list-to-bdd ((head (eql 'and-not)) tail)
   ;; (assert (<= 2 (length tail)) ()
   ;;         "AND-NOT takes at least two arguments: cannot convert ~A to a BDD" expr)
   (destructuring-bind (bdd-head &rest bdd-tail) (mapcar #'bdd tail)
     (reduce #'bdd-and-not bdd-tail :initial-value bdd-head)))
+
+(defmethod bdd-list-to-bdd ((head (eql 'not)) tail)
+  ;; (assert (null (cdr tail)) ()
+  ;;         "NOT takes exactly one argument: cannot convert ~A to a BDD" expr)
+  (bdd-and-not *bdd-true* (bdd (car tail))))
 
 (defmethod bdd-list-to-bdd (head tail &aux (expr (cons head tail)))
   (if (valid-type-p expr)
