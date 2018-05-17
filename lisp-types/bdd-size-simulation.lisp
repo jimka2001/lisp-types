@@ -254,9 +254,8 @@ Why?  Because the truth table of this function is:
         do (if (char= #\d char)
                (format stream "e")
                (format stream "~A" char))))
-             
 
-(defun write-data (data prefix)
+(defun write-bdd-distribution-data (data prefix)
   (declare (type list data)
            (type string prefix))
   (dolist (item data)
@@ -276,7 +275,7 @@ Why?  Because the truth table of this function is:
             (pop item))
           (format stream "  )~%"))))))
 
-(defun read-data (prefix &key (min 1) (max 8) vars)
+(defun read-bdd-distribution-data (prefix &key (min 1) (max 8) vars)
   (declare (ignore vars))
   (loop for var from min to max
         for data-file = (format nil "~A/bdd-distribution-data-~D.sexp" prefix var)
@@ -300,9 +299,9 @@ Why?  Because the truth table of this function is:
          (colors '("red" "goldenrod" "olive" "blue" "lavender" "greeny" "dark-cyan" "color-7" "color-8"))
          (data (if re-run
                    (sort (measure-bdd-sizes vars num-samples min max) #'< :key (getter :num-vars))
-                   (read-data prefix :vars vars))))
+                   (read-bdd-distribution-data prefix :vars vars))))
     (when re-run
-      (write-data data prefix))
+      (write-bdd-distribution-data data prefix))
 
   (flet ((individual-plot (stream num-vars &aux (plist (find num-vars data :key (getter :num-vars))))
            (format stream "\\begin{tikzpicture}~%")
