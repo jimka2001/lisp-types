@@ -189,6 +189,8 @@ Why?  Because the truth table of this function is:
            collect k))))
 
 (defun measure-bdd-size (vars num-samples)
+  (setf num-samples (min (expt 2 (expt 2 (length vars)))
+                         num-samples))
   (let* ((hash (make-hash-table))
          (ffff (1- (expt 2 (expt 2 (length vars)))))
          (randomp (< num-samples (1+ ffff))))
