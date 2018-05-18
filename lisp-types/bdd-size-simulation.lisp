@@ -283,17 +283,17 @@ Why?  Because the truth table of this function is:
   (dolist (plist data)
     (write-one-bdd-distribution-data plist prefix)))
 
-(defun read-bdd-distribution-data (prefix &key (min 1) (max 8) vars)
+(defun read-bdd-distribution-data (prefix &key (min 1) (max 14) vars)
   (declare (ignore vars))
   (loop for var from min to max
         for data-file = (format nil "~A/bdd-distribution-data-~D.sexp" prefix var)
         nconc (with-open-file (stream data-file
                                       :direction :input :if-does-not-exist nil)
-                (let* ((plist (read stream))
-                       (histogram (mapcar (lambda (this &aux (sample (car this)) (occurances (caddr this)))
-                                            (list sample occurances))
-                                          (getf plist :counts))))
-                  (when stream
+                (when stream
+                  (let* ((plist (read stream))
+                         (histogram (mapcar (lambda (this &aux (sample (car this)) (occurances (caddr this)))
+                                              (list sample occurances))
+                                            (getf plist :counts))))
                     (list (calc-plist histogram (getf plist :num-vars) (getf plist :randomp))))))))
 
 (defun measure-and-write-bdd-distribution (prefix num-vars num-samples)
