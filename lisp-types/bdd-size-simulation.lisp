@@ -224,7 +224,8 @@ Why?  Because the truth table of this function is:
         (pushnew ffff samples)
         (format t "generating ~D " (length samples))
         (when randomp (format t "randomly chosen "))
-        (format t "BDDs of possible ~D with ~D variables ~S~%"  (1+ ffff) (length vars) vars)
+        (format t "BDDs of possible ~D (~a%) with ~D variables ~S~%"  (1+ ffff)
+                (* 100.0 (/ (length samples) (1+ ffff))) (length vars) vars)
         (loop :for try :in samples
               :for iteration = 0 :then (1+ iteration)
               :do (measure try)
@@ -258,25 +259,28 @@ Why?  Because the truth table of this function is:
                (format stream "e")
                (format stream "~A" char))))
 
+(defun write-one-bdd-distribution-data (plist prefix)
+  (let* ((num-vars (getf plist :num-vars))
+         (data-file (format nil "~A/bdd-distribution-data-~D.sexp" prefix num-vars)))
+    (with-open-file (stream data-file
+                            :direction :output :if-does-not-exist :create :if-exists :supersede)
+      (when stream
+        (format t "writing to ~A~%" data-file)
+        (format stream "  (~%")
+        (while plist
+          (destructuring-bind (keyword obj &rest _others) plist
+            (declare (ignore _others))
+            (let ((*package* (find-package :keyword)))
+              (format stream "    ~S ~A~%" keyword obj)))
+          (pop plist)
+          (pop plist))
+          (format stream "  )~%")))))
+
 (defun write-bdd-distribution-data (data prefix)
   (declare (type list data)
            (type string prefix))
-  (dolist (item data)
-    (destructuring-bind (&key num-vars &allow-other-keys
-                         &aux (data-file (format nil "~A/bdd-distribution-data-~D.sexp"
-                                                 prefix num-vars))) item
-      (with-open-file (stream data-file
-                              :direction :output :if-does-not-exist :create :if-exists :supersede)
-        (when stream
-          (format stream "  (~%")
-          (while item
-            (destructuring-bind (keyword obj &rest _others) item
-              (declare (ignore _others))
-              (let ((*package* (find-package :keyword)))
-                (format stream "    ~S ~A~%" keyword obj)))
-            (pop item)
-            (pop item))
-          (format stream "  )~%"))))))
+  (dolist (plist data)
+    (write-one-bdd-distribution-data plist prefix)))
 
 (defun read-bdd-distribution-data (prefix &key (min 1) (max 8) vars)
   (declare (ignore vars))
@@ -290,6 +294,11 @@ Why?  Because the truth table of this function is:
                                           (getf plist :counts))))
                   (when stream
                     (list (calc-plist histogram (getf plist :num-vars) (getf plist :randomp))))))))
+
+(defun measure-and-write-bdd-distribution (prefix num-vars num-samples)
+  (write-bdd-distribution-data (measure-bdd-sizes *bdd-test-classes*
+                                                  num-samples num-vars num-vars)
+                               prefix))
 
 (defun latex-measure-bdd-sizes (prefix vars num-samples &key (min 1) (max (length vars)) (re-run t))
   (declare (type string prefix)
