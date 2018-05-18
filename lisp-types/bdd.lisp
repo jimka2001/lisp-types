@@ -245,13 +245,17 @@
     (bdd-list-to-bdd-helper (length tail) (mapcar #'bdd tail) *bdd-true* #'bdd-and))
 
   (defmethod bdd-list-to-bdd ((head (eql 'or)) tail)
-    (bdd-list-to-bdd-helper (length tail) (mapcar #'bdd tail) *bdd-false* #'bdd-or)))
+    (bdd-list-to-bdd-helper (length tail) (mapcar #'bdd tail) *bdd-false* #'bdd-or))
 
-(defmethod bdd-list-to-bdd ((head (eql 'and-not)) tail)
-  ;; (assert (<= 2 (length tail)) ()
-  ;;         "AND-NOT takes at least two arguments: cannot convert ~A to a BDD" expr)
-  (destructuring-bind (bdd-head &rest bdd-tail) (mapcar #'bdd tail)
-    (reduce #'bdd-and-not bdd-tail :initial-value bdd-head)))
+  (defmethod bdd-list-to-bdd ((head (eql 'and-not)) tail)
+    ;; (assert (<= 2 (length tail)) ()
+    ;;         "AND-NOT takes at least two arguments: cannot convert ~A to a BDD" expr)
+    (destructuring-bind (bdd-head &rest bdd-tail) (mapcar #'bdd tail)
+      (ecase *bdd-operation-order*
+        ((:reduce)
+         (reduce #'bdd-and-not bdd-tail :initial-value bdd-head))
+        ((:divide-and-conquer)
+         (bdd-and-not bdd-head (bdd-list-to-bdd-helper (length bdd-tail) bdd-tail *bdd-true* #'bdd-and)))))))
 
 (defmethod bdd-list-to-bdd ((head (eql 'not)) tail)
   ;; (assert (null (cdr tail)) ()
