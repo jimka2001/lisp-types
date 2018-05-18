@@ -224,6 +224,7 @@ dynamic extend of WITH-SUBTYPEP-CACHE"
 (defun grey-sort (integers)
   "given a list integers, put them into an order which makes it likely that adjacent 
  entries are close in terms of number of bits different"
+  (declare (optimize (debug 0) (speed 3)))
   (let ((path (list (car integers)))
         (integers (copy-list (cdr integers))))
     (labels ((closest (a &aux (guess (car integers)))
