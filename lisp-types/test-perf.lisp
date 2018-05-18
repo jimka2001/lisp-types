@@ -35,16 +35,22 @@
 ;;  (shadowing-import name :lisp-types.test))
 
 
-#+sbcl(define-test disjoint-cmp-1
+#+sbcl
+(define-test disjoint-cmp-1
   (setf *perf-results* nil)
-  (types/cmp-perfs :types '(sb-pcl::SYSTEM-CLASS
+  (types/cmp-perfs :file-name "disjoint-cmp-1"
+                   :destination-dir "/tmp"
+                   :types '(sb-pcl::SYSTEM-CLASS
                             sb-pcl::SLOT-DEFINITION
                             sb-pcl::EQL-SPECIALIZER) :time-out nil))
 
 
-#+sbcl(define-test disjoint-cmp-2
+#+sbcl
+(define-test disjoint-cmp-2
   (setf *perf-results* nil)
-  (types/cmp-perfs :types '(sb-pcl::SYSTEM-CLASS
+  (types/cmp-perfs :file-name "disjoint-cmp-2"
+                   :destination-dir "/tmp"
+                   :types '(sb-pcl::SYSTEM-CLASS
                             sb-pcl::STANDARD-SLOT-DEFINITION
                             sb-pcl::EFFECTIVE-SLOT-DEFINITION
                             sb-pcl::FUNCALLABLE-STANDARD-OBJECT
@@ -54,16 +60,22 @@
                             sb-pcl::SLOT-DEFINITION)
                    :time-out 5))
 
-#+sbcl(define-test disjoint-cmp-3
+#+sbcl
+(define-test disjoint-cmp-3
   (setf *perf-results* nil)
-  (types/cmp-perfs :types '(SB-PCL:SYSTEM-CLASS
+  (types/cmp-perfs :file-name "disjoint-cmp-3"
+                   :destination-dir "/tmp"
+                   :types '(SB-PCL:SYSTEM-CLASS
                             SB-MOP:STANDARD-WRITER-METHOD
                             SB-MOP:DIRECT-SLOT-DEFINITION)))
 
 
-#+sbcl(define-test disjoint-cmp-4
+#+sbcl
+(define-test disjoint-cmp-4
   (setf *perf-results* nil)
-  (types/cmp-perfs :types '(SB-PCL:SYSTEM-CLASS
+  (types/cmp-perfs :file-name "disjoint-cmp-4"
+                   :destination-dir "/tmp"
+                   :types '(SB-PCL:SYSTEM-CLASS
                             SB-MOP:DIRECT-SLOT-DEFINITION
                             SB-MOP:FORWARD-REFERENCED-CLASS
                             SB-MOP:EFFECTIVE-SLOT-DEFINITION
@@ -74,23 +86,30 @@
                             SB-MOP:FUNCALLABLE-STANDARD-OBJECT)
                    :time-out 8))
 
-#+sbcl(define-test disjoint-cmp-5
+#+sbcl
+(define-test disjoint-cmp-5
   (setf *perf-results* nil)
   ;; decompose-types-bdd-graph
-  (types/cmp-perfs :types '(SB-PCL:SYSTEM-CLASS
+  (types/cmp-perfs :file-name "disjoint-cmp-5"
+                   :destination-dir "/tmp"
+                   :types '(SB-PCL:SYSTEM-CLASS
                             SB-MOP:STANDARD-ACCESSOR-METHOD
                             SB-MOP:STANDARD-EFFECTIVE-SLOT-DEFINITION)))
 
 (define-test disjoint-cmp-6
   (setf *perf-results* nil)
-  (types/cmp-perfs :types '((MEMBER 2 4 5 6 8)
+  (types/cmp-perfs :file-name "disjoint-cmp-6"
+                   :destination-dir "/tmp"
+                   :types '((MEMBER 2 4 5 6 8)
                             (MEMBER 0 5 6 9 10)
                             (MEMBER 0 1 3 4 10)
                             (MEMBER 0 3 5 8 9 10))))
 
 (define-test disjoint-cmp-7
   (setf *perf-results* nil)
-  (types/cmp-perfs :types '((MEMBER 1 3 4 5 6 9)
+  (types/cmp-perfs :file-name "disjoint-cmp-7"
+                   :destination-dir "/tmp"
+                   :types '((MEMBER 1 3 4 5 6 9)
                             (MEMBER 1 5 7 8)
                             (MEMBER 4 7 8 9 10)
                             (MEMBER 3 4 5 7 9)
@@ -98,7 +117,9 @@
 
 (define-test disjoint-cmp-8
   (setf *perf-results* nil)
-  (types/cmp-perfs :types '((MEMBER 0 2)
+  (types/cmp-perfs :file-name "disjoint-cmp-8"
+                   :destination-dir "/tmp"
+                   :types '((MEMBER 0 2)
                             (MEMBER 0 1 2)
                             (MEMBER 0 2 4))))
 
@@ -185,40 +206,50 @@
 
 (define-test disjoint-cmp-g
   (setf *perf-results* nil)
-  (types/cmp-perfs :types '((MEMBER 0 3 4)
-                            (EQL 3)
-                            (MEMBER 1 4)
-                            (MEMBER 1 2 3)
-                            (MEMBER 0 2)
-                            NULL
-                            (MEMBER 0 2 3)
-                            (MEMBER 0 1 2 3))))
+  (bdd-with-new-hash ()
+    (types/cmp-perfs :file-name "disjoint-cmp-g"
+                     :destination-dir "/tmp"
+                     :types '((MEMBER 0 3 4)
+                              (EQL 3)
+                              (MEMBER 1 4)
+                              (MEMBER 1 2 3)
+                              (MEMBER 0 2)
+                              NULL
+                              (MEMBER 0 2 3)
+                              (MEMBER 0 1 2 3)))))
 
 (define-test disjoint-cmp-h
   (setf *perf-results* nil)
-  (types/cmp-perfs :limit 5
-                   :types '((COMMON-LISP:EQL 3)
-                            (COMMON-LISP:MEMBER 1 2 3)
-                            (COMMON-LISP:MEMBER 0 2) COMMON-LISP:NULL
-                            (COMMON-LISP:MEMBER 0 2 3)
-                            (COMMON-LISP:MEMBER 0 1 2 3))))
+  (bdd-with-new-hash ()
+    (types/cmp-perfs :file-name "disjoint-cmp-h"
+                     :destination-dir "/tmp"
+                     :limit 5
+                     :types '((COMMON-LISP:EQL 3)
+                              (COMMON-LISP:MEMBER 1 2 3)
+                              (COMMON-LISP:MEMBER 0 2) COMMON-LISP:NULL
+                              (COMMON-LISP:MEMBER 0 2 3)
+                              (COMMON-LISP:MEMBER 0 1 2 3)))))
 
 (define-test disjoint-cmp-i
   (setf *perf-results* nil)
-  (types/cmp-perfs :limit 5
-                   :types '(STRING STANDARD-GENERIC-FUNCTION ATOM METHOD SIMPLE-BASE-STRING
-                            SEQUENCE COMPLEX STANDARD-OBJECT STANDARD-METHOD)))
+  (bdd-with-new-hash ()
+    (types/cmp-perfs :limit 5
+                     :file-name "disjoint-cmp-i"
+                     :destination-dir "/tmp"
+                     :types '(STRING STANDARD-GENERIC-FUNCTION ATOM METHOD SIMPLE-BASE-STRING
+                              SEQUENCE COMPLEX STANDARD-OBJECT STANDARD-METHOD))))
 
 (define-test disjoint-cmp-j
   (setf *perf-results* nil)
-  (types/cmp-perf :types '((MEMBER 0 1 2 4 5 6 8 9 10) (MEMBER 1 2 4 6 8)
-                           (MEMBER 1 2 3 5 6 7 8 10) (MEMBER 1 5 6 7 9 10) (MEMBER 0 1 6 7 8 10)
-                           (MEMBER 0 1 2 3 5 6 10) (MEMBER 0 1 3 4 5 6 8 9 10)
-                           (MEMBER 0 3 5 6 8) (MEMBER 0 1 2 3 6 7 9) (MEMBER 0 2 4 8 10)
-                           (MEMBER 0 1 5 9) (MEMBER 0 1 2 4 8) (MEMBER 1 3 5 6 8 9 10)
-                           (MEMBER 3 5 7 9) (MEMBER 5 6 7 8 9 10) (MEMBER 0 4 6 7 8 9)
-                           (MEMBER 1 4 7 9) (MEMBER 0 3 4 7 8 10) (MEMBER 0 1 4 5 7 8)
-                           (MEMBER 0 2 4 5 7 9 10) (MEMBER 0 9 10))))
+  (bdd-with-new-hash ()
+    (types/cmp-perf :types '((MEMBER 0 1 2 4 5 6 8 9 10) (MEMBER 1 2 4 6 8)
+                             (MEMBER 1 2 3 5 6 7 8 10) (MEMBER 1 5 6 7 9 10) (MEMBER 0 1 6 7 8 10)
+                             (MEMBER 0 1 2 3 5 6 10) (MEMBER 0 1 3 4 5 6 8 9 10)
+                             (MEMBER 0 3 5 6 8) (MEMBER 0 1 2 3 6 7 9) (MEMBER 0 2 4 8 10)
+                             (MEMBER 0 1 5 9) (MEMBER 0 1 2 4 8) (MEMBER 1 3 5 6 8 9 10)
+                             (MEMBER 3 5 7 9) (MEMBER 5 6 7 8 9 10) (MEMBER 0 4 6 7 8 9)
+                             (MEMBER 1 4 7 9) (MEMBER 0 3 4 7 8 10) (MEMBER 0 1 4 5 7 8)
+                             (MEMBER 0 2 4 5 7 9 10) (MEMBER 0 9 10)))))
 
 (define-test disjoint-cmp-k
   (let ((type-specifiers
@@ -237,14 +268,15 @@
             (or (and (not reader-error) stream-error) (and reader-error (not style-warning)))
             (and (not arithmetic-error) reader-error (not structure-class) (not style-warning))
             (and (not arithmetic-error) (not reader-error) (not structure-class) style-warning))))
-    (slow-decompose-types-bdd-graph type-specifiers 
-                                :sort-nodes #'(lambda (graph)
-                                                (declare (notinline sort))
-                                                (sort graph #'< :key #'count-parents-per-node))
-                                :sort-strategy "TOP-TO-BOTTOM"
-                                :inner-loop :operation
-                                :do-break-sub :strict
-                                :do-break-loop t)))
+    (bdd-with-new-hash ()
+      (slow-decompose-types-bdd-graph type-specifiers 
+                                      :sort-nodes #'(lambda (graph)
+                                                      (declare (notinline sort))
+                                                      (sort graph #'< :key #'count-parents-per-node))
+                                      :sort-strategy "TOP-TO-BOTTOM"
+                                      :inner-loop :operation
+                                      :do-break-sub :strict
+                                      :do-break-loop t))))
 
 
 
@@ -253,14 +285,15 @@
           '(CONDITION RESTART RATIONAL CONS RATIO READER-ERROR STRUCTURE-CLASS
             SYNONYM-STREAM ARITHMETIC-ERROR TEST-CHAR-CODE WARNING FLOAT-RADIX
             SIMPLE-BIT-VECTOR STREAM-ERROR ARRAY STYLE-WARNING)))
-    (slow-decompose-types-bdd-graph type-specifiers 
-                                :sort-nodes #'(lambda (graph)
-                                                (declare (notinline sort))
-                                                (sort graph #'< :key #'count-parents-per-node))
-                                :sort-strategy "TOP-TO-BOTTOM"
-                                :inner-loop :operation
-                                :do-break-sub :strict
-                                :do-break-loop t)))
+    (bdd-with-new-hash ()
+      (slow-decompose-types-bdd-graph type-specifiers 
+                                      :sort-nodes #'(lambda (graph)
+                                                      (declare (notinline sort))
+                                                      (sort graph #'< :key #'count-parents-per-node))
+                                      :sort-strategy "TOP-TO-BOTTOM"
+                                      :inner-loop :operation
+                                      :do-break-sub :strict
+                                      :do-break-loop t))))
 
 ;; (lisp-types.test::sort-results "/Users/jnewton/newton.16.edtchs/src/member.sexp" nil)
 
