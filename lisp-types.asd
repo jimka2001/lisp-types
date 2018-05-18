@@ -40,7 +40,6 @@
      (:file "bdd-graph" :depends-on ("macros" "bdd" "bdd-reduce"))
      (:file "bdd-dot" :depends-on ("bdd" "bdd-reduce"))
      (:file "bdd-worst-case" :depends-on ("bdd"))
-     (:file "bdd-size-simulation" :depends-on ("bdd"))
      (:file "bdd-reduce-17" :depends-on ("bdd"))
      (:file "decompose-rtev2" :depends-on ("bdd"))
      (:file "bdd-typecase" :depends-on ("bdd-reduce-generic" "bdd"))

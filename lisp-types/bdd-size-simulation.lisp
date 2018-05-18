@@ -19,7 +19,7 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(in-package :lisp-types)
+(in-package :lisp-types.test)
 
 
 (defun int-to-boolean-expression (n vars)
@@ -114,7 +114,6 @@ Why?  Because the truth table of this function is:
             now)
          (setf previous-announcement now)
          (let* ((fraction-done (/ (- iteration min) (- max min)))
-                (fraction-remaining (- 1 fraction-done))
                 (elapsed-seconds (/ (- now start-time) internal-time-units-per-second))
                 (total-seconds (/ elapsed-seconds fraction-done))
                 (remaining-seconds (- total-seconds elapsed-seconds)))
