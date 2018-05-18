@@ -293,8 +293,12 @@
 (defclass Z6 () ())
 (defclass Z7 () ())
 (defclass Z8 () ())
+(defclass Z9 () ())
+(defclass ZA () ())
+(defclass ZB () ())
+(defclass ZC () ())
 (defclass Z12345678 (Z1 Z2 Z3 Z4 Z5 Z6 Z7 Z8) ())
-(defclass Z87654321 (Z8 Z7 Z6 Z5 Z4 Z3 Z2 Z1) ())
+(defclass ZCBA987654321 (ZC ZB ZA Z9 Z8 Z7 Z6 Z5 Z4 Z3 Z2 Z1) ())
 
 
  ;;    (sb-ext::gc :full t)
@@ -339,3 +343,26 @@
   (assert-true (= 1 (median-a-list '((0 2) (1 3) (2 1)))))
   (assert-true (= 1/2 (median-a-list '((0 2) (1 2)))))
   )
+
+(define-test test/random-combination
+  (flet ((test-it (*bdd-operation-order*)
+           (bdd-with-new-hash ()
+             (let ((vars '(Z1 Z2 Z3 Z4 Z5 Z6)))
+               (bdd (random-boolean-combination vars))))))
+    (test-it :reduce)
+    (test-it :divide-and-conquer)))
+
+
+(defun test-operation-order ()
+  (labels ((local (vars)
+             (when vars
+               (local (cdr vars)))
+             (let ((lisp-types::*bdd-operation-order* :reduce))
+               (format t "size=~A ~A~%" (length vars) lisp-types::*bdd-operation-order*)
+               (bdd-with-new-hash ()
+                 (time (bdd (random-boolean-combination vars)))))
+             (let ((lisp-types::*bdd-operation-order* :divide-and-conquer))
+               (format t "size=~A ~A~%" (length vars) lisp-types::*bdd-operation-order*)
+               (bdd-with-new-hash ()
+                 (time (bdd (random-boolean-combination vars)))))))
+    (local '(Z1 Z2 Z3 Z4 Z5 Z6 Z7 Z8 Z9))))
