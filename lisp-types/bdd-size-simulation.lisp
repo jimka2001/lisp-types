@@ -19,7 +19,7 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(in-package :lisp-types)
+(in-package :lisp-types.test)
 
 
 (defun int-to-boolean-expression (n vars)
@@ -73,7 +73,9 @@ Why?  Because the truth table of this function is:
       (cons 'or (loop for i from 0 below (expt 2 num-vars)
                       nconc (gen-min-term i))))))
 
+
 (defun random-boolean-combination (vars)
+  "return a randomly selection boolean combination of the given BOOLEAN variables in sum-of-minterms form (or (and ...) (and ...) ...)"
   ;; vars is a list of symbols
   (int-to-boolean-expression (random (expt 2 (expt 2 (length vars))))
                              vars))
@@ -99,7 +101,7 @@ Why?  Because the truth table of this function is:
     (values (caar a-list) a-list)))
 
 (defun make-announcement-timer (min max interval announce)
-  (declare (type (function (integer number) t))
+  (declare (type (function (integer number) t) announce)
            (type integer min max)
            (type real interval))
   (let* ((start-time (get-internal-real-time))
@@ -111,9 +113,10 @@ Why?  Because the truth table of this function is:
         ((< (+ previous-announcement internal-interval)
             now)
          (setf previous-announcement now)
-         (let* ((finish (+ start-time (/ (* (- max min) (- now start-time))
-                                         (- iteration min))))
-                (remaining-seconds (/ (- finish now) internal-time-units-per-second)))
+         (let* ((fraction-done (/ (- iteration min) (- max min)))
+                (elapsed-seconds (/ (- now start-time) internal-time-units-per-second))
+                (total-seconds (/ elapsed-seconds fraction-done))
+                (remaining-seconds (- total-seconds elapsed-seconds)))
            (funcall announce iteration (coerce remaining-seconds 'double-float))))))))
 
 (defun calc-plist (histogram num-vars randomp)
@@ -189,6 +192,8 @@ Why?  Because the truth table of this function is:
            collect k))))
 
 (defun measure-bdd-size (vars num-samples)
+  (setf num-samples (min (expt 2 (expt 2 (length vars)))
+                         num-samples))
   (let* ((hash (make-hash-table))
          (ffff (1- (expt 2 (expt 2 (length vars)))))
          (randomp (< num-samples (1+ ffff))))
@@ -201,8 +206,8 @@ Why?  Because the truth table of this function is:
 
       (let ((announcer (make-announcement-timer
                         2 (1- num-samples) 2
-                        (lambda (try remaining-seconds)
-                          (format t "~D ~D: " (length vars) try)
+                        (lambda (iteration remaining-seconds)
+                          (format t "~D iteration=~D: " (length vars) iteration)
                           (let ((seconds (truncate remaining-seconds))
                                 (minutes (coerce (/ remaining-seconds 60) 'float))
                                 (hours (coerce (/ remaining-seconds (* 60 60)) 'float)))
@@ -210,7 +215,8 @@ Why?  Because the truth table of this function is:
                             (when (> minutes 1)
                               (format t " = ~D minutes" (truncate minutes)))
                             (when (> hours 1)
-                              (format t " = ~D hours" (truncate hours)))
+                              (format t " = ~D hours ~D minutes" (truncate hours)
+                                      (truncate (- minutes (* 60 (truncate hours))))))
                             (format t "~%")))))
             (samples (gen-random-samples 0 ffff num-samples)))
         (pushnew 0 samples)
@@ -218,11 +224,12 @@ Why?  Because the truth table of this function is:
         (pushnew ffff samples)
         (format t "generating ~D " (length samples))
         (when randomp (format t "randomly chosen "))
-        (format t "BDDs of possible ~D with ~D variables ~A~%"  (1+ ffff) (length vars) vars)
-
-        (dolist (try samples)
-          (measure try)
-          (funcall announcer try))))
+        (format t "BDDs of possible ~D (~a%) with ~D variables ~S~%"  (1+ ffff)
+                (* 100.0 (/ (length samples) (1+ ffff))) (length vars) vars)
+        (loop :for try :in samples
+              :for iteration = 0 :then (1+ iteration)
+              :do (measure try)
+              :do (funcall announcer iteration))))
     (let (histogram)
       (declare #+sbcl (notinline sort))
       (maphash (lambda (&rest args)
@@ -251,29 +258,31 @@ Why?  Because the truth table of this function is:
         do (if (char= #\d char)
                (format stream "e")
                (format stream "~A" char))))
-             
 
-(defun write-data (data prefix)
+(defun write-one-bdd-distribution-data (plist prefix)
+  (let* ((num-vars (getf plist :num-vars))
+         (data-file (format nil "~A/bdd-distribution-data-~D.sexp" prefix num-vars)))
+    (with-open-file (stream data-file
+                            :direction :output :if-does-not-exist :create :if-exists :supersede)
+      (when stream
+        (format t "writing to ~A~%" data-file)
+        (format stream "  (~%")
+        (while plist
+          (destructuring-bind (keyword obj &rest _others) plist
+            (declare (ignore _others))
+            (let ((*package* (find-package :keyword)))
+              (format stream "    ~S ~A~%" keyword obj)))
+          (pop plist)
+          (pop plist))
+          (format stream "  )~%")))))
+
+(defun write-bdd-distribution-data (data prefix)
   (declare (type list data)
            (type string prefix))
-  (dolist (item data)
-    (destructuring-bind (&key num-vars &allow-other-keys
-                         &aux (data-file (format nil "~A/bdd-distribution-data-~D.sexp"
-                                                 prefix num-vars))) item
-      (with-open-file (stream data-file
-                              :direction :output :if-does-not-exist :create :if-exists :supersede)
-        (when stream
-          (format stream "  (~%")
-          (while item
-            (destructuring-bind (keyword obj &rest _others) item
-              (declare (ignore _others))
-              (let ((*package* (find-package :keyword)))
-                (format stream "    ~S ~A~%" keyword obj)))
-            (pop item)
-            (pop item))
-          (format stream "  )~%"))))))
+  (dolist (plist data)
+    (write-one-bdd-distribution-data plist prefix)))
 
-(defun read-data (prefix &key (min 1) (max 8) vars)
+(defun read-bdd-distribution-data (prefix &key (min 1) (max 8) vars)
   (declare (ignore vars))
   (loop for var from min to max
         for data-file = (format nil "~A/bdd-distribution-data-~D.sexp" prefix var)
@@ -286,6 +295,11 @@ Why?  Because the truth table of this function is:
                   (when stream
                     (list (calc-plist histogram (getf plist :num-vars) (getf plist :randomp))))))))
 
+(defun measure-and-write-bdd-distribution (prefix num-vars num-samples)
+  (write-bdd-distribution-data (measure-bdd-sizes *bdd-test-classes*
+                                                  num-samples num-vars num-vars)
+                               prefix))
+
 (defun latex-measure-bdd-sizes (prefix vars num-samples &key (min 1) (max (length vars)) (re-run t))
   (declare (type string prefix)
            (type list vars)
@@ -297,9 +311,9 @@ Why?  Because the truth table of this function is:
          (colors '("red" "goldenrod" "olive" "blue" "lavender" "greeny" "dark-cyan" "color-7" "color-8"))
          (data (if re-run
                    (sort (measure-bdd-sizes vars num-samples min max) #'< :key (getter :num-vars))
-                   (read-data prefix :vars vars))))
+                   (read-bdd-distribution-data prefix :vars vars))))
     (when re-run
-      (write-data data prefix))
+      (write-bdd-distribution-data data prefix))
 
   (flet ((individual-plot (stream num-vars &aux (plist (find num-vars data :key (getter :num-vars))))
            (format stream "\\begin{tikzpicture}~%")

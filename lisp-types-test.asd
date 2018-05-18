@@ -31,6 +31,7 @@
   ((:module "lisp-types"
     :components
     ((:file "test-setup")
+     (:file "test-bdd-test-classes")
      (:file "test-lisp-types")
      (:file "test-util")
      (:file "test-perf" :depends-on ("analysis"))
@@ -41,7 +42,10 @@
      (:file "test-profile" :depends-on ("profile"))
      (:file "theta")
      (:file "analysis" :depends-on ("test-lisp-types" "profile")) ;; valid-subtypes
-     (:file "test-bdd" :depends-on ("analysis" "test-lisp-types" "test-perf"))
+     (:file "bdd-size-simulation" :depends-on ("test-bdd-test-classes"))
+     (:file "test-bdd" :depends-on ("test-bdd-test-classes"
+                                    "bdd-size-simulation"
+                                    "analysis" "test-lisp-types" "test-perf"))
      (:file "test-bdd-reduce-17")
      (:file "test-dnf")
      (:file "test-analysis" :depends-on ("analysis"))
