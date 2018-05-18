@@ -196,7 +196,7 @@ than INTERVAL number of seconds"
      (loop for k from min to max
            collect k))))
 
-(defun measure-bdd-size (vars num-samples)
+(defun measure-bdd-size (vars num-samples &key (interval 2))
   (setf num-samples (min (expt 2 (expt 2 (length vars)))
                          num-samples))
   (let* ((hash (make-hash-table))
@@ -214,7 +214,8 @@ than INTERVAL number of seconds"
                (incf (gethash node-count hash 0)))))
 
       (let ((announcer (make-announcement-timer
-                        2 (1- num-samples) 2
+                        2 (1- num-samples)
+                        interval
                         (lambda (iteration remaining-seconds)
                           (format t "~D iteration=~D: " (length vars) iteration)
                           (let ((seconds (truncate remaining-seconds))
@@ -250,7 +251,7 @@ than INTERVAL number of seconds"
       (setf histogram (sort histogram #'< :key #'car))
       (calc-plist histogram (length vars) randomp))))
 
-(defun measure-bdd-sizes (vars num-samples min max)
+(defun measure-bdd-sizes (vars num-samples min max &key (interval 2))
   (mapcon (lambda (vars)
             (cond
               ((> min (length vars))
@@ -260,7 +261,8 @@ than INTERVAL number of seconds"
               (t
                (list (measure-bdd-size vars
                                        (min (expt 2 (expt 2 (length vars)))
-                                            num-samples))))))
+                                            num-samples)
+                                       :interval interval)))))
           vars))
 
 (defun convert-double-notation (stream string)
@@ -307,9 +309,10 @@ than INTERVAL number of seconds"
                                             (getf plist :counts))))
                     (list (calc-plist histogram (getf plist :num-vars) (getf plist :randomp))))))))
 
-(defun measure-and-write-bdd-distribution (prefix num-vars num-samples)
+(defun measure-and-write-bdd-distribution (prefix num-vars num-samples &key (interval 2))
   (write-bdd-distribution-data (measure-bdd-sizes *bdd-test-classes*
-                                                  num-samples num-vars num-vars)
+                                                  num-samples num-vars num-vars
+                                                  :interval interval)
                                prefix))
 
 (defun latex-measure-bdd-sizes (prefix vars num-samples &key (min 1) (max (length vars)) (re-run t))

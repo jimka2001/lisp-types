@@ -222,7 +222,8 @@ dynamic extend of WITH-SUBTYPEP-CACHE"
   (count-1-bits (boole boole-xor a b)))
 
 (defun grey-sort (integers)
-  "given a list integers, put them into an order which makes it likely that adjacent 
+  "given a list integers (which may be fixnum or bignum or a mix of the two), 
+ put them into an order which makes it likely that adjacent 
  entries are close in terms of number of bits different"
   (declare (optimize (debug 0) (speed 3)))
   (let ((path (list (car integers)))
