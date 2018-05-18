@@ -35,45 +35,50 @@
 
 
 (define-test test/bdd-to-dnf
-  (assert-true (equal 'integer
-                      (bdd-to-dnf (bdd 'integer))))
-  (assert-true (bdd-to-dnf (bdd '(or string integer))))
-  (assert-true (bdd-to-dnf (bdd '(or (and integer (not string)) (and string (not integer)))))))
+  (bdd-with-new-hash ()
+    (assert-true (equal 'integer
+                        (bdd-to-dnf (bdd 'integer))))
+    (assert-true (bdd-to-dnf (bdd '(or string integer))))
+    (assert-true (bdd-to-dnf (bdd '(or (and integer (not string)) (and string (not integer))))))))
 
 (define-test test/bdd-create
-  (assert-true (bdd 'integer))
-  (assert-true (bdd '(or integer float)))
-  (assert-true (bdd '(or (and integer (not string)) (and string (not integer)))))
-  (assert-true (eq (bdd '(or integer string))
-                   (bdd '(or string integer))))
-  (assert-true (eq (bdd '(or (and integer (not string)) (and string (not integer))))
-                   (bdd '(or (and (not integer) string) (and integer (not string))))))
+  (bdd-with-new-hash ()
+    (assert-true (bdd 'integer))
+    (assert-true (bdd '(or integer float)))
+    (assert-true (bdd '(or (and integer (not string)) (and string (not integer)))))
+    (assert-true (eq (bdd '(or integer string))
+                     (bdd '(or string integer))))
+    (assert-true (eq (bdd '(or (and integer (not string)) (and string (not integer))))
+                     (bdd '(or (and (not integer) string) (and integer (not string))))))
 
-  )
+    ))
 
 (define-test types/bdd-collect-atomic-types
-  (assert-false (set-exclusive-or (bdd-collect-atomic-types (bdd '(or (and integer (not string)) (and string (not integer)))))
+  (bdd-with-new-hash ()
+    (assert-false (set-exclusive-or (bdd-collect-atomic-types (bdd '(or (and integer (not string)) (and string (not integer)))))
                                   
-                                  '(integer string))))
+                                  '(integer string)))))
 
   
 (define-test test/certain-reductions
-  (assert-true (bdd '(or (and integer (not string)) (and string (not integer)))))
-  (assert-false (bdd-to-dnf (bdd-and-not (bdd 'integer) (bdd 'number)))))
+  (bdd-with-new-hash ()
+    (assert-true (bdd '(or (and integer (not string)) (and string (not integer)))))
+    (assert-false (bdd-to-dnf (bdd-and-not (bdd 'integer) (bdd 'number))))))
 
 
 (define-test type/bdd-sample-a
-  (let ((types '((member 1 2) (member 2 3) (member 1 2 3 4))))
-    (assert-false (set-exclusive-or (bdd-decompose-types types)
-                                    (decompose-types types)
-                                       :test #'equivalent-types-p)))
-  (assert-false (set-exclusive-or (bdd-decompose-types '(UNSIGNED-BYTE FIXNUM RATIONAL))
-                                  (decompose-types     '(UNSIGNED-BYTE FIXNUM RATIONAL))
-                                  :test #'equivalent-types-p))
+  (bdd-with-new-hash ()
+    (let ((types '((member 1 2) (member 2 3) (member 1 2 3 4))))
+      (assert-false (set-exclusive-or (bdd-decompose-types types)
+                                      (decompose-types types)
+                                      :test #'equivalent-types-p)))
+    (assert-false (set-exclusive-or (bdd-decompose-types '(UNSIGNED-BYTE FIXNUM RATIONAL))
+                                    (decompose-types     '(UNSIGNED-BYTE FIXNUM RATIONAL))
+                                    :test #'equivalent-types-p))
 
-  (assert-false (set-exclusive-or (bdd-decompose-types '(unsigned-byte bit fixnum rational number float))
-                                  (decompose-types-graph  '(unsigned-byte bit fixnum rational number float))
-                                  :test #'equivalent-types-p)))
+    (assert-false (set-exclusive-or (bdd-decompose-types '(unsigned-byte bit fixnum rational number float))
+                                    (decompose-types-graph  '(unsigned-byte bit fixnum rational number float))
+                                    :test #'equivalent-types-p))))
 
 (define-test type/3-types
   (let ((decomp (bdd-decompose-types '(TEST-CHAR-CODE DOUBLE-FLOAT UNSIGNED-BYTE))))
@@ -219,7 +224,11 @@
 
 (define-test test/bdd-numbers
   (bdd-with-new-hash ()
-    (assert-true (types/cmp-perfs :limit 15 :decompose 'lisp-types::bdd-decompose-types :types (valid-subtypes 'number)))))
+    (assert-true (types/cmp-perfs :limit 15
+                                  :file-name "bdd-numbers"
+                                  :destination-dir "/tmp"
+                                  :decompose 'lisp-types::bdd-decompose-types
+                                  :types (valid-subtypes 'number)))))
 
 
 (define-test test/bdd-cmp
