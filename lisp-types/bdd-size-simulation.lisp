@@ -228,6 +228,7 @@ Why?  Because the truth table of this function is:
                 (* 100.0 (/ (length samples) (1+ ffff))) (length vars) vars)
         (loop :for try :in samples
               :for iteration = 0 :then (1+ iteration)
+              :do (pop samples) ;; if the list is very long popping of the first element will allow gc
               :do (measure try)
               :do (funcall announcer iteration))))
     (let (histogram)
