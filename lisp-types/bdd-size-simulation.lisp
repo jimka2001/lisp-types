@@ -101,6 +101,11 @@ Why?  Because the truth table of this function is:
     (values (caar a-list) a-list)))
 
 (defun make-announcement-timer (min max interval announce)
+  "Given a MIN and MAX iteration (integers) and an integer INTERVAL designating a number
+ of seconds, and a unary function ANNOUNCE.
+return a unary function which can later be called with each iteration from MIN to MAX and
+will call the ANNOUNCE function if the elapsed time since the most recent call is more 
+than INTERVAL number of seconds"
   (declare (type (function (integer number) t) announce)
            (type integer min max)
            (type real interval))
@@ -196,12 +201,16 @@ Why?  Because the truth table of this function is:
                          num-samples))
   (let* ((hash (make-hash-table))
          (ffff (1- (expt 2 (expt 2 (length vars)))))
-         (randomp (< num-samples (1+ ffff))))
+         (randomp (< num-samples (1+ ffff)))
+         (prev-integer 0)
+         (prev-bdd *bdd-false*))
     (flet ((measure (try)
              (garbage-collect)
-             (bdd-with-new-hash (&aux (boolean-combo (int-to-boolean-expression try vars))
-                                      (bdd (bdd boolean-combo))
+             (bdd-with-new-hash (&aux (diff-vector (boole boole-xor prev-integer try))
+                                      (boolean-combo (int-to-boolean-expression diff-vector vars))
+                                      (bdd (bdd-xor prev-bdd (bdd boolean-combo)))
                                       (node-count (bdd-count-nodes bdd)))
+               (setf prev-bdd bdd)
                (incf (gethash node-count hash 0)))))
 
       (let ((announcer (make-announcement-timer
@@ -218,10 +227,12 @@ Why?  Because the truth table of this function is:
                               (format t " = ~D hours ~D minutes" (truncate hours)
                                       (truncate (- minutes (* 60 (truncate hours))))))
                             (format t "~%")))))
-            (samples (gen-random-samples 0 ffff num-samples)))
+            (samples (gen-random-samples 2 (1- ffff) num-samples)))
         (pushnew 0 samples)
         (pushnew 1 samples)
         (pushnew ffff samples)
+        (format t "grey-sorting ~D integers~%" (length samples))
+        (setf samples (lisp-types::grey-sort samples))
         (format t "generating ~D " (length samples))
         (when randomp (format t "randomly chosen "))
         (format t "BDDs of possible ~D (~a%) with ~D variables ~S~%"  (1+ ffff)

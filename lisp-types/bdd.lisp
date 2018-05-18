@@ -29,7 +29,8 @@
 (defgeneric bdd-or (b1 b2))
 (defgeneric bdd-and (b1 b2))
 (defgeneric bdd-and-not (b1 b2))
-
+(defgeneric bdd-xor (b1 b2))
+(defgeneric bdd-not (b))
 
 (defvar *bdd-count* 1)
 (defclass bdd ()
@@ -241,6 +242,9 @@
              ((:divide-and-conquer)
               (divide-and-conquer len bdds))))))
 
+  (defmethod bdd-list-to-bdd ((head (eql 'xor)) tail)
+    (bdd-list-to-bdd-helper (length tail) (mapcar #'bdd tail) *bdd-true* #'bdd-xor))
+  
   (defmethod bdd-list-to-bdd ((head (eql 'and)) tail)
     (bdd-list-to-bdd-helper (length tail) (mapcar #'bdd tail) *bdd-true* #'bdd-and))
 
@@ -309,6 +313,15 @@
 (defmethod bdd-node (label (left bdd) (right bdd))
   (%bdd-node label left right))
 
+(defmethod bdd-not ((true bdd-true))
+  *bdd-false*)
+
+(defmethod bdd-not ((false bdd-false))
+  *bdd-true*)
+
+(defmethod bdd-not ((b bdd))
+  (bdd-and-not *bdd-true* b))
+
 (defmethod bdd-or ((true bdd-true) (b bdd))
   *bdd-true*)
 (defmethod bdd-or :around ((b bdd) (true bdd-true))
@@ -317,6 +330,17 @@
   b)
 (defmethod bdd-or :around ((b bdd) (false bdd-false))
   b)
+
+(defmethod bdd-xor ((true bdd-true) (b bdd))
+  (bdd-not b))
+(defmethod bdd-xor ((false bdd-false) (b bdd))
+  b)
+(defmethod bdd-xor :around ((b bdd) (true bdd-true))
+  (bdd-not b))
+(defmethod bdd-xor :around ((b bdd) (false bdd-false))
+  b)
+
+
 
 (defmethod bdd-and ((true bdd-true) (b bdd))
   b)
@@ -440,6 +464,11 @@
         b1
         (bdd-op #'bdd-or b1 b2)))
 
+  (defmethod bdd-xor ((b1 bdd-node) (b2 bdd-node))
+    (if (eq b1 b2)
+        *bdd-false*
+        (bdd-op #'bdd-or b1 b2)))
+
   (defmethod bdd-and ((b1 bdd-node) (b2 bdd-node))
     (if (eq b1 b2)
         b1
@@ -452,6 +481,8 @@
 
 (defmethod bdd-or (b1 b2)
   (error "bdd-or not implemented for ~A and ~A" b1 b2))
+(defmethod bdd-xor (b1 b2)
+  (error "bdd-xor not implemented for ~A and ~A" b1 b2))
 (defmethod bdd-and (b1 b2)
   (error "bdd-and not implemented for ~A and ~A" b1 b2))
 (defmethod bdd-and-not (b1 b2)

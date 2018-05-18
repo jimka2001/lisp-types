@@ -197,3 +197,45 @@ dynamic extend of WITH-SUBTYPEP-CACHE"
       (let ((stop-time (get-internal-real-time)))
         (float (/ (- stop-time start-time)
                   internal-time-units-per-second))))))
+
+(defun count-1-bits (n &aux (bits 0))
+  (declare (optimize (speed 3) (debug 0))
+           (type (and unsigned-byte fixnum) bits)
+           (type unsigned-byte n))
+  (if (typep n 'fixnum)
+      (let ()
+        (declare (type fixnum n))
+        (while (plusp n)
+          (when (oddp n)
+            (incf bits))
+          (setf n (ash n -1))))
+      (let ()
+        (while (plusp n)
+          (when (oddp n)
+            (incf bits))
+          (setf n (ash n -1)))))
+  bits)
+
+(defun count-bit-diffs (a b)
+  (declare (type unsigned-byte a b) ; warning maybe bignums
+           (optimize (speed 3) (debug 0)))
+  (count-1-bits (boole boole-xor a b)))
+
+(defun grey-sort (integers)
+  "given a list integers, put them into an order which makes it likely that adjacent 
+ entries are close in terms of number of bits different"
+  (let ((path (list (car integers)))
+        (integers (copy-list (cdr integers))))
+    (labels ((closest (a &aux (guess (car integers)))
+               ;; find the closest element to A in the list INTEGERS
+               (dolist (b (cdr integers))
+                 (when (< (count-bit-diffs a b)
+                          (count-bit-diffs a guess))
+                   (setf guess b)))
+               guess))
+      (while integers
+        (let ((i0 (closest (car path))))
+          (setf integers (delete i0 integers)) ; remove destructively
+          (push i0 path)))
+      path)))
+
