@@ -73,7 +73,9 @@ Why?  Because the truth table of this function is:
       (cons 'or (loop for i from 0 below (expt 2 num-vars)
                       nconc (gen-min-term i))))))
 
+
 (defun random-boolean-combination (vars)
+  "return a randomly selection boolean combination of the given BOOLEAN variables in sum-of-minterms form (or (and ...) (and ...) ...)"
   ;; vars is a list of symbols
   (int-to-boolean-expression (random (expt 2 (expt 2 (length vars))))
                              vars))
@@ -99,7 +101,7 @@ Why?  Because the truth table of this function is:
     (values (caar a-list) a-list)))
 
 (defun make-announcement-timer (min max interval announce)
-  (declare (type (function (integer number) t))
+  (declare (type (function (integer number) t) announce)
            (type integer min max)
            (type real interval))
   (let* ((start-time (get-internal-real-time))
@@ -111,9 +113,11 @@ Why?  Because the truth table of this function is:
         ((< (+ previous-announcement internal-interval)
             now)
          (setf previous-announcement now)
-         (let* ((finish (+ start-time (/ (* (- max min) (- now start-time))
-                                         (- iteration min))))
-                (remaining-seconds (/ (- finish now) internal-time-units-per-second)))
+         (let* ((fraction-done (/ (- iteration min) (- max min)))
+                (fraction-remaining (- 1 fraction-done))
+                (elapsed-seconds (/ (- now start-time) internal-time-units-per-second))
+                (total-seconds (/ elapsed-seconds fraction-done))
+                (remaining-seconds (- total-seconds elapsed-seconds)))
            (funcall announce iteration (coerce remaining-seconds 'double-float))))))))
 
 (defun calc-plist (histogram num-vars randomp)
@@ -203,8 +207,8 @@ Why?  Because the truth table of this function is:
 
       (let ((announcer (make-announcement-timer
                         2 (1- num-samples) 2
-                        (lambda (try remaining-seconds)
-                          (format t "~D ~D: " (length vars) try)
+                        (lambda (iteration remaining-seconds)
+                          (format t "~D iteration=~D: " (length vars) iteration)
                           (let ((seconds (truncate remaining-seconds))
                                 (minutes (coerce (/ remaining-seconds 60) 'float))
                                 (hours (coerce (/ remaining-seconds (* 60 60)) 'float)))
@@ -221,11 +225,11 @@ Why?  Because the truth table of this function is:
         (pushnew ffff samples)
         (format t "generating ~D " (length samples))
         (when randomp (format t "randomly chosen "))
-        (format t "BDDs of possible ~D with ~D variables ~A~%"  (1+ ffff) (length vars) vars)
-
-        (dolist (try samples)
-          (measure try)
-          (funcall announcer try))))
+        (format t "BDDs of possible ~D with ~D variables ~S~%"  (1+ ffff) (length vars) vars)
+        (loop :for try :in samples
+              :for iteration = 0 :then (1+ iteration)
+              :do (measure try)
+              :do (funcall announcer iteration))))
     (let (histogram)
       (declare #+sbcl (notinline sort))
       (maphash (lambda (&rest args)
