@@ -37,7 +37,8 @@ iteration generates a min-term, by calling local function GEN-MIN-TERM.
 E.g., (INT-TO-BOOLEAN-EXPRESSION #b00010011 '(a b c))
 --> (OR (AND (NOT A) (NOT B) (NOT C)) 
         (AND A       (NOT B) (NOT C))
-        (AND (NOT A) (NOT B) C))
+        (AND (NOT A) (NOT B) C)
+        (AND A       B       C))
 Why?  Because the truth table of this function is:
  CBA|
  000|1
