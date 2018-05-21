@@ -332,8 +332,9 @@ than INTERVAL number of seconds"
       (write-bdd-distribution-data data prefix))
 
   (flet ((individual-plot (stream num-vars &aux (plist (find num-vars data :key (getter :num-vars))))
+           (format stream "% individual plot ~D vars~%" num-vars)
            (format stream "\\begin{tikzpicture}~%")
-           (format stream "\\begin{axis}[~% xlabel=ROBDD node count for ~D variables,~% ymajorgrids,~% yminorgrids,~% xmajorgrids,~% xminorgrids,~% ylabel=Number of Boolean functions,~% legend style={font=\tiny}~%]~%" num-vars)
+           (format stream "\\begin{axis}[~% xlabel=ROBDD node count for ~D variables,~% ymajorgrids,~% yminorgrids,~% xmajorgrids,~% xminorgrids,~% ylabel=Number of Boolean functions,~% label style={font=\\large},~% tick label style={font=\\Large}~%]~%" num-vars)
            (format stream "\\addplot[color=blue,mark=*] coordinates {~%")
            (dolist (item (getf plist :counts))
              (convert-double-notation
@@ -405,6 +406,7 @@ than INTERVAL number of seconds"
          (efficiency-plot (stream)
            (flet ((residual-compression-ratio (value num-vars)
                     (/ value (1- (expt 2.0 (1+ num-vars))))))
+             (format stream "%Residual compression ratio plot~%")
              (format stream "\\begin{tikzpicture}~%")
              (format stream "\\begin{axis}[~% ymin=0,~% ymajorgrids,~% yminorgrids,~% xmajorgrids,~% xlabel=Number of variables,~% ylabel=Residual compression ratio,~% legend style={at={(0,1)},anchor=north west,font=\tiny},~%")
              (format stream " ytick={0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0},~%")
@@ -417,7 +419,8 @@ than INTERVAL number of seconds"
                    do (format stream ",~D" xtick))
              (format stream "}~%]~%")
              ;; worst case size
-             (format stream "\\addplot[color=red,mark=*] coordinates {~%")
+             (format stream "%%worst case~%")
+             (format stream "\\addplot+[color=red] coordinates {~%")
              (dolist (plist data)
                (destructuring-bind (&key num-vars counts &allow-other-keys) plist
                  (format stream "(~D , ~D)~%"
@@ -426,14 +429,17 @@ than INTERVAL number of seconds"
                                                     num-vars))))
              (format stream "};~%")
              ;; average size
-             (format stream "\\addplot[color=green,mark=*] coordinates {~%")
+             (format stream "%%average~%")
+             (format stream "\\addplot+[color=green] coordinates {~%")
              (dolist (plist data)
                (destructuring-bind (&key num-vars average-size &allow-other-keys) plist
                  (format stream "(~D , ~D)~%"
                          num-vars
                          (residual-compression-ratio (coerce average-size 'float) num-vars))))
              (format stream "};~%")
-             (format stream "\\addplot[color=blue,mark=*] coordinates {~%")
+             ;; median
+             (format stream "%%median~%")
+             (format stream "\\addplot+[color=blue] coordinates {~%")
              (dolist (plist data)
                (destructuring-bind (&key num-vars median &allow-other-keys) plist
                  (format stream "(~D , ~D)~%"
@@ -444,6 +450,7 @@ than INTERVAL number of seconds"
              (format stream "\\end{axis}~%")
              (format stream "\\end{tikzpicture}~%")))
          (size-plots (stream)
+           (format stream "% normalized size plots~%")
            (format stream "\\begin{tikzpicture}~%")
            (format stream "\\begin{axis}[~% xlabel=BDD Size,~% ymajorgrids,~% yminorgrids,~% xmajorgrids,~% xminorgrids,~% ylabel=Probability,~%legend style={font=\\tiny},~% label style={font=\\tiny}~%]~%")
                 
@@ -451,7 +458,7 @@ than INTERVAL number of seconds"
              (destructuring-bind (&key num-vars counts &allow-other-keys) datum
                (when (> num-vars 1)
                  (push (format nil "Size with ~D variables" num-vars) legend)
-                 (format stream "\\addplot[color=~A,mark=*] coordinates {~%"
+                 (format stream "\\addplot+[color=~A] coordinates {~%"
                          (or (pop colors) "black"))
                  (dolist (xy counts)
                    (format stream "  (~D,~A)~%" (car xy) (cadr xy)))
