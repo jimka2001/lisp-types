@@ -401,6 +401,47 @@ than INTERVAL number of seconds"
            (format stream "\\legend{Worst case, Average, Median}~%")
            (format stream "\\end{axis}~%")
            (format stream "\\end{tikzpicture}~%"))
+         (efficiency-plot (stream)
+           (flet ((residual-compression-ratio (value num-vars)
+                    (/ value (1- (expt 2.0 (1+ num-vars))))))
+             (format stream "\\begin{tikzpicture}~%")
+             (format stream "\\begin{axis}[~% ymin=0,~% ymajorgrids,~% yminorgrids,~% xmajorgrids,~% xlabel=Number of variables,~% ylabel=Residual compression ratio,~% legend style={at={(0,1)},anchor=north west,font=\tiny},~%")
+             (format stream " ytick={0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0},~%")
+             (format stream " xtick={0,1")
+             (loop for xtick from 2
+                     to (reduce (lambda (max item)
+                                  (max max (getf item :num-vars)))
+                                (cdr data)
+                                :initial-value (getf (car data) :num-vars))
+                   do (format stream ",~D" xtick))
+             (format stream "}~%]~%")
+             ;; worst case size
+             (format stream "\\addplot[color=red,mark=*] coordinates {~%")
+             (dolist (plist data)
+               (destructuring-bind (&key num-vars counts &allow-other-keys) plist
+                 (format stream "(~D , ~D)~%"
+                         num-vars
+                         (residual-compression-ratio (reduce #'max counts :key #'car :initial-value 0.0)
+                                                    num-vars))))
+             (format stream "};~%")
+             ;; average size
+             (format stream "\\addplot[color=green,mark=*] coordinates {~%")
+             (dolist (plist data)
+               (destructuring-bind (&key num-vars average-size &allow-other-keys) plist
+                 (format stream "(~D , ~D)~%"
+                         num-vars
+                         (residual-compression-ratio (coerce average-size 'float) num-vars))))
+             (format stream "};~%")
+             (format stream "\\addplot[color=blue,mark=*] coordinates {~%")
+             (dolist (plist data)
+               (destructuring-bind (&key num-vars median &allow-other-keys) plist
+                 (format stream "(~D , ~D)~%"
+                         num-vars
+                         (residual-compression-ratio median num-vars))))
+             (format stream "};~%")
+             (format stream "\\legend{Worst case, Average, Median}~%")
+             (format stream "\\end{axis}~%")
+             (format stream "\\end{tikzpicture}~%")))
          (size-plots (stream)
            (format stream "\\begin{tikzpicture}~%")
            (format stream "\\begin{axis}[~% xlabel=BDD Size,~% ymajorgrids,~% yminorgrids,~% xmajorgrids,~% xminorgrids,~% ylabel=Probability,~%legend style={font=\\tiny},~% label style={font=\\tiny}~%]~%")
@@ -429,16 +470,24 @@ than INTERVAL number of seconds"
 
     (with-open-file (stream (format nil "~A/bdd-distribution-sigma.ltxdat" prefix)
                             :direction :output :if-does-not-exist :create :if-exists :supersede)
+      (format t "writing to ~A~%" stream)
       (sigma-plot stream))
     (with-open-file (stream (format nil "~A/bdd-distribution.ltxdat" prefix)
                             :direction :output :if-does-not-exist :create :if-exists :supersede)
+      (format t "writing to ~A~%" stream)
       (size-plots stream))
     (with-open-file (stream (format nil "~A/bdd-distribution-expected.ltxdat" prefix)
                             :direction :output :if-does-not-exist :create :if-exists :supersede)
+      (format t "writing to ~A~%" stream)
       (average-plot stream))
+    (with-open-file (stream (format nil "~A/bdd-efficiency-sample.ltxdat" prefix)
+                            :direction :output :if-does-not-exist :create :if-exists :supersede)
+      (format t "writing to ~A~%" stream)
+      (efficiency-plot stream))
     (loop for num-vars from min to max
           do (with-open-file (stream (format nil "~A/bdd-distribution-~D.ltxdat" prefix num-vars)
                                      :direction :output :if-does-not-exist :create :if-exists :supersede)
+               (format t "writing to ~A~%" stream)
                (individual-plot stream num-vars)))
     )
   data))
