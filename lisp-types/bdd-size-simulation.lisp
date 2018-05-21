@@ -323,7 +323,7 @@ than INTERVAL number of seconds"
   (ensure-directories-exist prefix)
   ;; prefix = "/Users/jnewton/newton.16.edtchs/src"
   (let* (legend
-         (colors '("red" "goldenrod" "olive" "blue" "lavender" "greeny" "dark-cyan" "color-7" "color-8"))
+         (colors '("red" "goldenrod" "olive" "blue" "lavender" "greeny" "dark-cyan" "teal" "orange"))
          (data (if re-run
                    (sort (measure-bdd-sizes vars num-samples min max) #'< :key (getter :num-vars))
                    (read-bdd-distribution-data prefix :vars vars))))
