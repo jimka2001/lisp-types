@@ -206,7 +206,7 @@ than INTERVAL number of seconds"
          (prev-integer 0)
          (prev-bdd *bdd-false*))
     (flet ((measure (try)
-             (garbage-collect)
+             ;;(garbage-collect)
              (bdd-with-new-hash (&aux (diff-vector (boole boole-xor prev-integer try))
                                       (boolean-combo (int-to-boolean-expression diff-vector vars))
                                       (bdd (bdd-xor prev-bdd (bdd boolean-combo)))
@@ -233,8 +233,10 @@ than INTERVAL number of seconds"
         (pushnew 0 samples)
         (pushnew 1 samples)
         (pushnew ffff samples)
-        (format t "grey-sorting ~D integers~%" (length samples))
-        (setf samples (lisp-types::grey-sort samples))
+        ;; (format t "grey-sorting ~D integers~%" (length samples))
+        ;;(setf samples (lisp-types::grey-sort samples))
+        (format t "sorting ~D integers~%" (length samples))
+        (setf samples (remove-duplicates-sorted-list (sort samples #'<)))
         (format t "generating ~D " (length samples))
         (when randomp (format t "randomly chosen "))
         (format t "BDDs of possible ~D (~a%) with ~D variables ~S~%"  (1+ ffff)
@@ -251,6 +253,22 @@ than INTERVAL number of seconds"
                hash)
       (setf histogram (sort histogram #'< :key #'car))
       (calc-plist histogram (length vars) randomp))))
+
+(defun remove-duplicates-sorted-list (elements)
+  (declare (optimize (speed 3) (debug 0)))
+  (labels ((recure (elements tail)
+             (cond
+               ((cdr elements)
+                (recure (cdr elements)
+                        (if (eql (car elements) (cadr elements))
+                            tail
+                            (cons (car elements) tail))))
+               (elements
+                (cons (car elements) tail))
+               (t
+                tail))))
+    (recure elements nil)))
+                
 
 (defun measure-bdd-sizes (vars num-samples min max &key (interval 2))
   (mapcon (lambda (vars)
