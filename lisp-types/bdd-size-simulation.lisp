@@ -212,7 +212,6 @@ than INTERVAL number of seconds"
                              (bdd (bdd-xor prev-bdd (bdd boolean-combo)))
                              (node-count (bdd-count-nodes bdd)))
                ;;(garbage-collect)
-               (format t "~D node-count=~D/~D  ~A~%" try node-count word-size (float (/ node-count word-size)))
                (setf prev-bdd bdd
                      prev-integer try)               
                (incf (gethash node-count hash 0))))
