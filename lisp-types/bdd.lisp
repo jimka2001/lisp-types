@@ -78,7 +78,7 @@
     c))
 
 (defvar *bdd-generation* 0)
-(defvar *bdd-hash-strength* :strong ) ;; or :weak or :weak-dynamic
+(defvar *bdd-hash-strength* :weak ) ;; or :weak or :weak-dynamic
 (defun bdd-new-hash (&key ((bdd-hash-strength *bdd-hash-strength*) *bdd-hash-strength*))
   (flet ((make-hash ()
            (incf *bdd-generation*)
