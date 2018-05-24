@@ -204,17 +204,23 @@ than INTERVAL number of seconds"
          (hash (make-hash-table))
          (ffff (1- (expt 2 (expt 2 (length vars)))))
          (randomp (< num-samples (1+ ffff)))
+         (threshold (/ word-size 4))
          (prev-integer 0)
-         (prev-bdd *bdd-false*))
+         (prev-bdd *bdd-false*)
+         (start-time (get-internal-real-time)))
     (bdd-with-new-hash ()
-      (flet ((measure (try &aux (diff-vector (boole boole-xor prev-integer try))
-                             (boolean-combo (int-to-boolean-expression diff-vector vars))
-                             (bdd (bdd-xor prev-bdd (bdd boolean-combo)))
-                             (node-count (bdd-count-nodes bdd)))
-               ;;(garbage-collect)
-               (setf prev-bdd bdd
-                     prev-integer try)               
-               (incf (gethash node-count hash 0))))
+      (flet ((measure (try &aux (diff-vector (boole boole-xor prev-integer try)))
+               (let ((bdd
+                       (if (< (count-bit-diffs diff-vector prev-integer) threshold)
+                           (progn (format t "~D/~D diff bits so using XOR~%" (count-bit-diffs diff-vector prev-integer) word-size)
+                                  (bdd-xor prev-bdd (bdd (int-to-boolean-expression diff-vector vars))))
+                           (progn (format t "~D/~D diff bits so using from SCRATCH~%" (count-bit-diffs diff-vector prev-integer) word-size)
+                                  (setf prev-bdd nil) ;; allow it to de-allocate
+                                  (bdd (int-to-boolean-expression try vars))))))
+                 ;;(garbage-collect)
+                 (setf prev-bdd bdd
+                       prev-integer try)               
+                 (incf (gethash (bdd-count-nodes bdd) hash 0)))))
 
         (let ((announcer (make-announcement-timer
                           2 (1- num-samples)
@@ -254,7 +260,8 @@ than INTERVAL number of seconds"
                  (push args histogram))
                hash)
       (setf histogram (sort histogram #'< :key #'car))
-      (calc-plist histogram (length vars) randomp))))
+      (list* :seconds (float (/ (- (get-internal-real-time) start-time) internal-time-units-per-second))
+             (calc-plist histogram (length vars) randomp)))))
 
 (defun remove-duplicates-sorted-list (elements)
   (declare (optimize (speed 3) (debug 0)))
