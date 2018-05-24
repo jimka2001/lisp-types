@@ -237,7 +237,7 @@ than INTERVAL number of seconds"
                                 (format t " = ~D hours ~D minutes" (truncate hours)
                                         (truncate (- minutes (* 60 (truncate hours))))))
                               (format t "~%")))))
-              (samples (gen-random-samples 2 (1- ffff) num-samples)))
+              (samples (gen-random-samples 2 (1- ffff) (- num-samples 3))))
           (pushnew 0 samples)
           (pushnew 1 samples)
           (pushnew ffff samples)
