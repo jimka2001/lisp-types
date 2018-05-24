@@ -211,7 +211,7 @@ than INTERVAL number of seconds"
     (bdd-with-new-hash ()
       (flet ((measure (try &aux (diff-vector (boole boole-xor prev-integer try)))
                (let ((bdd
-                       (if (< (count-bit-diffs diff-vector prev-integer) threshold)
+                       (if (<= (count-bit-diffs diff-vector prev-integer) threshold)
                            (progn (format t "~D/~D diff bits so using XOR~%" (count-bit-diffs diff-vector prev-integer) word-size)
                                   (bdd-xor prev-bdd (bdd (int-to-boolean-expression diff-vector vars))))
                            (progn (format t "~D/~D diff bits so using from SCRATCH~%" (count-bit-diffs diff-vector prev-integer) word-size)
