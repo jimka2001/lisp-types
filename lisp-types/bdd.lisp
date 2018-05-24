@@ -467,7 +467,7 @@
   (defmethod bdd-xor ((b1 bdd-node) (b2 bdd-node))
     (if (eq b1 b2)
         *bdd-false*
-        (bdd-op #'bdd-or b1 b2)))
+        (bdd-op #'bdd-xor b1 b2)))
 
   (defmethod bdd-and ((b1 bdd-node) (b2 bdd-node))
     (if (eq b1 b2)

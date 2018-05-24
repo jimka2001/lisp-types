@@ -350,3 +350,66 @@
                (bdd-with-new-hash ()
                  (time (bdd (random-boolean-combination vars)))))))
     (local '(Z1 Z2 Z3 Z4 Z5 Z6 Z7 Z8 Z9))))
+
+(define-test test/bdd-and
+  (let ((test-vectors (list (list *bdd-false* *bdd-false* *bdd-false*)
+                            (list *bdd-false* *bdd-true*  *bdd-false*)
+                            (list *bdd-true*  *bdd-false* *bdd-false*)
+                            (list *bdd-true*  *bdd-true*  *bdd-true*))))
+    (bdd-with-new-hash ()
+      (dolist (test-vector test-vectors)
+        (destructuring-bind (a b f) test-vector
+          (assert-true (eq f (bdd-and a b))))))))
+
+(define-test test/bdd-or
+  (let ((test-vectors (list (list *bdd-false* *bdd-false* *bdd-false*)
+                            (list *bdd-false* *bdd-true*  *bdd-true*)
+                            (list *bdd-true*  *bdd-false* *bdd-true*)
+                            (list *bdd-true*  *bdd-true*  *bdd-true*))))
+    (bdd-with-new-hash ()
+      (dolist (test-vector test-vectors)
+        (destructuring-bind (a b f) test-vector
+          (assert-true (eq f (bdd-or a b))))))))
+
+(define-test test/bdd-and-not
+  (let ((test-vectors (list (list *bdd-false* *bdd-false* *bdd-false*)
+                            (list *bdd-false* *bdd-true*  *bdd-false*)
+                            (list *bdd-true*  *bdd-false* *bdd-true*)
+                            (list *bdd-true*  *bdd-true*  *bdd-false*))))
+    (bdd-with-new-hash ()
+      (dolist (test-vector test-vectors)
+        (destructuring-bind (a b f) test-vector
+          (assert-true (eq f (bdd-and-not a b))))))))
+
+(define-test test/bdd-xor
+  (let ((test-vectors (list (list *bdd-false* *bdd-false* *bdd-false*)
+                            (list *bdd-false* *bdd-true*  *bdd-true*)
+                            (list *bdd-true*  *bdd-false* *bdd-true*)
+                            (list *bdd-true*  *bdd-true*  *bdd-false*))))
+    (bdd-with-new-hash ()
+      (dolist (test-vector test-vectors)
+        (destructuring-bind (a b f) test-vector
+          (assert-true (eq f (bdd-xor a b))))))))
+
+
+(define-test test/bdd-xor-2
+  (let ((test-operands '((z1 z2)
+                         ((or z1 z2) z3)
+                         ((or z1 z2) (or z1 z3))
+                         ((or (not z1) z2) (or z1 z3))
+                         ((or z1 z2) (or z1 (not z3)))
+                         ((or z1 (not z2)) (or z1 z3))
+                         ((or z1 (not z2)) (or (not z1) z3))
+                         ((or z1 z3 z3 z4 z5 z6 z7) (or z3 z4 z5 z6 z7 z8 z9))
+                         )))
+    (bdd-with-new-hash ()
+      (dolist (test-operand test-operands)
+        (destructuring-bind (a b) (mapcar #'bdd test-operand)
+          (assert-true (eq (bdd-or (bdd-and-not a b) (bdd-and-not b a))
+                           (bdd-xor a b)))
+          (assert-true (eq (bdd-and-not (bdd-or a b) (bdd-and a b))
+                           (bdd-xor a b)))
+          (assert-true (eq (bdd-xor b a)
+                           (bdd-xor a b)))
+)))))
+          
