@@ -211,22 +211,65 @@ than INTERVAL number of seconds"
     (t
      (print-it bdd-sizes-file)))))
 
-(defun measure-bdd-size (vars num-samples &key (interval 2) (bdd-sizes-file "/dev/null"))
+(defun read-counts-from-log (target-num-vars bdd-sizes-file)
+  (with-open-file (log-file bdd-sizes-file
+                            :direction :input
+                            :if-does-not-exist :error)
+    (let (num-vars samples)
+      (while (setf num-vars (read log-file nil nil nil))
+        (destructuring-bind (bdd-size truth-table) (list
+                                                    ;; read the bdd-size integer
+                                                    (read log-file t nil nil)
+                                                    ;; read and ignore the base-36 integer
+                                                    (let ((*read-base* 36))
+                                                      (read log-file t nil nil)))
+          (declare (ignore truth-table))
+          (when (= target-num-vars num-vars)
+            (push bdd-size samples))))
+      samples)))
+
+(defun measure-bdd-size (vars num-samples &key (interval 2) (bdd-sizes-file "/dev/null") (read-from-log-p nil))
+  ;; READ-FROM-LOG-P specifies to read a bdd-size from the log file if possible.
+  ;;      if there are fewer than num-samples in the log file, an error is triggered.
+  ;;      If READ-FROM-LOG-P is TRUE, then BDD-SIZES-FILE should be a file already created
+  ;;      and already uniquified.  We will assume it has no duplicate lines.
+  ;;      The format of the file is line based.
+  ;;      Each line has 3 numbers, the first 2 are in base 10, the 3rd is in base 36.
+  ;;              num-vars bdd-size truth-table
+  ;;      In the case that READ-FROM-LOG-P is TRUE, but the file does not have any lines beginning
+  ;;      with (length VARS) as passed to MEASURE-BDD-SIZE, then it will be considered as
+  ;;         BDD-SIZES-FILE=nil and READ-FROM-LOG-P=nil
+  ;;     
   (setf num-samples (min (expt 2 (expt 2 (length vars)))
                          num-samples))
   (let* ((num-vars (length vars))
          (hash (make-hash-table))
          (ffff (1- (expt 2 (expt 2 num-vars))))
          (randomp (< num-samples (1+ ffff)))
-         (start-time (get-internal-real-time)))
+         (start-time (get-internal-real-time))
+         (bdd-sizes (when read-from-log-p
+                      (read-counts-from-log num-vars bdd-sizes-file))))
 
+    (when (and read-from-log-p
+               (null bdd-sizes))
+      (setf read-from-log-p nil
+            bdd-sizes-file nil))
+    (when read-from-log-p
+      (setf num-samples (length bdd-sizes)))
     (flet ((measure (truth-table)
-             (bdd-with-new-hash ()               
-               (let* ((bdd (bdd (int-to-boolean-expression truth-table vars)))
-                      (bdd-count (bdd-count-nodes bdd)))
-                 (garbage-collect)
-                 (log-bdd-count bdd-sizes-file num-vars bdd-count truth-table)
-                 (incf (gethash bdd-count hash 0))))))
+             (cond
+               ((null read-from-log-p)
+                (bdd-with-new-hash ()               
+                  (let* ((bdd (bdd (int-to-boolean-expression truth-table vars)))
+                         (bdd-count (bdd-count-nodes bdd)))
+                    (garbage-collect)
+                    (log-bdd-count bdd-sizes-file num-vars bdd-count truth-table)
+                    (incf (gethash bdd-count hash 0)))))
+               (bdd-sizes
+                (let ((bdd-size (pop bdd-sizes)))
+                  (incf (gethash bdd-size hash 0))))
+               (t
+                (error "fewer than ~D samples in log file ~A" num-samples bdd-sizes-file)))))
 
       (let ((announcer (make-announcement-timer
                         2 (1- num-samples)
@@ -283,9 +326,8 @@ than INTERVAL number of seconds"
                (t
                 tail))))
     (recure elements nil)))
-                
 
-(defun measure-bdd-sizes (vars num-samples min max &key (interval 2) (bdd-sizes-file "/dev/null"))
+(defun measure-bdd-sizes (vars num-samples min max &key (interval 2) (read-from-log-p nil) (bdd-sizes-file "/dev/null"))
   (mapcon (lambda (vars)
             (cond
               ((> min (length vars))
@@ -297,6 +339,7 @@ than INTERVAL number of seconds"
                                        (min (expt 2 (expt 2 (length vars)))
                                             num-samples)
                                        :bdd-sizes-file bdd-sizes-file
+                                       :read-from-log-p read-from-log-p
                                        :interval interval)))))
           vars))
 
@@ -354,6 +397,7 @@ than INTERVAL number of seconds"
   (write-bdd-distribution-data (measure-bdd-sizes *bdd-test-classes*
                                                   num-samples num-vars num-vars
                                                   :bdd-sizes-file bdd-sizes-file
+                                                  :read-from-log-p nil
                                                   :interval interval)
                                prefix))
 
@@ -385,7 +429,6 @@ than INTERVAL number of seconds"
            (format stream "};~%")
            (format stream "\\legend{}~%")
            (format stream "\\end{axis}~%")
-
            (format stream "\\end{tikzpicture}~%"))
          (sigma-plot (stream)
            (format stream "\\begin{tikzpicture}~%")
