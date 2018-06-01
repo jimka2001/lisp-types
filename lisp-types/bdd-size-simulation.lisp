@@ -197,10 +197,10 @@ than INTERVAL number of seconds"
      (loop for k from min to max
            collect k))))
 
-(defun log-bdd-count (bdd-sizes-file bdd-count truth-table)
+(defun log-bdd-count (bdd-sizes-file num-vars bdd-count truth-table)
   (declare (type unsigned-byte bdd-count truth-table))
   (flet ((print-it (stream)
-           (format stream "~A ~36R~%" bdd-count truth-table)))
+           (format stream "~A ~A ~36R~%" num-vars bdd-count truth-table)))
     (typecase bdd-sizes-file
     (string
      (with-open-file (log-file bdd-sizes-file
@@ -214,9 +214,10 @@ than INTERVAL number of seconds"
 (defun measure-bdd-size (vars num-samples &key (interval 2) (bdd-sizes-file "/dev/null"))
   (setf num-samples (min (expt 2 (expt 2 (length vars)))
                          num-samples))
-  (let* ((word-size (expt 2 (length vars)))
+  (let* ((num-vars (length vars))
+         (word-size (expt 2 num-vars))
          (hash (make-hash-table))
-         (ffff (1- (expt 2 (expt 2 (length vars)))))
+         (ffff (1- (expt 2 (expt 2 num-vars))))
          (randomp (< num-samples (1+ ffff)))
          (threshold (/ word-size 4))
          (prev-integer 0)
@@ -233,14 +234,14 @@ than INTERVAL number of seconds"
                  ;;(garbage-collect)
                  (setf prev-bdd bdd
                        prev-integer truth-table)
-                 (log-bdd-count bdd-sizes-file bdd-count truth-table)
+                 (log-bdd-count bdd-sizes-file num-vars bdd-count truth-table)
                  (incf (gethash bdd-count hash 0)))))
 
         (let ((announcer (make-announcement-timer
                           2 (1- num-samples)
                           interval
                           (lambda (iteration remaining-seconds)
-                            (format t "~D iteration=~D: " (length vars) iteration)
+                            (format t "~D iteration=~D: " (num-vars) iteration)
                             (let ((seconds (truncate remaining-seconds))
                                   (minutes (coerce (/ remaining-seconds 60) 'float))
                                   (hours (coerce (/ remaining-seconds (* 60 60)) 'float)))
@@ -262,7 +263,7 @@ than INTERVAL number of seconds"
           (format t "generating ~D " (length samples))
           (when randomp (format t "randomly chosen "))
           (format t "BDDs of possible ~D (~a%) with ~D variables ~S~%"  (1+ ffff)
-                  (* 100.0 (/ (length samples) (1+ ffff))) (length vars) vars)
+                  (* 100.0 (/ (length samples) (1+ ffff))) num-vars vars)
           (loop :for truth-table :in samples
                 :for iteration = 0 :then (1+ iteration)
                 :do (pop samples) ;; if the list is very long popping of the first element will allow gc
@@ -275,7 +276,7 @@ than INTERVAL number of seconds"
                hash)
       (setf histogram (sort histogram #'< :key #'car))
       (list* :seconds (float (/ (- (get-internal-real-time) start-time) internal-time-units-per-second))
-             (calc-plist histogram (length vars) randomp)))))
+             (calc-plist histogram num-vars randomp)))))
 
 (defun remove-duplicates-sorted-list (elements)
   (declare (optimize (speed 3) (debug 0)))
