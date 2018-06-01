@@ -403,7 +403,7 @@ than INTERVAL number of seconds"
                  do (format stream ",~D" xtick))
            (format stream "}~%]~%")
            ;; worst case size
-           (format stream "\\addplot[color=red,mark=*] coordinates {~%")
+           (format stream "\\addplot[style=densely dotted,color=blue,mark=*] coordinates {~%")
            (dolist (plist data)
              (destructuring-bind (&key num-vars counts &allow-other-keys) plist
                (format stream "(~D,~D)~%"
@@ -411,14 +411,15 @@ than INTERVAL number of seconds"
                        (reduce #'max counts :key #'car :initial-value 0))))
            (format stream "};~%")
            ;; average size
-           (format stream "\\addplot[color=green,mark=*] coordinates {~%")
+           (format stream "\\addplot[color=teal,mark=triangle] coordinates {~%")
            (dolist (plist data)
              (destructuring-bind (&key num-vars average-size &allow-other-keys) plist
                (format stream "(~D,~D)~%"
                        num-vars
                        (coerce average-size 'float))))
            (format stream "};~%")
-           (format stream "\\addplot[color=blue,mark=*] coordinates {~%")
+           ;; median
+           (format stream "\\addplot[style=dashed,color=greeny,mark=diamond] coordinates {~%")
            (dolist (plist data)
              (destructuring-bind (&key num-vars median &allow-other-keys) plist
                (format stream "(~D,~D)~%"
@@ -445,7 +446,7 @@ than INTERVAL number of seconds"
              (format stream "}~%]~%")
              ;; worst case size
              (format stream "%%worst case~%")
-             (format stream "\\addplot+[color=red] coordinates {~%")
+             (format stream "\\addplot[style=densely dotted,color=blue,mark=*] coordinates {~%")
              (dolist (plist data)
                (destructuring-bind (&key num-vars counts &allow-other-keys) plist
                  (format stream "(~D , ~D)~%"
@@ -455,7 +456,7 @@ than INTERVAL number of seconds"
              (format stream "};~%")
              ;; average size
              (format stream "%%average~%")
-             (format stream "\\addplot+[color=green] coordinates {~%")
+             (format stream "\\addplot[color=teal,mark=triangle] coordinates {~%")
              (dolist (plist data)
                (destructuring-bind (&key num-vars average-size &allow-other-keys) plist
                  (format stream "(~D , ~D)~%"
@@ -464,7 +465,7 @@ than INTERVAL number of seconds"
              (format stream "};~%")
              ;; median
              (format stream "%%median~%")
-             (format stream "\\addplot+[color=blue] coordinates {~%")
+             (format stream "\\addplot[style=dashed,color=greeny,mark=diamond] coordinates {~%")
              (dolist (plist data)
                (destructuring-bind (&key num-vars median &allow-other-keys) plist
                  (format stream "(~D , ~D)~%"
