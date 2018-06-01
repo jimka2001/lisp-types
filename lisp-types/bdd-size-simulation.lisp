@@ -403,12 +403,15 @@ than INTERVAL number of seconds"
                                prefix))
 
 (defun latex-measure-bdd-sizes (prefix vars num-samples &key (min 1) (max (length vars)) (re-run t))
+  ;; example values
+  ;; prefix = "/Users/jnewton/newton.16.edtchs/src"
+  ;; vars   = *bdd-test-classes*
+  ;; nums-samples = 1000
   (declare (type string prefix)
            (type list vars)
            (type fixnum num-samples)
            #+sbcl (notinline sort))
   (ensure-directories-exist prefix)
-  ;; prefix = "/Users/jnewton/newton.16.edtchs/src"
   (let* (legend
          (colors '("red" "goldenrod" "olive" "blue" "lavender" "greeny" "dark-cyan" "teal" "orange"))
          (data (if re-run
