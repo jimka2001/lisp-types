@@ -204,6 +204,7 @@ than INTERVAL number of seconds"
     (typecase bdd-sizes-file
     (string
      (with-open-file (log-file bdd-sizes-file
+                               :direction :output
                                :if-does-not-exist :create
                                :if-exists :append)
        (print-it log-file)))
@@ -352,6 +353,12 @@ than INTERVAL number of seconds"
                     (list (calc-plist histogram (getf plist :num-vars) (getf plist :randomp))))))))
 
 (defun measure-and-write-bdd-distribution (prefix num-vars num-samples bdd-sizes-file &key (interval 2))
+  "PREFIX: string designating path name to directory to write analysis results, 
+           e.g., \"/lrde/home/jnewton/analysis/.\"
+   NUM-VARS: number of variables of the BDD to create
+   NUM-SAMPLES: number of random truth tables to try
+   BDD-SIZES-FILE: string (also accepts t an nil) indicate file to output log information
+   INTERVAL: minimum number of seconds between progress updates"
   (write-bdd-distribution-data (measure-bdd-sizes *bdd-test-classes*
                                                   num-samples num-vars num-vars
                                                   :bdd-sizes-file bdd-sizes-file
