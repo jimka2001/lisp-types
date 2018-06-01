@@ -197,7 +197,20 @@ than INTERVAL number of seconds"
      (loop for k from min to max
            collect k))))
 
-(defun measure-bdd-size (vars num-samples &key (interval 2))
+(defun log-bdd-count (bdd-sizes-file bdd-count truth-table)
+  (declare (type unsigned-byte bdd-count truth-table))
+  (flet ((print-it (stream)
+           (format stream "~A ~36R~%" bdd-count truth-table)))
+    (typecase bdd-sizes-file
+    (string
+     (with-open-file (log-file bdd-sizes-file
+                               :if-does-not-exist :create
+                               :if-exists :append)
+       (print-it log-file)))
+    (t
+     (print-it bdd-sizes-file)))))
+
+(defun measure-bdd-size (vars num-samples &key (interval 2) (bdd-sizes-file "/dev/null"))
   (setf num-samples (min (expt 2 (expt 2 (length vars)))
                          num-samples))
   (let* ((word-size (expt 2 (length vars)))
@@ -209,16 +222,18 @@ than INTERVAL number of seconds"
          (prev-bdd *bdd-false*)
          (start-time (get-internal-real-time)))
     (bdd-with-new-hash ()
-      (flet ((measure (try &aux (diff-vector (boole boole-xor prev-integer try)))
-               (let ((bdd
-                       (if (<= (count-bit-diffs diff-vector prev-integer) threshold)
-                           (bdd-xor prev-bdd (bdd (int-to-boolean-expression diff-vector vars)))
-                           (progn (setf prev-bdd nil) ;; allow it to de-allocate
-                                  (bdd (int-to-boolean-expression try vars))))))
+      (flet ((measure (truth-table &aux (diff-vector (boole boole-xor prev-integer truth-table)))
+               (let* ((bdd
+                        (if (<= (count-bit-diffs diff-vector prev-integer) threshold)
+                            (bdd-xor prev-bdd (bdd (int-to-boolean-expression diff-vector vars)))
+                            (progn (setf prev-bdd nil) ;; allow it to de-allocate
+                                   (bdd (int-to-boolean-expression truth-table vars)))))
+                      (bdd-count (bdd-count-nodes bdd)))
                  ;;(garbage-collect)
                  (setf prev-bdd bdd
-                       prev-integer try)               
-                 (incf (gethash (bdd-count-nodes bdd) hash 0)))))
+                       prev-integer truth-table)
+                 (log-bdd-count bdd-sizes-file bdd-count truth-table)
+                 (incf (gethash bdd-count hash 0)))))
 
         (let ((announcer (make-announcement-timer
                           2 (1- num-samples)
@@ -247,10 +262,10 @@ than INTERVAL number of seconds"
           (when randomp (format t "randomly chosen "))
           (format t "BDDs of possible ~D (~a%) with ~D variables ~S~%"  (1+ ffff)
                   (* 100.0 (/ (length samples) (1+ ffff))) (length vars) vars)
-          (loop :for try :in samples
+          (loop :for truth-table :in samples
                 :for iteration = 0 :then (1+ iteration)
                 :do (pop samples) ;; if the list is very long popping of the first element will allow gc
-                :do (measure try)
+                :do (measure truth-table)
                 :do (funcall announcer iteration)))))
     (let (histogram)
       (declare #+sbcl (notinline sort))
@@ -277,7 +292,7 @@ than INTERVAL number of seconds"
     (recure elements nil)))
                 
 
-(defun measure-bdd-sizes (vars num-samples min max &key (interval 2))
+(defun measure-bdd-sizes (vars num-samples min max &key (interval 2) (bdd-sizes-file "/dev/null"))
   (mapcon (lambda (vars)
             (cond
               ((> min (length vars))
@@ -288,6 +303,7 @@ than INTERVAL number of seconds"
                (list (measure-bdd-size vars
                                        (min (expt 2 (expt 2 (length vars)))
                                             num-samples)
+                                       :bdd-sizes-file bdd-sizes-file
                                        :interval interval)))))
           vars))
 
@@ -335,9 +351,10 @@ than INTERVAL number of seconds"
                                             (getf plist :counts))))
                     (list (calc-plist histogram (getf plist :num-vars) (getf plist :randomp))))))))
 
-(defun measure-and-write-bdd-distribution (prefix num-vars num-samples &key (interval 2))
+(defun measure-and-write-bdd-distribution (prefix num-vars num-samples bdd-sizes-file &key (interval 2))
   (write-bdd-distribution-data (measure-bdd-sizes *bdd-test-classes*
                                                   num-samples num-vars num-vars
+                                                  :bdd-sizes-file bdd-sizes-file
                                                   :interval interval)
                                prefix))
 
@@ -532,8 +549,8 @@ than INTERVAL number of seconds"
            (type list vars)
           )
   (let ((bdd-data (bdd-with-new-hash ()
-                    (loop for try from 0 below (expt 2 (expt 2 num-vars))
-                          collect (let* ((expr (int-to-boolean-expression try vars))
+                    (loop for truth-table from 0 below (expt 2 (expt 2 num-vars))
+                          collect (let* ((expr (int-to-boolean-expression truth-table vars))
                                          (bdd (bdd expr)))
                                     (list :bdd bdd
                                           :node-count (bdd-count-nodes bdd)
