@@ -388,7 +388,7 @@ than INTERVAL number of seconds"
                                             (getf plist :counts))))
                     (list (calc-plist histogram (getf plist :num-vars) (getf plist :randomp))))))))
 
-(defun measure-and-write-bdd-distribution (prefix num-vars num-samples bdd-sizes-file &key (interval 2))
+(defun measure-and-write-bdd-distribution (prefix num-vars num-samples bdd-sizes-file &key (interval 2) (read-from-log-p nil))
   "PREFIX: string designating path name to directory to write analysis results, 
            e.g., \"/lrde/home/jnewton/analysis/.\"
    NUM-VARS: number of variables of the BDD to create
@@ -398,7 +398,7 @@ than INTERVAL number of seconds"
   (write-bdd-distribution-data (measure-bdd-sizes *bdd-test-classes*
                                                   num-samples num-vars num-vars
                                                   :bdd-sizes-file bdd-sizes-file
-                                                  :read-from-log-p nil
+                                                  :read-from-log-p read-from-log-p
                                                   :interval interval)
                                prefix))
 
