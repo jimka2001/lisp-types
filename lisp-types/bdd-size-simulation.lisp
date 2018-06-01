@@ -170,6 +170,7 @@ than INTERVAL number of seconds"
               :sigma stdev
               :median median
               :possible-sizes (mapcar #'car histogram)
+              :unique-sizes (length histogram)
               :normalized-histogram normalized-histogram
               :counts (mapcar (lambda (pair)
                                 (declare (type (cons integer (cons integer)) pair))
