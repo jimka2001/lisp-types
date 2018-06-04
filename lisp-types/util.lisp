@@ -248,4 +248,16 @@ dynamic extend of WITH-SUBTYPEP-CACHE"
 (defun seconds-to-hh.mm.ss (seconds)
   (multiple-value-bind (minutes ss) (truncate (truncate seconds) 60)
     (multiple-value-bind (hh mm) (truncate minutes 60)
-      (list hh mm ss))))
+      (list seconds
+            (list hh mm ss)
+            (format nil "~D:~D:~D" hh mm ss)))))
+
+(defun sci-notation (bignum)
+  ;; bignum = alpha * 10^beta
+  (let* ((log_x (log bignum 10))
+         (beta (truncate (log bignum 10.0)))
+         (log_alpha (- log_x beta))
+         (alpha (expt 10.0 log_alpha)))
+    
+    (list alpha beta)))
+
