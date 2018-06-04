@@ -466,7 +466,7 @@ than INTERVAL number of seconds"
                  do (format stream ",~D" xtick))
            (format stream "}~%]~%")
            ;; worst case size
-           (format stream "\\addplot[style=densely dotted,color=blue,mark=*] coordinates {~%")
+           (format stream "\\addplot[line width=0.8pt,style=densely dotted,color=blue,mark=*] coordinates {~%")
            (dolist (plist data)
              (destructuring-bind (&key num-vars counts &allow-other-keys) plist
                (format stream "(~D,~D)~%"
@@ -482,7 +482,7 @@ than INTERVAL number of seconds"
                        (coerce average-size 'float))))
            (format stream "};~%")
            ;; median
-           (format stream "\\addplot[style=dashed,color=greeny,mark=diamond] coordinates {~%")
+           (format stream "\\addplot[line width=0.8pt,style=dashed,color=greeny,mark=diamond] coordinates {~%")
            (dolist (plist data)
              (destructuring-bind (&key num-vars median &allow-other-keys) plist
                (format stream "(~D,~D)~%"
@@ -509,7 +509,7 @@ than INTERVAL number of seconds"
              (format stream "}~%]~%")
              ;; worst case size
              (format stream "%%worst case~%")
-             (format stream "\\addplot[style=densely dotted,color=blue,mark=*] coordinates {~%")
+             (format stream "\\addplot[line width=0.8pt,style=densely dotted,color=blue,mark=*] coordinates {~%")
              (dolist (plist data)
                (destructuring-bind (&key num-vars counts &allow-other-keys) plist
                  (format stream "(~D , ~D)~%"
@@ -528,7 +528,7 @@ than INTERVAL number of seconds"
              (format stream "};~%")
              ;; median
              (format stream "%%median~%")
-             (format stream "\\addplot[style=dashed,color=greeny,mark=diamond] coordinates {~%")
+             (format stream "\\addplot[line width=0.8pt,style=dashed,color=greeny,mark=diamond] coordinates {~%")
              (dolist (plist data)
                (destructuring-bind (&key num-vars median &allow-other-keys) plist
                  (format stream "(~D , ~D)~%"
