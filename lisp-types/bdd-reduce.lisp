@@ -34,15 +34,7 @@
   (unless (valid-type-p (bdd-label bdd))
     (error "invalid type specifier: ~A" (bdd-label bdd))))
 
-(labels ((incr-hash ()
-           (incf *bdd-hash-access-count*)
-           (when *bdd-verbose*
-             (when (= 0 (mod *bdd-hash-access-count* 10000))
-               (format t "bdd hash = ~A wall-time=~A cpu-time=~A~%"
-                       (getf *bdd-hash-struct* :hash)
-                       (truncate (get-internal-run-time) internal-time-units-per-second)
-                       (truncate (get-universal-time) internal-time-units-per-second)))))
-         (relation (r x-parity y-parity)
+(labels ((relation (r x-parity y-parity)
            #'(lambda (x y)
                (funcall r
                         (if x-parity
@@ -58,18 +50,18 @@
            (relation #'smarter-subtypep x-parity y-parity))
          (disjoint (x-parity y-parity)
            (relation #'disjoint-types-p x-parity y-parity)))
-  (let* ((reductions `((:case  1 :child :positive  :relation ,(disjoint t t)     :reduction ,#'bdd-negative)
-                       (:case  2 :child :positive  :relation ,(disjoint t nil)   :reduction ,#'bdd-positive)
+  (let* ((reductions `((:case  1 :child :positive :relation ,(disjoint t t)     :reduction ,#'bdd-negative)
+                       (:case  2 :child :positive :relation ,(disjoint t nil)   :reduction ,#'bdd-positive)
                        (:case  3 :child :negative :relation ,(disjoint nil t)   :reduction ,#'bdd-negative)
                        (:case  4 :child :negative :relation ,(disjoint nil nil) :reduction ,#'bdd-positive)
 
                        (:case  5 :child :negative :relation ,(super t t)        :reduction ,#'bdd-negative)
                        (:case  6 :child :negative :relation ,(super t nil)      :reduction ,#'bdd-positive)
-                       (:case  7 :child :positive  :relation ,(super nil t)      :reduction ,#'bdd-negative)
-                       (:case  8 :child :positive  :relation ,(super nil nil)    :reduction ,#'bdd-positive)
+                       (:case  7 :child :positive :relation ,(super nil t)      :reduction ,#'bdd-negative)
+                       (:case  8 :child :positive :relation ,(super nil nil)    :reduction ,#'bdd-positive)
 
-                       (:case  9 :child :positive  :relation ,(sub t t)          :reduction ,#'bdd-positive)
-                       (:case 10 :child :positive  :relation ,(sub t nil)        :reduction ,#'bdd-negative)
+                       (:case  9 :child :positive :relation ,(sub t t)          :reduction ,#'bdd-positive)
+                       (:case 10 :child :positive :relation ,(sub t nil)        :reduction ,#'bdd-negative)
                        (:case 11 :child :negative :relation ,(sub nil t)        :reduction ,#'bdd-positive)
                        (:case 12 :child :negative :relation ,(sub nil nil)      :reduction ,#'bdd-negative)))
          ;; :relation ... :reduction 
@@ -124,7 +116,7 @@
      bdd)))
 
 
-(defmethod bdd-find-reduction (label (bdd lisp-typebdd) reduction-rules)
+(defmethod bdd-find-reduction (label (bdd lisp-type-bdd) reduction-rules)
   (declare (type list reduction-rules)
            (optimize (speed 3)))
   "Apply each of the REDUCTION-RULES to BDD.  Some of the reduction rules may
@@ -570,31 +562,5 @@ to a set of types returned from %bdd-decompose-types."
           (when (bdd-type-equal (bdd c2) (bdd c))
             (error "calculated two equal types ~A = ~A" c c2)))))))
 
-(defun boolean-expr-to-latex (expr &optional (stream t))
-  (etypecase expr
-    ((eql nil)
-     (format stream "\\bot"))
-    ((eql t)
-     (format stream "\\top"))
-    ((not list)
-     (format stream "~A" expr))
-    ((cons (eql and))
-          (format stream "(")
-     (boolean-expr-to-latex (cadr expr) stream)
-     (dolist (subexpr (cddr expr))
-       (format stream " \\wedge ")
-       (boolean-expr-to-latex subexpr stream))
-     (format stream ")")
-     )
-    ((cons (eql or))
-     (format stream "(")
-     (boolean-expr-to-latex (cadr expr) stream)
-     (dolist (subexpr (cddr expr))
-       (format stream " \\vee ")
-       (boolean-expr-to-latex subexpr stream))
-     (format stream ")")
-     )
-    ((cons (eql not))
-     (format stream "\\neg ")
-     (boolean-expr-to-latex (cadr expr) stream))))
+
 
