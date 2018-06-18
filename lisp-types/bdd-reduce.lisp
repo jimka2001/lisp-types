@@ -21,6 +21,16 @@
 
 (in-package   :lisp-types)
 
+(defclass lisp-type-robdd (bdd)
+  ())
+
+;; TODO bdd-to-dnf or %bdd-to-dnf should remove superclasses from conjunctions, and remove subclasses from disjunctions
+
+(defmethod initialize-instance :after ((bdd lisp-type-robdd) &rest initargs)
+  (declare (ignore initargs))
+  (unless (valid-type-p (bdd-label bdd))
+    (error "invalid type specifier: ~A" (bdd-label bdd))))
+
 (labels ((incr-hash ()
            (incf *bdd-hash-access-count*)
            (when *bdd-verbose*
@@ -185,59 +195,6 @@ according to the LABEL which is now the label of some parent in its lineage."
        (if (equal new type-specs)
            type-specs
            new)))))
-
-
-(defun %bdd-to-dnf (bdd)
-  "Convert a BDD to logical expression in DNF (disjunctive normal form), i.e. an OR of ANDs.
-The construction attempts re-use cons cells in order to reduce the memory footprint of a large
-set of BDDs."
-  (declare (type bdd bdd))
-  (labels (
-           (wrap (op zero forms)
-             (cond ((cdr forms)
-                    (cons op forms))
-                   (forms
-                    (car forms))
-                   (t
-                    zero)))
-           (prepend (head dnf)
-             (typecase dnf
-               ((cons (eql or))
-                (wrap
-                 'or nil
-                 (mapcar (lambda (tail)
-                           (prepend head tail))
-                         (cdr dnf))))
-               ((cons (eql and))
-                (wrap 'and t (remove-super-types (cons head (cdr dnf)))))
-               ((eql t)
-                head)
-               ((eql nil)
-                nil)
-               (t
-                (wrap 'and t (remove-supers (list head dnf))))))
-           (disjunction (left right)
-             (cond
-               ((null left)
-                right)
-               ((null right)
-                left)
-               ((and (typep left '(cons (eql or)))
-                     (typep right '(cons (eql or))))
-                (cons 'or (nconc (copy-list (cdr left)) (cdr right))))
-               ((typep left '(cons (eql or)))
-                (wrap 'or nil (cons right (cdr left))))
-               ((typep right '(cons (eql or)))
-                (wrap 'or nil (cons left (cdr right))))
-               (t
-                (wrap 'or nil (list left right))))))
-    
-    (let ((left-terms  (prepend (bdd-label bdd) (bdd-to-dnf (bdd-left bdd))))
-          (right-terms (prepend `(not ,(bdd-label bdd)) (bdd-to-dnf (bdd-right bdd)))))
-      (disjunction left-terms
-                   right-terms))))
-
-
 
 (defun bdd-subtypep (t-sub t-super)
   (declare (type bdd t-super t-sub))

@@ -20,7 +20,7 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 (cl:defpackage :lisp-types
-  (:use :cl)
+  (:use :cl :cl-robdd)
   (:export
    "DECOMPOSE-TYPES"
    "DECOMPOSE-TYPES-GRAPH"
