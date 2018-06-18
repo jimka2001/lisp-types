@@ -26,13 +26,16 @@
   (do-symbols (name :lisp-types)
     (when (and (eq lisp-types (symbol-package name))
                (not (find-symbol (symbol-name name) lisp-types-test)))
-      (format t "3 importing name=~A into  :lisp-types.test~%" name)
+      (format t "importing name=~A into  :lisp-types.test~%" name)
       (shadowing-import name :lisp-types.test))))
 
-;(shadow-package-symbols)
-;;(do-symbols (name :lisp-types)
-;;  (shadowing-import name :lisp-types.test))
-
+(define-test test/lisp-type-bdd
+  (let ((bdd (ltbdd 'z1)))
+    (assert-true (typep bdd 'lisp-type-bdd))
+    (assert-true (typep bdd 'lisp-type-bdd-node))
+    (assert-true (typep (bdd-positive) 'bdd-leaf))
+    (assert-true (typep (bdd-right) 'bdd-leaf))))
+  
 
 (define-test test/bdd-to-dnf
   (bdd-with-new-hash ()

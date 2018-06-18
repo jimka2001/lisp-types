@@ -119,10 +119,10 @@
         ;; nodes.  If p*(p-1) >= 2^n then this is sufficient,
         ;; otherwise, remaining denotes how many additional need to be
         ;; created in BLOCK create-remaining.
-        (map-pairs (lambda (left right)
+        (map-pairs (lambda (positive negative)
                      (cond
                        ((plusp needed)
-                        (push (bdd-node (car vars) left right) bdds)
+                        (push (bdd-node (car vars) positive negative) bdds)
                         (decf needed))
                        (t
                         (return-from create-links-to-n+1))))
@@ -137,7 +137,7 @@
         ;; the existing nodes row n+2, n+3 ... as necessary, skipping
         ;; any pair which has already been created in the previous
         ;; block.
-        (map-pairs (lambda (right left &aux (bdd (bdd-node (car vars) left right)))
+        (map-pairs (lambda (negative positive &aux (bdd (bdd-node (car vars) positive negative)))
                      (cond
                        ;; if there's already a bdd in bdds pointing to
                        ;; these two nodes, this skip this pair.  we

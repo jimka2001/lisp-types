@@ -23,4 +23,4 @@
 
 
 (defgeneric bdd-find-reduction (label bdd reduction-rules))
-(defgeneric bdd-reduce-allocated (bdd new-left new-right))
+(defgeneric bdd-reduce-allocated (bdd new-positive new-negative))

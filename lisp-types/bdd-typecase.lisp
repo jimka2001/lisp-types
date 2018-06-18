@@ -64,8 +64,8 @@
              (bdd-node
               (unless (assoc bdd mapping)
                 (push (list bdd (gensym "L")) mapping)
-                (walk-bdd (bdd-left bdd))
-                (walk-bdd (bdd-right bdd))))))
+                (walk-bdd (bdd-positive bdd))
+                (walk-bdd (bdd-negative bdd))))))
          (branch (bdd)
            (typecase bdd
              (bdd-false nil)
@@ -84,8 +84,8 @@
                 (t
                  `(,(cadr (assoc bdd mapping)) ()
                    (if (typep ,obj ',(bdd-label bdd))
-                       ,(branch (bdd-left bdd))
-                       ,(branch (bdd-right
+                       ,(branch (bdd-positive bdd))
+                       ,(branch (bdd-negative
                                  bdd))))))))))
       (walk-bdd bdd)
       (values
@@ -107,8 +107,8 @@
                  (bdd-node
                   (unless (assoc bdd bdd->name-mapping)
                     (push (list bdd (gensym "L")) bdd->name-mapping)
-                    (walk-bdd (bdd-left bdd))
-                    (walk-bdd (bdd-right bdd))))))
+                    (walk-bdd (bdd-positive bdd))
+                    (walk-bdd (bdd-negative bdd))))))
              (branch (bdd)
                (typecase bdd
                  (bdd-false `(return-from ,block-name nil))
@@ -124,8 +124,8 @@
                         (return-from ,block-name (progn ,@(get (cadr (bdd-label bdd)) :clause-body))))
                       `(,(cadr (assoc bdd bdd->name-mapping))
                         (if (typep ,obj ',(bdd-label bdd))
-                            ,(branch (bdd-left bdd))
-                            ,(branch (bdd-right bdd)))))))))
+                            ,(branch (bdd-positive bdd))
+                            ,(branch (bdd-negative bdd)))))))))
       (walk-bdd bdd)
       `(lambda (,obj)
          (block ,block-name
