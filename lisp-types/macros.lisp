@@ -62,7 +62,6 @@
 (defmacro setof (var data &body body)
   `(remove-if-not (lambda (,var) ,@body) ,data))
 
-
 (defmacro prog1-let ((var expr) &body body)
   `(let ((,var ,expr))
      ,@body

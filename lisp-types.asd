@@ -38,7 +38,6 @@
      (:file "bdd-reduce-generic")
      (:file "bdd-reduce" :depends-on ("bdd-reduce-generic"))
      (:file "bdd-graph" :depends-on ("macros" "bdd-reduce"))
-     (:file "bdd-dot" :depends-on ("bdd-reduce"))
      (:file "bdd-worst-case")
      (:file "bdd-reduce-17")
      (:file "decompose-rtev2")
