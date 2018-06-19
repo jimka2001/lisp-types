@@ -20,7 +20,7 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-(defpackage :lisp-types.test
+(defpackage :lisp-types-test
   (:shadowing-import-from :lisp-types "TEST" "A")
   ;;(:shadowing-import-from :closer-mop "STANDARD-GENERIC-FUNCTION" "DEFMETHOD" "DEFGENERIC")
   (:use :cl :lisp-types :lisp-unit ;;:closer-mop
@@ -30,9 +30,9 @@
         ))
 
 
-(in-package :lisp-types.test)
+(in-package :lisp-types-test)
 
-(shadow-all-symbols :package-from :lisp-types :package-into :lisp-types.test)
+(shadow-all-symbols :package-from :lisp-types :package-into :lisp-types-test)
 
 ;; configuration for lisp-unit
 (setf lisp-unit:*print-summary* t

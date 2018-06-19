@@ -22,8 +22,8 @@
 
 
 
-(in-package :lisp-types.test)
-(shadow-all-symbols :package-from :lisp-types :package-into :lisp-types.test)
+(in-package :lisp-types-test)
+(shadow-all-symbols :package-from :lisp-types :package-into :lisp-types-test)
 
 (deftype test-float-radix () '(integer 0 (64)))
 (deftype test-float-digits () '(integer 0 64))
@@ -39,7 +39,7 @@
 	(*print-failures* t)
 	(*summarize-results* t)
 	(*print-errors* t))
-    (run-tests :all (list :lisp-types.test))))
+    (run-tests :all (list :lisp-types-test))))
 
 (define-test type/reduce-b
   (assert-true (equal (reduce-lisp-type '(AND ARITHMETIC-ERROR (NOT CELL-ERROR)))

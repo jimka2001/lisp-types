@@ -19,10 +19,10 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(in-package :lisp-types.test)
+(in-package :lisp-types-test)
 
 
-(shadow-all-symbols :package-from :lisp-types :package-into :lisp-types.test)
+(shadow-all-symbols :package-from :lisp-types :package-into :lisp-types-test)
 
 
 
@@ -287,7 +287,7 @@
                                       :do-break-sub :strict
                                       :do-break-loop t))))
 
-;; (lisp-types.test::sort-results "/Users/jnewton/newton.16.edtchs/src/member.sexp" nil)
+;; (lisp-types-test::sort-results "/Users/jnewton/newton.16.edtchs/src/member.sexp" nil)
 
 (defun perf-test-1 (&key (size 11))
   (bdd-with-new-hash (&aux (type-specifiers (lisp-types::choose-randomly (loop :for name being the external-symbols in "SB-PCL"

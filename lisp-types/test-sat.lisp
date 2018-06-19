@@ -19,9 +19,9 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(in-package :lisp-types.test)
+(in-package :lisp-types-test)
 
-(shadow-all-symbols :package-from :lisp-types :package-into :lisp-types.test)
+(shadow-all-symbols :package-from :lisp-types :package-into :lisp-types-test)
 
 (define-test type/sat1
   ;; crashes in allegro

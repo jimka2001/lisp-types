@@ -21,9 +21,9 @@
 
 
 
-(in-package :lisp-types.test)
+(in-package :lisp-types-test)
 
-(shadow-all-symbols :package-from :lisp-types :package-into :lisp-types.test)
+(shadow-all-symbols :package-from :lisp-types :package-into :lisp-types-test)
 
 (def-cache-fun (cache-it call-with-cache) (a b)
     "testing function"

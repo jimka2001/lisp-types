@@ -19,7 +19,7 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(in-package :lisp-types.test)
+(in-package :lisp-types-test)
 
 (defclass Z1 () ())
 (defclass Z2 () ())

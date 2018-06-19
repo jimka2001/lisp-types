@@ -19,7 +19,7 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(in-package :lisp-types.test)
+(in-package :lisp-types-test)
 
 #|
 
@@ -27,7 +27,7 @@
 
 
 
-(let ((package-into (find-package  :lisp-types.test))
+(let ((package-into (find-package  :lisp-types-test))
       (package-from (find-package  :lisp-types))
       (*package* (find-package :keyword)))
   (do-symbols (name package-from)
