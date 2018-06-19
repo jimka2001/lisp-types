@@ -19,22 +19,7 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(in-package :lisp-types-test)
-
-#|
-
-|#
-
-
-
-(let ((package-into (find-package  :lisp-types-test))
-      (package-from (find-package  :lisp-types))
-      (*package* (find-package :keyword)))
-  (do-symbols (name package-from)
-    (when (and (eq package-from (symbol-package name))
-               (not (find-symbol (symbol-name name) package-into)))
-      (format t "importing name=~A into ~S ~%" name package-into)
-      (shadowing-import name package-into))))
+(in-package :lisp-types-analysis)
 
 (defun user-read (&rest args)
   "Calls read with the specified ARGS, but with *PACKAGE* bound to the CL-USER package.  
