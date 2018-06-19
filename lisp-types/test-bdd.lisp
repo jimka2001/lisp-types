@@ -29,8 +29,8 @@
   (let ((bdd (ltbdd 'z1)))
     (assert-true (typep bdd 'lisp-type-bdd))
     (assert-true (typep bdd 'lisp-type-bdd-node))
-    (assert-true (typep (bdd-positive) 'bdd-leaf))
-    (assert-true (typep (bdd-right) 'bdd-leaf))))
+    (assert-true (typep (bdd-positive bdd) 'bdd-leaf))
+    (assert-true (typep (bdd-negative bdd) 'bdd-leaf))))
   
 
 (define-test test/bdd-to-dnf
