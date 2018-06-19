@@ -38,7 +38,6 @@
      (:file "test-typecase" :depends-on ("test-lisp-types"))
      (:file "test-sat" :depends-on ("test-lisp-types" "test-perf"))
      (:file "test-graph" :depends-on ("test-lisp-types" "test-perf"))
-     (:file "theta")
      (:file "analysis" :depends-on ("test-lisp-types")) ;; valid-subtypes
      (:file "test-bdd" :depends-on ("test-bdd-test-classes"
                                     "analysis" "test-lisp-types" "test-perf"))
