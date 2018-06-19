@@ -20,16 +20,10 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-(let ((package-into (find-package  :lisp-types.test))
-      (package-from (find-package  :lisp-types))
-      (*package* (find-package :keyword)))
-  (do-symbols (name package-from)
-    (when (and (eq package-from (symbol-package name))
-               (not (find-symbol (symbol-name name) package-into)))
-      (format t "importing name=~A into ~S ~%" name package-into)
-      (shadowing-import name package-into))))
+
 
 (in-package :lisp-types.test)
+(shadow-all-symbols :package-from :lisp-types :package-into :lisp-types.test)
 
 (deftype test-float-radix () '(integer 0 (64)))
 (deftype test-float-digits () '(integer 0 64))
