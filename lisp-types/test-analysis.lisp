@@ -24,9 +24,5 @@
 (shadow-all-symbols :package-from :lisp-types :package-into :lisp-types-test)
 
 
-(define-test analysis/call-with-timeout
-  (assert-true (numberp (getf (call-with-timeout 2 (lambda () (sleep 10)) 1)
-                              :time-out)))
-  (assert-true (eql 42 (getf (call-with-timeout 20 (lambda () 42) 2)
-                             :value))))
+
   
