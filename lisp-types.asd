@@ -39,7 +39,6 @@
      (:file "bdd-reduce-generic")
      (:file "bdd-reduce" :depends-on ("bdd-reduce-generic"))
      (:file "bdd-graph" :depends-on ("macros" "bdd-reduce"))
-     (:file "bdd-worst-case")
      (:file "bdd-reduce-17")
      (:file "decompose-rtev2")
      (:file "bdd-typecase" :depends-on ("bdd-reduce-generic"))
