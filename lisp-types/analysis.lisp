@@ -19,6 +19,12 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+(defpackage :lisp-types-analysis
+  (:use :cl :lisp-types :cl-robdd :robdd-analysis)
+  (:export
+   "BDD-REPORT-PROFILE"
+))
+
 (in-package :lisp-types-analysis)
 
 (defun user-read (&rest args)
