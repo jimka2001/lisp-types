@@ -42,9 +42,7 @@
      (:file "test-profile" :depends-on ("profile"))
      (:file "theta")
      (:file "analysis" :depends-on ("test-lisp-types" "profile")) ;; valid-subtypes
-     (:file "bdd-size-simulation" :depends-on ("test-bdd-test-classes"))
      (:file "test-bdd" :depends-on ("test-bdd-test-classes"
-                                    "bdd-size-simulation"
                                     "analysis" "test-lisp-types" "test-perf"))
      (:file "test-bdd-reduce-17")
      (:file "test-dnf")
