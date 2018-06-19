@@ -22,17 +22,14 @@
 (in-package :lisp-types.test)
 
 
-    (let ((lisp-types-test (find-package  :lisp-types.test))
-          (lisp-types (find-package  :lisp-types)))
-      (do-symbols (name :lisp-types)
-        (when (and (eq lisp-types (symbol-package name))
-                   (not (find-symbol (symbol-name name) lisp-types-test)))
-          (format t "6 importing name=~A into  :lisp-types.test~%" name)
-          (shadowing-import name :lisp-types.test))))
-
-;;(shadow-package-symbols)
-;;(do-symbols (name :lisp-types)
-;;  (shadowing-import name :lisp-types.test))
+(let ((package-into (find-package  :lisp-types.test))
+      (package-from (find-package  :lisp-types))
+      (*package* (find-package :keyword)))
+  (do-symbols (name package-from)
+    (when (and (eq package-from (symbol-package name))
+               (not (find-symbol (symbol-name name) package-into)))
+      (format t "importing name=~A into ~S ~%" name package-into)
+      (shadowing-import name package-into))))
 
 
 #+sbcl

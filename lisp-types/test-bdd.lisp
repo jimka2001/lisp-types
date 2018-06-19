@@ -21,13 +21,14 @@
 
 (in-package :lisp-types.test)
 
-(let ((lisp-types-test (find-package  :lisp-types.test))
-      (lisp-types (find-package  :lisp-types)))
-  (do-symbols (name :lisp-types)
-    (when (and (eq lisp-types (symbol-package name))
-               (not (find-symbol (symbol-name name) lisp-types-test)))
-      (format t "importing name=~A into  :lisp-types.test~%" name)
-      (shadowing-import name :lisp-types.test))))
+(let ((package-into (find-package  :lisp-types.test))
+      (package-from (find-package  :lisp-types))
+      (*package* (find-package :keyword)))
+  (do-symbols (name package-from)
+    (when (and (eq package-from (symbol-package name))
+               (not (find-symbol (symbol-name name) package-into)))
+      (format t "importing name=~A into ~S ~%" name package-into)
+      (shadowing-import name package-into))))
 
 (define-test test/lisp-type-bdd
   (let ((bdd (ltbdd 'z1)))
@@ -331,25 +332,7 @@
   (assert-true (= 1/2 (median-a-list '((0 2) (1 2)))))
   )
 
-(define-test test/random-combination
-  (flet ((test-it (*bdd-operation-order*)
-           (bdd-with-new-hash ()
-             (let ((vars '(Z1 Z2 Z3 Z4 Z5 Z6)))
-               (bdd (random-boolean-combination vars))))))
-    (test-it :reduce)
-    (test-it :divide-and-conquer)))
 
 
-(defun test-operation-order ()
-  (labels ((local (vars)
-             (when vars
-               (local (cdr vars)))
-             (let ((lisp-types::*bdd-operation-order* :reduce))
-               (format t "size=~A ~A~%" (length vars) lisp-types::*bdd-operation-order*)
-               (bdd-with-new-hash ()
-                 (time (bdd (random-boolean-combination vars)))))
-             (let ((lisp-types::*bdd-operation-order* :divide-and-conquer))
-               (format t "size=~A ~A~%" (length vars) lisp-types::*bdd-operation-order*)
-               (bdd-with-new-hash ()
-                 (time (bdd (random-boolean-combination vars)))))))
-    (local '(Z1 Z2 Z3 Z4 Z5 Z6 Z7 Z8 Z9))))
+
+
