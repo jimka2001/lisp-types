@@ -34,7 +34,7 @@
       (dolist (name (sort names #'string< ))
         (when (and (eq package-from (symbol-package name))
                    (not (find-symbol (symbol-name name) package-into)))
-          (format t "importing name=~S into ~S ~%" name package-into)
+          ;; (format t "importing name=~S into ~S ~%" name package-into)
           (shadowing-import name package-into))))))
 
 (defun run-program (program args &rest options)

@@ -29,6 +29,7 @@
     :components
     ((:file "macros")
      (:file "util")
+     (:file "ltbdd")
      (:file "lisp-types" :depends-on ("macros"))
      (:file "reduce" :depends-on ("macros" "lisp-types"))
      (:file "decompose" :depends-on ("reduce"))

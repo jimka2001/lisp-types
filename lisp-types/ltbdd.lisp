@@ -21,3 +21,19 @@
 
 (in-package   :lisp-types)
 
+(defclass lisp-type-bdd (bdd)
+  ())
+
+(defclass lisp-type-bdd-node (lisp-type-bdd bdd-node)
+  ())
+
+;; TODO bdd-to-dnf or %bdd-to-dnf should remove superclasses from conjunctions, and remove subclasses from disjunctions
+
+(defmethod initialize-instance :after ((bdd lisp-type-bdd) &rest initargs)
+  (declare (ignore initargs))
+  (unless (valid-type-p (bdd-label bdd))
+    (error "invalid type specifier: ~A" (bdd-label bdd))))
+
+(defun ltbdd (obj)
+  (bdd obj :bdd-node-class 'lisp-type-bdd-node))
+
