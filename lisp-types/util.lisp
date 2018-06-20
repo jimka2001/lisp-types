@@ -238,10 +238,6 @@ dynamic extend of WITH-SUBTYPEP-CACHE"
           (push i0 path)))
       path)))
 
-(defun demand-env-var (env-var-name)
-  (or (sb-posix:getenv env-var-name)
-      (error "Missing env var ~s" env-var-name)))
-
 (defun seconds-to-hh.mm.ss (seconds)
   (multiple-value-bind (minutes ss) (truncate (truncate seconds) 60)
     (multiple-value-bind (hh mm) (truncate minutes 60)
