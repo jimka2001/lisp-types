@@ -195,7 +195,7 @@ according to the LABEL which is now the label of some parent in its lineage."
   (bdd-empty-type (bdd-and bdd1 bdd2)))
 
 (defun bdd-type-equal (t1 t2)
-  (declare (type lisp-type-bdd t1 t2))
+  (declare (type (or lisp-type-bdd-node bdd-leaf) t1 t2))
   (and (bdd-subtypep t1 t2)
        (bdd-subtypep t2 t1)))
 
@@ -333,7 +333,7 @@ in the topological ordering (i.e., the first value)."
                (typecase bdd
                  (bdd-false nil)
                  (bdd-true t)
-                 (bdd-node
+                 (lisp-type-bdd-node
                   (list (cadr (assoc bdd bdd->name-mapping))))))
              (label-function (bdd)
                (typecase bdd
@@ -387,12 +387,12 @@ in the topological ordering (i.e., the first value)."
 
 (defun bdd-typep (obj type-specifier)
   "This function has the same syntax as CL:TYPEP, but using a BDD based algorithm " 
-  (bdd-type-p obj (bdd type-specifier)))
+  (bdd-type-p obj (ltbdd type-specifier)))
 
 (define-compiler-macro bdd-typep (obj type-specifier)
   (typecase type-specifier
     ((cons (eql quote))
-     (bdd-with-new-hash (&aux (bdd (bdd (cadr type-specifier))))
+     (bdd-with-new-hash (&aux (bdd (ltbdd (cadr type-specifier))))
        `(funcall ,(bdd-to-if-then-else-3 bdd (gensym)) ,obj)))
     (t
      `(typep ,obj ,type-specifier))))
@@ -414,22 +414,22 @@ Returns NIL otherwise."
      nil)
     (bdd-true
      t)
-    (bdd-node
+    (lisp-type-bdd-node
      (bdd-type-p obj 
                  (if (typep obj (bdd-label bdd))
                      (bdd-positive bdd)
                      (bdd-negative bdd))))
     (t
-     (bdd-type-p obj (the bdd (bdd bdd))))))
+     (bdd-type-p obj (the lisp-type-bdd (ltbdd bdd))))))
 
 (defun bdd-reduce-lisp-type (type)
     "Given a common lisp type designator such as (AND A (or (not B) C)), 
 convert it to DNF (disjunctive-normal-form)"
-  (bdd-to-dnf (bdd type)))
+  (bdd-to-dnf (ltbdd type)))
 
 (defun %bdd-decompose-types (type-specifiers)
   ;;(declare (optimize (debug 0) (speed 3))) ;; optimize tail call 
-  (bdd-with-new-hash (&aux (bdds (remove-if #'bdd-empty-type (mapcar #'bdd type-specifiers))))
+  (bdd-with-new-hash (&aux (bdds (remove-if #'bdd-empty-type (mapcar #'ltbdd type-specifiers))))
     (declare (type list bdds))
     (labels ((try (bdds disjoint-bdds &aux (bdd-a (car bdds)))
                (declare (type (or null bdd) bdd-a))

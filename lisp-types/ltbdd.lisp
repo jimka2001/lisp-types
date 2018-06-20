@@ -39,5 +39,11 @@
 (defun ltbdd (obj)
   (bdd obj :bdd-node-class 'lisp-type-bdd-node))
 
+(defmethod bdd-factory ((bdd-class (eql (find-class 'lisp-type-bdd-node))))
+  #'ltbdd)
+
+(defmethod bdd-factory ((bdd-class (eql 'lisp-type-bdd-node)))
+  #'ltbdd)
+
 (defun ltbdd-node (label positive negative)
   (bdd-node label positive negative :bdd-node-class 'lisp-type-bdd-node))

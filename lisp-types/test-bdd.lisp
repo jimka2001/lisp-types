@@ -25,11 +25,12 @@
 
 
 (define-test test/lisp-type-bdd
-  (let ((bdd (ltbdd 'z1)))
-    (assert-true (typep bdd 'lisp-type-bdd))
-    (assert-true (typep bdd 'lisp-type-bdd-node))
-    (assert-true (typep (bdd-positive bdd) 'bdd-leaf))
-    (assert-true (typep (bdd-negative bdd) 'bdd-leaf))))
+  (bdd-with-new-hash ()
+    (let ((bdd (ltbdd 'z1)))
+      (assert-true (typep bdd 'lisp-type-bdd))
+      (assert-true (typep bdd 'lisp-type-bdd-node))
+      (assert-true (typep (bdd-positive bdd) 'bdd-leaf))
+      (assert-true (typep (bdd-negative bdd) 'bdd-leaf)))))
   
 
 (define-test test/bdd-to-dnf
@@ -223,19 +224,19 @@
                    
 (define-test test/bdd-type-p
   (bdd-with-new-hash ()
-    (assert-false (bdd-type-p  t (bdd '(or (and sequence (not array))
+    (assert-false (bdd-type-p  t (ltbdd '(or (and sequence (not array))
                                         number
                                         (and (not sequence) array)))))
-    (assert-true (bdd-type-p  3 (bdd '(or (and sequence (not array))
+    (assert-true (bdd-type-p  3 (ltbdd '(or (and sequence (not array))
                                        number
                                        (and (not sequence) array)))))))
 
 (define-test test/bdd-dnf
   (bdd-with-new-hash ()
-     (assert-true (member 'number (bdd-to-dnf (bdd '(or (and sequence (not array))
+     (assert-true (member 'number (bdd-to-dnf (ltbdd '(or (and sequence (not array))
                                                      number
                                                      (and (not sequence) array))))))
-     (assert-false (member '(and number) (bdd-to-dnf (bdd '(or (and sequence (not array))
+     (assert-false (member '(and number) (bdd-to-dnf (ltbdd '(or (and sequence (not array))
                                                             number
                                                             (and (not sequence) array)))) :test #'equal))))
 

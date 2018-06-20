@@ -308,7 +308,7 @@
   ())
 
 (defmethod add-node ((g bdd-graph) type-specifier)
-  (let ((z (make-instance 'node-of-bdd :label (bdd type-specifier))))
+  (let ((z (make-instance 'node-of-bdd :label (ltbdd type-specifier))))
     (push z
           (nodes g))
     z))

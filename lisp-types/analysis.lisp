@@ -657,14 +657,18 @@ to a set of types returned from %bdd-decompose-types."
          (format str "~A~A" delimiter next))))))
 
 (defun create-gnuplot (sorted-file gnuplot-file png-filename normalize hilite-min include-decompose key create-png-p comment)
-  (declare (type (member :smooth :xys) key))
+  (declare (type (member :smooth :xys) key)
+           (type (or list (and symbol (satisfies symbol-function))) include-decompose))
   (let ((min-num-points 1)
+        (include-decompose (if (symbolp include-decompose)
+                               (list include-decompose)
+                               include-decompose))
         (content (with-open-file (stream sorted-file :direction :input)
                    (format t "reading    ~A~%" sorted-file)
                    (user-read stream nil nil))))
     (with-open-file (stream gnuplot-file :direction :output :if-exists :supersede :if-does-not-exist :create)
       (format t "[writing to ~A~%" gnuplot-file)
-      (destructuring-bind (&key summary sorted &allow-other-keys &aux min-curve min-curve-line-style) content
+      (destructuring-bind (&key (summary "missing summary") sorted &allow-other-keys &aux min-curve min-curve-line-style) content
         (declare (type string summary))
         (if (not sorted)
             (warn "skipping ~S too few points" summary)
@@ -1078,6 +1082,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
   nil)
 
 (defun print-ltxdat (ltxdat-name sorted-name include-decompose legendp tag)
+  (declare (type list include-decompose))
   (let ((content (with-open-file (stream sorted-name :direction :input :if-does-not-exist :error)
                    (user-read stream))))
     (destructuring-bind (&key sorted &allow-other-keys) content
@@ -1205,7 +1210,8 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
                        (png-name (make-output-file-name :png-name destination-dir prefix file-name))
                        (gnuplot-normalized-name (make-output-file-name :gnuplot-normalized-name destination-dir prefix file-name))
                        (png-normalized-name (make-output-file-name :png-normalized-name destination-dir prefix file-name)))
-  (declare (type string prefix destination-dir))
+  (declare (type string prefix destination-dir)
+           (type (or list (and symbol (satisfies symbol-function))) include-decompose))
   (format t "report ~A~%" summary)
   (when re-run
     (with-open-file (stream sexp-name :direction :output :if-exists :supersede :if-does-not-exist :create)

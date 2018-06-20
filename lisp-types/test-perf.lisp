@@ -47,12 +47,30 @@
                             sb-pcl::EQL-SPECIALIZER) :time-out nil))
 
 #+sbcl
+(define-test test/bdd-numbers-3
+  (bdd-with-new-hash ()
+    (assert-true (types/cmp-perfs :limit 3
+                                  :file-name "bdd-numbers"
+                                  :destination-dir "/tmp"
+                                  :decompose '(lisp-types::bdd-decompose-types)
+                                  :types (valid-subtypes 'number)))))
+
+#+sbcl
+(define-test test/bdd-numbers-6
+  (bdd-with-new-hash ()
+    (assert-true (types/cmp-perfs :limit 6
+                                  :file-name "bdd-numbers"
+                                  :destination-dir "/tmp"
+                                  :decompose '(lisp-types::bdd-decompose-types)
+                                  :types (valid-subtypes 'number)))))
+
+#+sbcl
 (define-test test/bdd-numbers
   (bdd-with-new-hash ()
     (assert-true (types/cmp-perfs :limit 15
                                   :file-name "bdd-numbers"
                                   :destination-dir "/tmp"
-                                  :decompose 'lisp-types::bdd-decompose-types
+                                  :decompose '(lisp-types::bdd-decompose-types)
                                   :types (valid-subtypes 'number)))))
 
 
@@ -145,9 +163,9 @@
 (define-test disjoint-cmp-a
   (bdd-with-new-hash ()
     (bdd-with-new-hash ()
-      (let* ((t1 (bdd '(member 0 2)))
-             (t2 (bdd '(member 0 1 2)))
-             (t3 (bdd '(member 0 2 4)))
+      (let* ((t1 (ltbdd '(member 0 2)))
+             (t2 (ltbdd '(member 0 1 2)))
+             (t3 (ltbdd '(member 0 2 4)))
              (bdds (list t1 t2 t3))
              (U (reduce #'bdd-or bdds :initial-value *bdd-false*)))
         (assert-false (eq '= (bdd-cmp '(member  0 2 4) '(member 0 2))))
