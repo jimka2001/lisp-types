@@ -20,22 +20,10 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-(in-package :lisp-types.test)
-
-(eval-when (:execute :load-toplevel :compile-toplevel)
-  (defun shadow-package-symbols ()
-    (let ((lisp-types-test (find-package  :lisp-types.test))
-          (lisp-types (find-package  :lisp-types)))
-      (do-symbols (name :lisp-types)
-        (when (and (eq lisp-types (symbol-package name))
-                   (not (find-symbol (symbol-name name) lisp-types-test)))
-          (format t "5 importing name=~A into  :lisp-types.test~%" name)
-          (shadowing-import name :lisp-types.test))))))
-
-(shadow-package-symbols)
 
 
-
+(in-package :lisp-types-test)
+(shadow-all-symbols :package-from :lisp-types :package-into :lisp-types-test)
 
 (deftype test-float-radix () '(integer 0 (64)))
 (deftype test-float-digits () '(integer 0 64))
@@ -51,7 +39,7 @@
 	(*print-failures* t)
 	(*summarize-results* t)
 	(*print-errors* t))
-    (run-tests :all (list :lisp-types.test))))
+    (run-tests :all (list :lisp-types-test))))
 
 (define-test type/reduce-b
   (assert-true (equal (reduce-lisp-type '(AND ARITHMETIC-ERROR (NOT CELL-ERROR)))

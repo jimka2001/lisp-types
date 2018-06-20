@@ -22,6 +22,7 @@
 
 (asdf:defsystem :lisp-types-test
   :depends-on (:lisp-types
+               :lisp-types-analysis
                :bordeaux-threads
                :closer-mop
 	       (:version :lisp-unit "0.9.0")
@@ -34,21 +35,14 @@
      (:file "test-bdd-test-classes")
      (:file "test-lisp-types")
      (:file "test-util")
-     (:file "test-perf" :depends-on ("analysis"))
+     (:file "test-perf")
      (:file "test-typecase" :depends-on ("test-lisp-types"))
      (:file "test-sat" :depends-on ("test-lisp-types" "test-perf"))
      (:file "test-graph" :depends-on ("test-lisp-types" "test-perf"))
-     (:file "profile")
-     (:file "test-profile" :depends-on ("profile"))
-     (:file "theta")
-     (:file "analysis" :depends-on ("test-lisp-types" "profile")) ;; valid-subtypes
-     (:file "bdd-size-simulation" :depends-on ("test-bdd-test-classes"))
      (:file "test-bdd" :depends-on ("test-bdd-test-classes"
-                                    "bdd-size-simulation"
-                                    "analysis" "test-lisp-types" "test-perf"))
+                                    "test-lisp-types" "test-perf"))
      (:file "test-bdd-reduce-17")
      (:file "test-dnf")
-     (:file "test-analysis" :depends-on ("analysis"))
      (:file "test-reduce-lisp-type-once")
      (:file "test-bdd-typecase")
      ))))

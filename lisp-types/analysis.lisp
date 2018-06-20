@@ -19,25 +19,49 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(in-package :lisp-types.test)
+(defpackage :lisp-types-analysis
+  (:use :cl :lisp-types :cl-robdd :cl-robdd-analysis)
+  (:export
+   "VALID-SUBTYPES"
+   "BDD-REPORT-PROFILE"
+   "TYPES/CMP-PERF"
+   "TYPES/CMP-PERFS"
+   "*PERF-RESULTS*"
+))
 
-#|
+(in-package :lisp-types-analysis)
 
-|#
+(defun run-program (program args &rest options)
+  #+sbcl (apply #'sb-ext:run-program program args :search t options)
+  #+allegro (apply #'excl:run-shell-command
+                   (apply #'vector (cons program args))
+                   :wait t
+                   options
+                   )
+  )
 
+(defmacro exists (obj data &body body)
+  (typecase obj
+    (list
+     (let ((var (gensym "exists")))
+       `(member-if (lambda (,var)
+                     (destructuring-bind ,obj ,var
+                       ,@body)) ,data)))
+    (t
+     `(member-if (lambda (,obj) ,@body) ,data))))
 
+(defmacro forall (var data &body body)
+  `(every #'(lambda (,var) ,@body) ,data))
 
-(let ((lisp-types-test (find-package  :lisp-types.test))
-      (lisp-types (find-package  :lisp-types)))
-  (do-symbols (name :lisp-types)
-    (when (and (eq lisp-types (symbol-package name))
-               (not (find-symbol (symbol-name name) lisp-types-test)))
-      (format t "1 importing name=~A into  :lisp-types.test~%" name)
-      (shadowing-import name :lisp-types.test))))
+(defmacro while (test &body body)
+  `(loop :while ,test
+	 :do (progn ,@body)))
 
-;;(shadow-package-symbols)
-;;(do-symbols (name :lisp-types)
-;;  (shadowing-import name :lisp-types.test))
+(defmacro setof (var data &body body)
+  `(remove-if-not (lambda (,var) ,@body) ,data))
+
+(defun getter (field)
+  (lambda (obj) (getf obj field)))
 
 (defun user-read (&rest args)
   "Calls read with the specified ARGS, but with *PACKAGE* bound to the CL-USER package.  
@@ -219,6 +243,11 @@ than as keywords."
         (format str "~A ~A" day-of-week month)
         (format str " ~2D ~2D:~2,'0D:~2,'0D ~S" date hour minute second year)))))
 
+(defun garbage-collect ()
+  #+sbcl (sb-ext::gc :full t)
+  #+allegro (excl:gc t)
+)
+
 (defun types/cmp-perfs (&key
                           (re-run t)
                           (verify nil)
@@ -324,162 +353,10 @@ than as keywords."
       (log-data)))
   t)
 
-(defun best-time (num-tries thunk
-                  &key profile
-                    (sprofile-plists nil)
-                    (dprofile-plists nil)
-                    (dprofile-total-seconds 0)
-                    (set-sprofile-plists (lambda (plists)
-                                           (setf sprofile-plists plists)))
-                    (set-dprofile-plists (lambda (plists total-seconds)
-                                           (setf dprofile-total-seconds total-seconds)
-                                           (setf dprofile-plists plists)))                    
-                    (n-stimes 1)
-                    (set-n-stimes (lambda (n)
-                                    (setf n-stimes n)))
-                    (get-n-stimes (lambda ()
-                                    n-stimes))
-                    (n-dtimes 1)
-                    (set-n-dtimes (lambda (n)
-                                    (setf n-dtimes n)))
-                    (get-n-dtimes (lambda ()
-                                    n-dtimes))
-                    (get-profile-plists (lambda ()
-                                          (list :n-stimes (funcall get-n-stimes)
-                                                :n-dtimes (funcall get-n-dtimes)
-                                                :dprofile-total dprofile-total-seconds
-                                                :dprof dprofile-plists
-                                                :sprof sprofile-plists))))
-  "returns a plist with the fields :wall-time :run-time :value"
-  (declare (type (and fixnum unsigned-byte) num-tries)
-           (type (function () t) thunk))
-  (let (result)
-    (dotimes (try num-tries)
-      (funcall set-n-stimes 1)
-      (funcall set-n-dtimes 1)
-      (let* ((run-time-t1 (get-internal-run-time))
-             (start-real-time (get-internal-real-time))
-             (s2 (if profile
-                     (call-with-sprofiling thunk
-                                           set-sprofile-plists
-                                           set-n-stimes)
-                     (funcall thunk)))
-             (run-time-t2 (get-internal-run-time))
-             (wall-time (/ (- (get-internal-real-time) start-real-time) internal-time-units-per-second
-                           (1+ (funcall get-n-stimes))))
-             (run-time  (/ (- run-time-t2 run-time-t1) internal-time-units-per-second
-                           (1+ (funcall get-n-stimes)))))
-        (when profile
-          (call-with-dprofiling thunk
-                                '("LISP-TYPES" "LISP-TYPES.TEST" subtypep sb-kernel:specifier-type)
-                                set-dprofile-plists
-                                set-n-dtimes))
-        (setf result
-              (cond
-                ((not result) ; if first time through dotimes loop
-                 (list :wall-time (the real wall-time)
-                       :run-time run-time
-                       :value s2
-                       :profile-plists (funcall get-profile-plists)))
-                ((< run-time (the real (getf result :run-time #+sbcl 0)))
-                 (list :wall-time wall-time
-                       :run-time run-time
-                       :value s2
-                       :profile-plists (funcall get-profile-plists)))
-                (t
-                 result)))))
-    result))
-
-(defun call-with-timeout (time-out thunk num-tries &key profile)
-  "TIME-OUT, integer, the wall-time allowed to call the function THUNK.
- THUNK is a 0-ary function returning some type X.
- Call the function THUNK, in one thread, and start a 2nd observer thread.  The 2nd thread
- is responsible for monitoring the wall time and killing the 1st thread if the TIME-OUT has
- passed.  The function will be called num-tries times, and the minimum time is the
- value reported in the returned plist.
- If TIME-OUT is nil, then the function is not run in a separate thread, but rather 
- is run directly.
- Returns a plist, one of the following:
- (:wall-time rational :run-time rational :time-out integer) or
- (:wall-time rational :run-time rational :value X :profile-plists list-of-plists)"
-  (declare (type (or null (and fixnum unsigned-byte)) time-out)
-           (type (function () t) thunk)
-           (type (and fixnum unsigned-byte) num-tries))
-  (let (sprofile-plists
-        dprofile-plists
-        (dprofile-total-seconds 0)
-        (n-dtimes 1)
-        (n-stimes 1))
-    (labels ((get-profile-plists ()
-               (list :n-stimes (get-n-stimes)
-                     :n-dtimes (get-n-dtimes)
-                     :dprofile-total dprofile-total-seconds
-                     :dprof dprofile-plists
-                     :sprof sprofile-plists))
-             (set-sprofile-plists (plists)
-               (setf sprofile-plists plists))
-             (set-dprofile-plists (plists total-seconds)
-               (setf dprofile-total-seconds total-seconds)
-               (setf dprofile-plists plists))
-             (get-n-stimes ()
-               n-stimes)
-             (set-n-stimes (n)
-               (setf n-stimes n))
-             (get-n-dtimes ()
-               n-dtimes)
-             (set-n-dtimes (n)
-               (setf n-dtimes n)))
-      (if (not time-out)
-          (best-time num-tries thunk :profile profile
-                                     :get-profile-plists #'get-profile-plists
-                                     :set-sprofile-plists #'set-sprofile-plists
-                                     :set-dprofile-plists #'set-dprofile-plists
-                                     :get-n-stimes #'get-n-stimes
-                                     :get-n-dtimes #'get-n-dtimes
-                                     :set-n-stimes #'set-n-stimes
-                                     :set-n-dtimes #'set-n-dtimes)
-          (%call-with-timeout time-out thunk num-tries :profile profile
-                                                       :get-profile-plists #'get-profile-plists
-                                                       :set-sprofile-plists #'set-sprofile-plists
-                                                       :set-dprofile-plists #'set-dprofile-plists
-                                                       :get-n-stimes #'get-n-stimes
-                                                       :get-n-dtimes #'get-n-dtimes
-                                                       :set-n-stimes #'set-n-stimes
-                                                       :set-n-dtimes #'set-n-dtimes)))))
-
-#+allegro
-(defun %call-with-timeout (time-out thunk num-tries &key profile)
-  (declare (type (and fixnum unsigned-byte) time-out num-tries)
-           (type (function () t) thunk)
-           (ignore profile))
-  (let ((start-run-time (get-internal-run-time))
-        (start-real-time (get-internal-real-time)))
-    (sys:with-timeout (time-out (let ((run-time (get-internal-run-time))
-                                      (real-time (get-internal-real-time)))
-                                  (list :wall-time (/ (- real-time start-real-time) internal-time-units-per-second)
-                                        :run-time  (/ (- run-time start-run-time) internal-time-units-per-second)
-                                        :time-out time-out)))
-      (best-time num-tries thunk :profile nil))))
-
-#+sbcl
-(defun %call-with-timeout (time-out thunk num-tries &rest profiler-args &key get-profile-plists &allow-other-keys)
-  (declare (type (and fixnum unsigned-byte) time-out num-tries)
-           (type (function () t) thunk))
-  (let ((start-run-time (get-internal-run-time))
-        (start-real-time (get-internal-real-time)))
-    (handler-bind ((sb-ext:timeout (lambda (c)
-                                     (declare (ignore c))
-                                     (let ((run-time (get-internal-run-time))
-                                           (real-time (get-internal-real-time)))
-                                       (return-from %call-with-timeout
-                                         (list :wall-time (/ (- real-time start-real-time) internal-time-units-per-second)
-                                               :run-time  (/ (- run-time start-run-time) internal-time-units-per-second)
-                                               :profile-plists (funcall get-profile-plists)
-                                               :time-out time-out))))))
-      (sb-ext:with-timeout time-out
-        (apply #'best-time num-tries thunk profiler-args)))))
 
 (defvar *perf-results* nil)
+(assert (find-symbol "*PERF-RESULTS*" :lisp-types-analysis))
+
 (defun types/cmp-perf (&key types (decompose 'bdd-decompose-types-weak) (time-out 15) (num-tries 2) profile
                        &aux (f (symbol-function decompose)))
   (declare (type list types)
@@ -572,6 +449,29 @@ than as keywords."
                   ;; case independent search
                   (string-equal name (symbol-name f))))
               *decomposition-function-descriptors*))))
+
+(defun check-decomposition (given calculated)
+  "debugging function to assure that a given list of types GIVEN corresponds correctly
+to a set of types returned from %bdd-decompose-types."
+  (bdd-with-new-hash ()
+    (let ((bdd-given (bdd `(or ,@given)))
+          (bdd-calculated (bdd `(or ,@calculated))))
+      (unless (bdd-subtypep bdd-given bdd-calculated)
+        (error "union of given types ~A is not a subset of union of~%    calculated types ~A~%difference is ~A"
+               given calculated (bdd-to-dnf (bdd-and-not bdd-given bdd-calculated))))
+      (unless (bdd-subtypep bdd-calculated bdd-given)
+        (error "union of calculated types ~A is not a subset of~%    union of given types ~A~%difference is ~A"
+               calculated given (bdd-to-dnf (bdd-and-not bdd-calculated bdd-given))))
+      (dolist (c calculated)
+        (when (bdd-empty-type (bdd c))
+          (error "calculated empty type ~A" c))
+        (unless (exists g given
+                  (bdd-subtypep (bdd c) (bdd g)))
+          (error "calculated type ~A is not a subset of any given type ~A"
+                 c given))
+        (dolist (c2 (remove c calculated))
+          (when (bdd-type-equal (bdd c2) (bdd c))
+            (error "calculated two equal types ~A = ~A" c c2)))))))
 
 (defun find-decomposition-discrepancy (&optional (type-specs '(test-array-rank test-array-total-size bignum bit
                                                                complex fixnum float test-float-digits
@@ -757,14 +657,18 @@ than as keywords."
          (format str "~A~A" delimiter next))))))
 
 (defun create-gnuplot (sorted-file gnuplot-file png-filename normalize hilite-min include-decompose key create-png-p comment)
-  (declare (type (member :smooth :xys) key))
+  (declare (type (member :smooth :xys) key)
+           (type (or list (and symbol (satisfies symbol-function))) include-decompose))
   (let ((min-num-points 1)
+        (include-decompose (if (symbolp include-decompose)
+                               (list include-decompose)
+                               include-decompose))
         (content (with-open-file (stream sorted-file :direction :input)
                    (format t "reading    ~A~%" sorted-file)
                    (user-read stream nil nil))))
     (with-open-file (stream gnuplot-file :direction :output :if-exists :supersede :if-does-not-exist :create)
       (format t "[writing to ~A~%" gnuplot-file)
-      (destructuring-bind (&key summary sorted &allow-other-keys &aux min-curve min-curve-line-style) content
+      (destructuring-bind (&key (summary "missing summary") sorted &allow-other-keys &aux min-curve min-curve-line-style) content
         (declare (type string summary))
         (if (not sorted)
             (warn "skipping ~S too few points" summary)
@@ -1178,6 +1082,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
   nil)
 
 (defun print-ltxdat (ltxdat-name sorted-name include-decompose legendp tag)
+  (declare (type list include-decompose))
   (let ((content (with-open-file (stream sorted-name :direction :input :if-does-not-exist :error)
                    (user-read stream))))
     (destructuring-bind (&key sorted &allow-other-keys) content
@@ -1305,7 +1210,8 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
                        (png-name (make-output-file-name :png-name destination-dir prefix file-name))
                        (gnuplot-normalized-name (make-output-file-name :gnuplot-normalized-name destination-dir prefix file-name))
                        (png-normalized-name (make-output-file-name :png-normalized-name destination-dir prefix file-name)))
-  (declare (type string prefix destination-dir))
+  (declare (type string prefix destination-dir)
+           (type (or list (and symbol (satisfies symbol-function))) include-decompose))
   (format t "report ~A~%" summary)
   (when re-run
     (with-open-file (stream sexp-name :direction :output :if-exists :supersede :if-does-not-exist :create)
@@ -1787,55 +1693,7 @@ sleeping before the code finishes evaluating."
                          :destination-dir "/Users/jnewton/analysis"
                          :prefix (format nil "bdd-profile-~D-~D-" decompose-function-index bucket-index))))))
 
-(defun replace-all (string part replacement &key (test #'char=))
-  "Returns a new string in which all the occurences of the part 
-is replaced with replacement."
-  (with-output-to-string (out)
-    (loop with part-length = (length part)
-          for old-pos = 0 then (+ pos part-length)
-          for pos = (search part string
-                            :start2 old-pos
-                            :test test)
-          do (write-string string out
-                           :start old-pos
-                           :end (or pos (length string)))
-          when pos do (write-string replacement out)
-            while pos)))
 
-(defun qstat-f ()
-  "call qstat -f and write the output to a file with the .sXXXX extension
-similar to where current Output_Path is indicating."
-  (let ((pbs-jobid (sb-posix:getenv "PBS_JOBID"))
-        (delimeter (format nil "~%~a" '#\Tab )))
-    ;; call qstat -f and get the output;
-    ;; qstat -f wraps long lines, so we first have to unwrap them by finding
-    ;; "\n\t" and replacing with ""
-    (let* ((qstat-out (replace-all (with-output-to-string (str)
-                                    (sb-ext:run-program "qstat" (list "-f" pbs-jobid)
-                                                        :search t
-                                                        :output str))
-                                   delimeter ""))
-           ;; we want to write into file.sXXXXX, so we have to
-           ;; find the Output_Path = /path/to/file.oXXXXXX and parse that
-           ;; to get the desired name of the new status output file.
-           (pos-host (search "Output_Path = " qstat-out))
-           (pos-path (search ":" qstat-out :start2 pos-host))
-           (pos-eol  (search (format nil "~%") qstat-out :start2 pos-host))
-           ;; output-path = "/path/to/file.oXXXXXX"
-           (output-path (subseq qstat-out (1+ pos-path) pos-eol))
-           (pos-extension (1+ (search "." output-path :from-end t)))
-           ;; extension = "XXXXXX" ; excluding the ".o"
-           (extension (subseq output-path (1+ pos-extension)))
-           ;; leading = "/path/to/file." ;; including the "."
-           (leading   (subseq output-path 0 pos-extension))
-           ;; status-filename = "/path/to/file.sXXXXXX"
-           (status-filename (concatenate 'string leading "s" extension)))
-      
-      (with-open-file (stream status-filename
-                              :direction :output
-                              :if-exists :supersede
-                              :if-does-not-exist :create)
-        (format stream "~%")
-        (write-line qstat-out stream)))))
+
 
 ;; (bdd-report-profile :num-tries 1 :multiplier 0.2 :create-png-p nil)

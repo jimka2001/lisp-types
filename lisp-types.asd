@@ -21,6 +21,7 @@
 
 (asdf:defsystem :lisp-types
   :depends-on (:dispatch
+               :cl-robdd
                ;; :sb-profile
                :sb-sprof )
   :components
@@ -28,19 +29,17 @@
     :components
     ((:file "macros")
      (:file "util")
+     (:file "ltbdd")
      (:file "lisp-types" :depends-on ("macros"))
      (:file "reduce" :depends-on ("macros" "lisp-types"))
      (:file "decompose" :depends-on ("reduce"))
      (:file "sat" :depends-on ("macros" "lisp-types"))
      (:file "typecase" :depends-on ("lisp-types"))
      (:file "graph" :depends-on ("macros" "lisp-types" "util"))
-     (:file "bdd" :depends-on ("macros" "lisp-types"))
      (:file "bdd-reduce-generic")
-     (:file "bdd-reduce" :depends-on ("bdd-reduce-generic" "bdd"))
-     (:file "bdd-graph" :depends-on ("macros" "bdd" "bdd-reduce"))
-     (:file "bdd-dot" :depends-on ("bdd" "bdd-reduce"))
-     (:file "bdd-worst-case" :depends-on ("bdd"))
-     (:file "bdd-reduce-17" :depends-on ("bdd"))
-     (:file "decompose-rtev2" :depends-on ("bdd"))
-     (:file "bdd-typecase" :depends-on ("bdd-reduce-generic" "bdd"))
+     (:file "bdd-reduce" :depends-on ("bdd-reduce-generic"))
+     (:file "bdd-graph" :depends-on ("macros" "bdd-reduce"))
+     (:file "bdd-reduce-17")
+     (:file "decompose-rtev2")
+     (:file "bdd-typecase" :depends-on ("bdd-reduce-generic"))
      ))))

@@ -19,51 +19,50 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(in-package :lisp-types.test)
+(in-package :lisp-types-test)
 
-(let ((lisp-types-test (find-package  :lisp-types.test))
-      (lisp-types (find-package  :lisp-types)))
-  (do-symbols (name :lisp-types)
-    (when (and (eq lisp-types (symbol-package name))
-               (not (find-symbol (symbol-name name) lisp-types-test)))
-      (format t "3 importing name=~A into  :lisp-types.test~%" name)
-      (shadowing-import name :lisp-types.test))))
+(shadow-all-symbols :package-from :lisp-types :package-into :lisp-types-test)
 
-;(shadow-package-symbols)
-;;(do-symbols (name :lisp-types)
-;;  (shadowing-import name :lisp-types.test))
 
+(define-test test/lisp-type-bdd
+  (bdd-with-new-hash ()
+    (let ((bdd (ltbdd 'z1)))
+      (assert-true (typep bdd 'lisp-type-bdd))
+      (assert-true (typep bdd 'lisp-type-bdd-node))
+      (assert-true (typep (bdd-positive bdd) 'bdd-leaf))
+      (assert-true (typep (bdd-negative bdd) 'bdd-leaf)))))
+  
 
 (define-test test/bdd-to-dnf
   (bdd-with-new-hash ()
     (assert-true (equal 'integer
-                        (bdd-to-dnf (bdd 'integer))))
-    (assert-true (bdd-to-dnf (bdd '(or string integer))))
-    (assert-true (bdd-to-dnf (bdd '(or (and integer (not string)) (and string (not integer))))))))
+                        (bdd-to-dnf (ltbdd 'integer))))
+    (assert-true (bdd-to-dnf (ltbdd '(or string integer))))
+    (assert-true (bdd-to-dnf (ltbdd '(or (and integer (not string)) (and string (not integer))))))))
 
 (define-test test/bdd-create
   (bdd-with-new-hash ()
-    (assert-true (bdd 'integer))
-    (assert-true (bdd '(or integer float)))
-    (assert-true (bdd '(or (and integer (not string)) (and string (not integer)))))
-    (assert-true (eq (bdd '(or integer string))
-                     (bdd '(or string integer))))
-    (assert-true (eq (bdd '(or (and integer (not string)) (and string (not integer))))
-                     (bdd '(or (and (not integer) string) (and integer (not string))))))
+    (assert-true (ltbdd 'integer))
+    (assert-true (ltbdd '(or integer float)))
+    (assert-true (ltbdd '(or (and integer (not string)) (and string (not integer)))))
+    (assert-true (eq (ltbdd '(or integer string))
+                     (ltbdd '(or string integer))))
+    (assert-true (eq (ltbdd '(or (and integer (not string)) (and string (not integer))))
+                     (ltbdd '(or (and (not integer) string) (and integer (not string))))))
 
     ))
 
 (define-test types/bdd-collect-atomic-types
   (bdd-with-new-hash ()
-    (assert-false (set-exclusive-or (bdd-collect-atomic-types (bdd '(or (and integer (not string)) (and string (not integer)))))
+    (assert-false (set-exclusive-or (bdd-collect-atomic-types (ltbdd '(or (and integer (not string)) (and string (not integer)))))
                                   
                                   '(integer string)))))
 
   
 (define-test test/certain-reductions
   (bdd-with-new-hash ()
-    (assert-true (bdd '(or (and integer (not string)) (and string (not integer)))))
-    (assert-false (bdd-to-dnf (bdd-and-not (bdd 'integer) (bdd 'number))))))
+    (assert-true (ltbdd '(or (and integer (not string)) (and string (not integer)))))
+    (assert-false (bdd-to-dnf (bdd-and-not (ltbdd 'integer) (ltbdd 'number))))))
 
 
 (define-test type/bdd-sample-a
@@ -90,17 +89,17 @@
         (assert-false (smarter-subtypep t2 t1))))))
 
 (define-test type/bdd-subtypep
-  (assert-true (bdd-subtypep (bdd 'float) (bdd 'number)))
-  (assert-true (bdd-subtypep (bdd '(eql :x)) (bdd 'keyword)))
-  (assert-true (bdd-subtypep (bdd '(not keyword)) (bdd '(not (eql :x)))))
-  (assert-false (bdd-subtypep (bdd 'keyword) (bdd '(eql :x))))
-  (assert-false (bdd-subtypep (bdd '(not keyword)) (bdd '(eql :x))))
-  (assert-false (bdd-subtypep (bdd '(not (eql :x))) (bdd 'keyword)))
+  (assert-true (bdd-subtypep (ltbdd 'float) (ltbdd 'number)))
+  (assert-true (bdd-subtypep (ltbdd '(eql :x)) (ltbdd 'keyword)))
+  (assert-true (bdd-subtypep (ltbdd '(not keyword)) (ltbdd '(not (eql :x)))))
+  (assert-false (bdd-subtypep (ltbdd 'keyword) (ltbdd '(eql :x))))
+  (assert-false (bdd-subtypep (ltbdd '(not keyword)) (ltbdd '(eql :x))))
+  (assert-false (bdd-subtypep (ltbdd '(not (eql :x))) (ltbdd 'keyword)))
 
-  (assert-true (bdd-type-equal (bdd '(and (member :a :b) keyword))
-                               (bdd '(member :a :b))))
+  (assert-true (bdd-type-equal (ltbdd '(and (member :a :b) keyword))
+                               (ltbdd '(member :a :b))))
 
-  (assert-true (equal (bdd-to-dnf (bdd '(and (member :a :b) keyword)))
+  (assert-true (equal (bdd-to-dnf (ltbdd '(and (member :a :b) keyword)))
                       '(member :a :b)))
   )
 
@@ -124,12 +123,12 @@
                    (AND CLASS (NOT CELL-ERROR) (NOT BUILT-IN-CLASS) ARITHMETIC-ERROR)
                    (AND (NOT CLASS) CELL-ERROR ARITHMETIC-ERROR) BROADCAST-STREAM BOOLEAN BIGNUM
                    (AND (NOT BIT-VECTOR) (NOT BASE-STRING) ARRAY) BIT-VECTOR BASE-STRING))
-         (t3 (bdd 'CONCATENATED-STREAM))
-         (t2 (bdd `(or ,@decomp)))
+         (t3 (ltbdd 'CONCATENATED-STREAM))
+         (t2 (ltbdd `(or ,@decomp)))
          (t4 (bdd-and-not t3 t2)))
 
     (dolist (t1 decomp)
-      (let ((bdd1 (bdd t1)))
+      (let ((bdd1 (ltbdd t1)))
         (dolist (f (list #'bdd-and #'bdd-and-not #'(lambda (a b) (bdd-and-not b a))))
           (let ((t5 (funcall f bdd1 t4)))
             (if (bdd-empty-type t5) nil 'not-nil)))))))
@@ -181,235 +180,68 @@
     ;;  (number (string nil t) nil)
     ;;  --> (number t nil)
     (assert-true (equal (bdd-serialize
-                         (bdd-node 'number
-                                   (bdd-node 'string nil t)
+                         (ltbdd-node 'number
+                                   (ltbdd-node 'string nil t)
                                    nil))
                         '(number t nil)))
         
     ;; 2) disjoint on right of negative type
     (assert-true (equal (bdd-serialize
-                         (bdd-node 'non-number
+                         (ltbdd-node 'non-number
                                    nil
-                                   (bdd-node 'string nil t)))
+                                   (ltbdd-node 'string nil t)))
                         '(non-number nil t)))
                       
     ;; 3) subtype on right
     (assert-true (equal (bdd-serialize
-                         (bdd-node 'integer
-                                   (bdd-node 'number t nil)
+                         (ltbdd-node 'integer
+                                   (ltbdd-node 'number t nil)
                                    nil))
                         '(integer t nil)))
 
     ;; 4) subtype on left of negative type
     (assert-true (equal (bdd-serialize
-                         (bdd-node 'non-number
-                                   (bdd-node 'integer nil t)
+                         (ltbdd-node 'non-number
+                                   (ltbdd-node 'integer nil t)
                                    nil))
                         '(non-number t nil)))
                       
 
     ;; 5) supertype on left
     (assert-true (equal (bdd-serialize
-                         (bdd-node 'integer
-                                   (bdd-node 'number t nil)
+                         (ltbdd-node 'integer
+                                   (ltbdd-node 'number t nil)
                                    nil))
                         '(integer t nil)))
 
     ;; 6) supertype on right of negative type
     (assert-true (equal (bdd-serialize
-                         (bdd-node 'non-integer
+                         (ltbdd-node 'non-integer
                                    nil
-                                   (bdd-node 'number t nil)))
+                                   (ltbdd-node 'number t nil)))
                         '(non-integer nil t)))))
 
-(define-test test/bdd-numbers
-  (bdd-with-new-hash ()
-    (assert-true (types/cmp-perfs :limit 15
-                                  :file-name "bdd-numbers"
-                                  :destination-dir "/tmp"
-                                  :decompose 'lisp-types::bdd-decompose-types
-                                  :types (valid-subtypes 'number)))))
-
-
-(define-test test/bdd-cmp
-  (bdd-with-new-hash ()
-    ;; =
-    (assert-true (eq '= (bdd-cmp 'a 'a)))
-    (assert-true (eq '= (bdd-cmp "a" "a")))
-    (assert-true (eq '= (bdd-cmp 1 1)))
-    (assert-true (eq '= (bdd-cmp 1.0 1.0)))
-    (assert-true (eq '= (bdd-cmp 1/2 1/2)))
-    (assert-true (eq '= (bdd-cmp nil nil)))
-    (assert-true (eq '= (bdd-cmp '(a 1 1.0) '(a 1 1.0))))
-
-    ;; <
-    (assert-true (eq '< (bdd-cmp "CL-USER" "KEYWORD")))
-    (assert-true (eq '< (bdd-cmp 'CL-USER::x :x)))
-    (assert-true (eq '< (bdd-cmp '(a b c) '(a b c d))))
-    (assert-true (eq '< (bdd-cmp '(a 1 c) '(a 2 c d))))
-    (assert-true (eq '< (bdd-cmp '(a 1 c d) '(a 2 c))))
-    (assert-true (eq '< (bdd-cmp 'string 'symbol)))
-    ;; (assert-true (eq '< (bdd-cmp "string" 'symbol)))
-    (assert-true (eq '< (bdd-cmp 'cons 'null)))
-    (assert-true (eq '< (bdd-cmp nil '(a))))
-    (assert-true (eq '< (bdd-cmp 1/3 1/2)))
-
-    ;; >
-    (assert-true (eq '> (bdd-cmp "KEYWORD" "CL-USER")))
-    (assert-true (eq '> (bdd-cmp :x 'CL-USER::x)))
-    (assert-true (eq '> (bdd-cmp '(a b c d) '(a b c))))
-    (assert-true (eq '> (bdd-cmp '(a 2 c d) '(a 1 c))))
-    (assert-true (eq '> (bdd-cmp '(a 2 c) '(a 1 c d))))
-    (assert-true (eq '> (bdd-cmp 'symbol 'string)))
-    ;; (assert-true (eq '> (bdd-cmp 'symbol "string")))
-    (assert-true (eq '> (bdd-cmp 'null 'cons)))
-    (assert-true (eq '> (bdd-cmp '(a) nil)))
-    (assert-true (eq '> (bdd-cmp 1/2 1/3)))
-    )  )
                    
 (define-test test/bdd-type-p
   (bdd-with-new-hash ()
-    (assert-false (bdd-type-p  t (bdd '(or (and sequence (not array))
+    (assert-false (bdd-type-p  t (ltbdd '(or (and sequence (not array))
                                         number
                                         (and (not sequence) array)))))
-    (assert-true (bdd-type-p  3 (bdd '(or (and sequence (not array))
+    (assert-true (bdd-type-p  3 (ltbdd '(or (and sequence (not array))
                                        number
                                        (and (not sequence) array)))))))
 
 (define-test test/bdd-dnf
   (bdd-with-new-hash ()
-     (assert-true (member 'number (bdd-to-dnf (bdd '(or (and sequence (not array))
+     (assert-true (member 'number (bdd-to-dnf (ltbdd '(or (and sequence (not array))
                                                      number
                                                      (and (not sequence) array))))))
-     (assert-false (member '(and number) (bdd-to-dnf (bdd '(or (and sequence (not array))
+     (assert-false (member '(and number) (bdd-to-dnf (ltbdd '(or (and sequence (not array))
                                                             number
                                                             (and (not sequence) array)))) :test #'equal))))
 
- ;;    (sb-ext::gc :full t)
- ;;    (latex-measure-bdd-sizes "/Users/jnewton/newton.16.edtchs/src" '(Z1 Z2 Z3 Z4 Z5 Z6) 4000)
-
-(defun test-with-z1-z3 (prefix num-samples &key (re-run t))
-  (garbage-collect)
-  (latex-measure-bdd-sizes prefix '(Z1 Z2 Z3 Z4 Z5 Z6) num-samples
-                           :min 1 :max 3 :re-run re-run))
-
-(defun test-with-z1-z6 (prefix num-samples &key (re-run t))
-  (garbage-collect)
-  (latex-measure-bdd-sizes prefix '(Z1 Z2 Z3 Z4 Z5 Z6) num-samples
-                           :min 1 :max 6 :re-run re-run))
-
-(defun test-with-z7-z8 (prefix num-samples &key (re-run t))
-  (garbage-collect)
-  (latex-measure-bdd-sizes prefix '(Z1 Z2 Z3 Z4 Z5 Z6 Z7 Z8) num-samples
-                           :min 7 :max 8 :re-run re-run))
-
-(defun test-with-z3-z8 (prefix num-samples &key (re-run t))
-  (garbage-collect)
-  (latex-measure-bdd-sizes prefix '(Z1 Z2 Z3 Z4 Z5 Z6 Z7 Z8) num-samples
-                           :min 3 :max 8 :re-run re-run))
-
-(defun test-with-z1-z8 (prefix num-samples &key (re-run t))
-  (garbage-collect)
-  (latex-measure-bdd-sizes prefix '(Z1 Z2 Z3 Z4 Z5 Z6 Z7 Z8) num-samples
-                           :min 1 :max 8 :re-run re-run))
-
-;; (test-with-z1-z6 "/Users/jnewton/newton.16.edtchs/src/bdd-distribution.ltxdat" 1000)
 
 
-(define-test test/bdd-sizes
-  (ensure-directories-exist "/tmp/jnewton/graph/bdd-distribution.ltxdat")
-  (test-with-z1-z6 "/tmp/jnewton/graph" 10 ;; 4000
-                   ))
-
-(define-test test/median
-  (assert-true (= 1 (median-a-list '((1 3)))))
-  (assert-true (= 1 (median-a-list '((0 1) (1 3) (2 1)))))
-  (assert-true (= 1 (median-a-list '((0 2) (1 3) (2 1)))))
-  (assert-true (= 1/2 (median-a-list '((0 2) (1 2)))))
-  )
-
-(define-test test/random-combination
-  (flet ((test-it (*bdd-operation-order*)
-           (bdd-with-new-hash ()
-             (let ((vars '(Z1 Z2 Z3 Z4 Z5 Z6)))
-               (bdd (random-boolean-combination vars))))))
-    (test-it :reduce)
-    (test-it :divide-and-conquer)))
 
 
-(defun test-operation-order ()
-  (labels ((local (vars)
-             (when vars
-               (local (cdr vars)))
-             (let ((lisp-types::*bdd-operation-order* :reduce))
-               (format t "size=~A ~A~%" (length vars) lisp-types::*bdd-operation-order*)
-               (bdd-with-new-hash ()
-                 (time (bdd (random-boolean-combination vars)))))
-             (let ((lisp-types::*bdd-operation-order* :divide-and-conquer))
-               (format t "size=~A ~A~%" (length vars) lisp-types::*bdd-operation-order*)
-               (bdd-with-new-hash ()
-                 (time (bdd (random-boolean-combination vars)))))))
-    (local '(Z1 Z2 Z3 Z4 Z5 Z6 Z7 Z8 Z9))))
 
-(define-test test/bdd-and
-  (let ((test-vectors (list (list *bdd-false* *bdd-false* *bdd-false*)
-                            (list *bdd-false* *bdd-true*  *bdd-false*)
-                            (list *bdd-true*  *bdd-false* *bdd-false*)
-                            (list *bdd-true*  *bdd-true*  *bdd-true*))))
-    (bdd-with-new-hash ()
-      (dolist (test-vector test-vectors)
-        (destructuring-bind (a b f) test-vector
-          (assert-true (eq f (bdd-and a b))))))))
-
-(define-test test/bdd-or
-  (let ((test-vectors (list (list *bdd-false* *bdd-false* *bdd-false*)
-                            (list *bdd-false* *bdd-true*  *bdd-true*)
-                            (list *bdd-true*  *bdd-false* *bdd-true*)
-                            (list *bdd-true*  *bdd-true*  *bdd-true*))))
-    (bdd-with-new-hash ()
-      (dolist (test-vector test-vectors)
-        (destructuring-bind (a b f) test-vector
-          (assert-true (eq f (bdd-or a b))))))))
-
-(define-test test/bdd-and-not
-  (let ((test-vectors (list (list *bdd-false* *bdd-false* *bdd-false*)
-                            (list *bdd-false* *bdd-true*  *bdd-false*)
-                            (list *bdd-true*  *bdd-false* *bdd-true*)
-                            (list *bdd-true*  *bdd-true*  *bdd-false*))))
-    (bdd-with-new-hash ()
-      (dolist (test-vector test-vectors)
-        (destructuring-bind (a b f) test-vector
-          (assert-true (eq f (bdd-and-not a b))))))))
-
-(define-test test/bdd-xor
-  (let ((test-vectors (list (list *bdd-false* *bdd-false* *bdd-false*)
-                            (list *bdd-false* *bdd-true*  *bdd-true*)
-                            (list *bdd-true*  *bdd-false* *bdd-true*)
-                            (list *bdd-true*  *bdd-true*  *bdd-false*))))
-    (bdd-with-new-hash ()
-      (dolist (test-vector test-vectors)
-        (destructuring-bind (a b f) test-vector
-          (assert-true (eq f (bdd-xor a b))))))))
-
-
-(define-test test/bdd-xor-2
-  (let ((test-operands '((z1 z2)
-                         ((or z1 z2) z3)
-                         ((or z1 z2) (or z1 z3))
-                         ((or (not z1) z2) (or z1 z3))
-                         ((or z1 z2) (or z1 (not z3)))
-                         ((or z1 (not z2)) (or z1 z3))
-                         ((or z1 (not z2)) (or (not z1) z3))
-                         ((or z1 z3 z3 z4 z5 z6 z7) (or z3 z4 z5 z6 z7 z8 z9))
-                         )))
-    (bdd-with-new-hash ()
-      (dolist (test-operand test-operands)
-        (destructuring-bind (a b) (mapcar #'bdd test-operand)
-          (assert-true (eq (bdd-or (bdd-and-not a b) (bdd-and-not b a))
-                           (bdd-xor a b)))
-          (assert-true (eq (bdd-and-not (bdd-or a b) (bdd-and a b))
-                           (bdd-xor a b)))
-          (assert-true (eq (bdd-xor b a)
-                           (bdd-xor a b)))
-)))))
-          

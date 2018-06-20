@@ -1,4 +1,4 @@
-;; Copyright (c) 2017 EPITA Research and Development Laboratory
+;; Copyright (c) 2016,2017 EPITA Research and Development Laboratory
 ;;
 ;; Permission is hereby granted, free of charge, to any person obtaining
 ;; a copy of this software and associated documentation
@@ -19,11 +19,31 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(in-package :lisp-types.test)
+(in-package   :lisp-types)
 
-(define-test analysis/call-with-timeout
-  (assert-true (numberp (getf (call-with-timeout 2 (lambda () (sleep 10)) 1)
-                              :time-out)))
-  (assert-true (eql 42 (getf (call-with-timeout 20 (lambda () 42) 2)
-                             :value))))
-  
+(defclass lisp-type-bdd (bdd)
+  ()
+  (:documentation "Subclass of bdd for represeting an ROBDD with lisp-type semantics"))
+
+(defclass lisp-type-bdd-node (lisp-type-bdd bdd-node)
+  ()
+  (:documentation "Subclass of bdd-node for represeting an ROBDD with lisp-type semantics"))
+
+;; TODO bdd-to-dnf or %bdd-to-dnf should remove superclasses from conjunctions, and remove subclasses from disjunctions
+
+(defmethod initialize-instance :after ((bdd lisp-type-bdd) &rest initargs)
+  (declare (ignore initargs))
+  (unless (valid-type-p (bdd-label bdd))
+    (error "invalid type specifier: ~A" (bdd-label bdd))))
+
+(defun ltbdd (obj)
+  (bdd obj :bdd-node-class 'lisp-type-bdd-node))
+
+(defmethod bdd-factory ((bdd-class (eql (find-class 'lisp-type-bdd-node))))
+  #'ltbdd)
+
+(defmethod bdd-factory ((bdd-class (eql 'lisp-type-bdd-node)))
+  #'ltbdd)
+
+(defun ltbdd-node (label positive negative)
+  (bdd-node label positive negative :bdd-node-class 'lisp-type-bdd-node))

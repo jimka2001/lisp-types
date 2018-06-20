@@ -20,24 +20,20 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-(defpackage :lisp-types.test
+(defpackage :lisp-types-test
   (:shadowing-import-from :lisp-types "TEST" "A")
   ;;(:shadowing-import-from :closer-mop "STANDARD-GENERIC-FUNCTION" "DEFMETHOD" "DEFGENERIC")
   (:use :cl :lisp-types :lisp-unit ;;:closer-mop
+        :lisp-types-analysis
+        :cl-robdd
    #+sbcl :sb-pcl
    #+allegro :aclmop
         ))
 
 
-(in-package :lisp-types.test)
+(in-package :lisp-types-test)
 
-(let ((lisp-types-test (find-package  :lisp-types.test))
-      (lisp-types (find-package  :lisp-types)))
-  (do-symbols (name :lisp-types)
-    (when (and (eq lisp-types (symbol-package name))
-               (not (find-symbol (symbol-name name) lisp-types-test)))
-      (format t "4 importing name=~A into  :lisp-types.test~%" name)
-      (shadowing-import name :lisp-types.test))))
+(shadow-all-symbols :package-from :lisp-types :package-into :lisp-types-test)
 
 ;; configuration for lisp-unit
 (setf lisp-unit:*print-summary* t

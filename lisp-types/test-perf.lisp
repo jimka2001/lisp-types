@@ -19,20 +19,22 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(in-package :lisp-types.test)
+(in-package :lisp-types-test)
 
+(shadow-all-symbols :package-from :lisp-types          :package-into :lisp-types-test)
 
-    (let ((lisp-types-test (find-package  :lisp-types.test))
-          (lisp-types (find-package  :lisp-types)))
-      (do-symbols (name :lisp-types)
-        (when (and (eq lisp-types (symbol-package name))
-                   (not (find-symbol (symbol-name name) lisp-types-test)))
-          (format t "6 importing name=~A into  :lisp-types.test~%" name)
-          (shadowing-import name :lisp-types.test))))
-
-;;(shadow-package-symbols)
-;;(do-symbols (name :lisp-types)
-;;  (shadowing-import name :lisp-types.test))
+#+sbcl
+(define-test disjoint-cmp-j
+  (setf *perf-results* nil)
+  (bdd-with-new-hash ()
+    (types/cmp-perf :types '((MEMBER 0 1 2 4 5 6 8 9 10) (MEMBER 1 2 4 6 8)
+                             (MEMBER 1 2 3 5 6 7 8 10) (MEMBER 1 5 6 7 9 10) (MEMBER 0 1 6 7 8 10)
+                             (MEMBER 0 1 2 3 5 6 10) (MEMBER 0 1 3 4 5 6 8 9 10)
+                             (MEMBER 0 3 5 6 8) (MEMBER 0 1 2 3 6 7 9) (MEMBER 0 2 4 8 10)
+                             (MEMBER 0 1 5 9) (MEMBER 0 1 2 4 8) (MEMBER 1 3 5 6 8 9 10)
+                             (MEMBER 3 5 7 9) (MEMBER 5 6 7 8 9 10) (MEMBER 0 4 6 7 8 9)
+                             (MEMBER 1 4 7 9) (MEMBER 0 3 4 7 8 10) (MEMBER 0 1 4 5 7 8)
+                             (MEMBER 0 2 4 5 7 9 10) (MEMBER 0 9 10)))))
 
 
 #+sbcl
@@ -43,6 +45,35 @@
                    :types '(sb-pcl::SYSTEM-CLASS
                             sb-pcl::SLOT-DEFINITION
                             sb-pcl::EQL-SPECIALIZER) :time-out nil))
+
+#+sbcl
+(define-test test/bdd-numbers-3
+  (bdd-with-new-hash ()
+    (assert-true (types/cmp-perfs :limit 3
+                                  :file-name "bdd-numbers"
+                                  :destination-dir "/tmp"
+                                  :decompose '(lisp-types::bdd-decompose-types)
+                                  :types (valid-subtypes 'number)))))
+
+#+sbcl
+(define-test test/bdd-numbers-6
+  (bdd-with-new-hash ()
+    (assert-true (types/cmp-perfs :limit 6
+                                  :file-name "bdd-numbers"
+                                  :destination-dir "/tmp"
+                                  :decompose '(lisp-types::bdd-decompose-types)
+                                  :types (valid-subtypes 'number)))))
+
+#+sbcl
+(define-test test/bdd-numbers
+  (bdd-with-new-hash ()
+    (assert-true (types/cmp-perfs :limit 15
+                                  :file-name "bdd-numbers"
+                                  :destination-dir "/tmp"
+                                  :decompose '(lisp-types::bdd-decompose-types)
+                                  :types (valid-subtypes 'number)))))
+
+
 
 
 #+sbcl
@@ -132,9 +163,9 @@
 (define-test disjoint-cmp-a
   (bdd-with-new-hash ()
     (bdd-with-new-hash ()
-      (let* ((t1 (bdd '(member 0 2)))
-             (t2 (bdd '(member 0 1 2)))
-             (t3 (bdd '(member 0 2 4)))
+      (let* ((t1 (ltbdd '(member 0 2)))
+             (t2 (ltbdd '(member 0 1 2)))
+             (t3 (ltbdd '(member 0 2 4)))
              (bdds (list t1 t2 t3))
              (U (reduce #'bdd-or bdds :initial-value *bdd-false*)))
         (assert-false (eq '= (bdd-cmp '(member  0 2 4) '(member 0 2))))
@@ -239,17 +270,6 @@
                      :types '(STRING STANDARD-GENERIC-FUNCTION ATOM METHOD SIMPLE-BASE-STRING
                               SEQUENCE COMPLEX STANDARD-OBJECT STANDARD-METHOD))))
 
-(define-test disjoint-cmp-j
-  (setf *perf-results* nil)
-  (bdd-with-new-hash ()
-    (types/cmp-perf :types '((MEMBER 0 1 2 4 5 6 8 9 10) (MEMBER 1 2 4 6 8)
-                             (MEMBER 1 2 3 5 6 7 8 10) (MEMBER 1 5 6 7 9 10) (MEMBER 0 1 6 7 8 10)
-                             (MEMBER 0 1 2 3 5 6 10) (MEMBER 0 1 3 4 5 6 8 9 10)
-                             (MEMBER 0 3 5 6 8) (MEMBER 0 1 2 3 6 7 9) (MEMBER 0 2 4 8 10)
-                             (MEMBER 0 1 5 9) (MEMBER 0 1 2 4 8) (MEMBER 1 3 5 6 8 9 10)
-                             (MEMBER 3 5 7 9) (MEMBER 5 6 7 8 9 10) (MEMBER 0 4 6 7 8 9)
-                             (MEMBER 1 4 7 9) (MEMBER 0 3 4 7 8 10) (MEMBER 0 1 4 5 7 8)
-                             (MEMBER 0 2 4 5 7 9 10) (MEMBER 0 9 10)))))
 
 (define-test disjoint-cmp-k
   (let ((type-specifiers
@@ -295,7 +315,7 @@
                                       :do-break-sub :strict
                                       :do-break-loop t))))
 
-;; (lisp-types.test::sort-results "/Users/jnewton/newton.16.edtchs/src/member.sexp" nil)
+;; (lisp-types-test::sort-results "/Users/jnewton/newton.16.edtchs/src/member.sexp" nil)
 
 (defun perf-test-1 (&key (size 11))
   (bdd-with-new-hash (&aux (type-specifiers (lisp-types::choose-randomly (loop :for name being the external-symbols in "SB-PCL"

@@ -21,15 +21,9 @@
 
 
 
-(in-package :lisp-types.test)
+(in-package :lisp-types-test)
 
-(let ((lisp-types-test (find-package  :lisp-types.test))
-      (lisp-types (find-package  :lisp-types)))
-  (do-symbols (name :lisp-types)
-    (when (and (eq lisp-types (symbol-package name))
-               (not (find-symbol (symbol-name name) lisp-types-test)))
-      (format t "4 importing name=~A into  :lisp-types.test~%" name)
-      (shadowing-import name :lisp-types.test))))
+(shadow-all-symbols :package-from :lisp-types :package-into :lisp-types-test)
 
 (def-cache-fun (cache-it call-with-cache) (a b)
     "testing function"

@@ -21,7 +21,7 @@
 
 
 
-(in-package :lisp-types.test)
+(in-package :lisp-types-test)
 
 (defvar *dnf-true-types*
   '((NOT A)

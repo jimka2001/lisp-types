@@ -141,7 +141,7 @@
             "Unsupported combination recursive=~A inner-loop=~A" recursive inner-loop))
   (let* ((node-id 0)
          (bdds (remove-duplicates
-                (sort (mapcar #'bdd type-specifiers)
+                (sort (mapcar #'ltbdd type-specifiers)
                       #'>
                       :key #'(lambda (bdd)
                                (declare #+sbcl (notinline length))

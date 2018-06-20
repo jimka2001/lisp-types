@@ -21,15 +21,9 @@
 
 (in-package   :lisp-types)
 
-(labels ((incr-hash ()
-           (incf *bdd-hash-access-count*)
-           (when *bdd-verbose*
-             (when (= 0 (mod *bdd-hash-access-count* 10000))
-               (format t "bdd hash = ~A wall-time=~A cpu-time=~A~%"
-                       (getf *bdd-hash-struct* :hash)
-                       (truncate (get-internal-run-time) internal-time-units-per-second)
-                       (truncate (get-universal-time) internal-time-units-per-second)))))
-         (relation (r x-parity y-parity)
+
+
+(labels ((relation (r x-parity y-parity)
            #'(lambda (x y)
                (funcall r
                         (if x-parity
@@ -45,59 +39,61 @@
            (relation #'smarter-subtypep x-parity y-parity))
          (disjoint (x-parity y-parity)
            (relation #'disjoint-types-p x-parity y-parity)))
-  (let* ((reductions `((:case  1 :child :left  :relation ,(disjoint t t)     :reduction ,#'bdd-right)
-                       (:case  2 :child :left  :relation ,(disjoint t nil)   :reduction ,#'bdd-left)
-                       (:case  3 :child :right :relation ,(disjoint nil t)   :reduction ,#'bdd-right)
-                       (:case  4 :child :right :relation ,(disjoint nil nil) :reduction ,#'bdd-left)
+  (let* ((reductions `((:case  1 :child :positive :relation ,(disjoint t t)     :reduction ,#'bdd-negative)
+                       (:case  2 :child :positive :relation ,(disjoint t nil)   :reduction ,#'bdd-positive)
+                       (:case  3 :child :negative :relation ,(disjoint nil t)   :reduction ,#'bdd-negative)
+                       (:case  4 :child :negative :relation ,(disjoint nil nil) :reduction ,#'bdd-positive)
 
-                       (:case  5 :child :right :relation ,(super t t)        :reduction ,#'bdd-right)
-                       (:case  6 :child :right :relation ,(super t nil)      :reduction ,#'bdd-left)
-                       (:case  7 :child :left  :relation ,(super nil t)      :reduction ,#'bdd-right)
-                       (:case  8 :child :left  :relation ,(super nil nil)    :reduction ,#'bdd-left)
+                       (:case  5 :child :negative :relation ,(super t t)        :reduction ,#'bdd-negative)
+                       (:case  6 :child :negative :relation ,(super t nil)      :reduction ,#'bdd-positive)
+                       (:case  7 :child :positive :relation ,(super nil t)      :reduction ,#'bdd-negative)
+                       (:case  8 :child :positive :relation ,(super nil nil)    :reduction ,#'bdd-positive)
 
-                       (:case  9 :child :left  :relation ,(sub t t)          :reduction ,#'bdd-left)
-                       (:case 10 :child :left  :relation ,(sub t nil)        :reduction ,#'bdd-right)
-                       (:case 11 :child :right :relation ,(sub nil t)        :reduction ,#'bdd-left)
-                       (:case 12 :child :right :relation ,(sub nil nil)      :reduction ,#'bdd-right)))
+                       (:case  9 :child :positive :relation ,(sub t t)          :reduction ,#'bdd-positive)
+                       (:case 10 :child :positive :relation ,(sub t nil)        :reduction ,#'bdd-negative)
+                       (:case 11 :child :negative :relation ,(sub nil t)        :reduction ,#'bdd-positive)
+                       (:case 12 :child :negative :relation ,(sub nil nil)      :reduction ,#'bdd-negative)))
          ;; :relation ... :reduction 
-         (left-reductions  (mapcar #'cddddr (setof r reductions
-                                              (eq :left (getf r :child)))))
-         (right-reductions (mapcar #'cddddr (setof r reductions
-                                              (eq :right (getf r :child))))))
+         (positive-reductions  (mapcar #'cddddr (setof r reductions
+                                              (eq :positive (getf r :child)))))
+         (negative-reductions (mapcar #'cddddr (setof r reductions
+                                              (eq :negative (getf r :child))))))
 
-    (defun %bdd-node (label left-bdd right-bdd &key (bdd-node-class 'bdd-node))
-      (cond
-        ((eq left-bdd right-bdd) ;; 26%
-         left-bdd)
-        ((bdd-find (bdd-hash) label left-bdd right-bdd)) ;; 63%
-        (t ;; 11%
-         (let ((new-left  (bdd-reduce label left-bdd  left-reductions))
-               (new-right (bdd-reduce label right-bdd right-reductions)))
-           (cond
-             ((eq new-left new-right) ;; 2.5%
-              new-left)
-             ((bdd-find (bdd-hash) label new-left new-right)) ;;7%
-             (t
-              (let* ((bdd (make-instance bdd-node-class
-                                         :label label
-                                         :left  new-left
-                                         :right new-right))
-                     (key (bdd-make-key label (bdd-ident new-left) (bdd-ident new-right))))
-                (incr-hash)
-                (setf (gethash key (bdd-hash)) bdd)
-                (setf (gethash key (bdd-hash))
-                      (bdd-reduce-allocated bdd new-left new-right)))))))))))
+    (defun lisp-type-bdd-allocate (label positive-bdd negative-bdd &key (bdd-node-class 'lisp-type-bdd-node))
+      (let ((new-positive (bdd-reduce label positive-bdd  positive-reductions))
+            (new-negative (bdd-reduce label negative-bdd negative-reductions)))
+        (cond
+          ((eq new-positive new-negative) ;; 2.5%
+           new-positive)
+          ((bdd-find (bdd-hash) label new-positive new-negative)) ;;7%
+          (t
+           (let* ((bdd (make-instance bdd-node-class
+                                      :label label
+                                      :positive  new-positive
+                                      :negative new-negative))
+                  (key (bdd-make-key label (bdd-ident new-positive) (bdd-ident new-negative))))
+             (incr-hash)
+             (setf (gethash key (bdd-hash)) bdd)
+             (setf (gethash key (bdd-hash))
+                   (bdd-reduce-allocated bdd new-positive new-negative)))))))))
 
-(defmethod bdd-reduce-allocated ((bdd bdd-node) new-left new-right)
+(defmethod bdd-allocate (label (positive-bdd lisp-type-bdd) (negative-bdd bdd) &key (bdd-node-class 'lisp-type-bdd-node))
+  (lisp-type-bdd-allocate label positive-bdd negative-bdd :bdd-node-class bdd-node-class))
+
+(defmethod bdd-allocate (label (positive-bdd bdd) (negative-bdd lisp-type-bdd) &key (bdd-node-class 'lisp-type-bdd-node))
+  (lisp-type-bdd-allocate label positive-bdd negative-bdd :bdd-node-class bdd-node-class))
+
+
+(defmethod bdd-reduce-allocated ((bdd lisp-type-bdd-node) new-positive new-negative)
   (cond
-    ;; check (bdd-and-not bdd new-left)
-    ;;   vs  (bdd-and-not new-left bdd)
-    ((bdd-type-equal bdd new-left) ;; 0.006%   ;; TODO perhaps it is more interesting to check equivalance first to the 'smaller' of new-left and new-right, not sure because checking for smaller might be slow, and making a new slot to store the size might expand memory enough to also make the program slower?
-     new-left)
-    ;; check (bdd-and-not bdd new-right)
-    ;;   vs  (bdd-and-not new-right bdd)
-    ((bdd-type-equal bdd new-right) ;; 0.5%
-     new-right)
+    ;; check (bdd-and-not bdd new-positive)
+    ;;   vs  (bdd-and-not new-positive bdd)
+    ((bdd-type-equal bdd new-positive) ;; 0.006%   ;; TODO perhaps it is more interesting to check equivalance first to the 'smaller' of new-positive and new-negative, not sure because checking for smaller might be slow, and making a new slot to store the size might expand memory enough to also make the program slower?
+     new-positive)
+    ;; check (bdd-and-not bdd new-negative)
+    ;;   vs  (bdd-and-not new-negative bdd)
+    ((bdd-type-equal bdd new-negative) ;; 0.5%
+     new-negative)
     ;; the next two clauses, which use CL:SUBTYPEP are necessary
     ;; because the CL type system contains lots of identities
     ;; which are difficult to encode.  such as
@@ -116,7 +112,7 @@
      bdd)))
 
 
-(defmethod bdd-find-reduction (label (bdd bdd) reduction-rules)
+(defmethod bdd-find-reduction (label (bdd lisp-type-bdd) reduction-rules)
   (declare (type list reduction-rules)
            (optimize (speed 3)))
   "Apply each of the REDUCTION-RULES to BDD.  Some of the reduction rules may
@@ -125,7 +121,7 @@ then NIL is returned, otherwise the reduced BDD is returned.
 Each element of REDUCTION-RULES is a plist having at least the keys
   :RELATION - a relation between two type specifiers, eg., #'SMARTER-SUBTYPEP
   :REDUCTION - a function from BDD->BDD, which normally returns either 
-             the left or right child E.g., #'BDD-LEFT or #'BDD-RIGHT"
+             the positive or negative child E.g., #'BDD-POSITIVE or #'BDD-NEGATIVE"
   (let ((reduced (reduce (lambda (bdd reduction-rule-plist)
                            (cond
                              ((typep bdd 'bdd-leaf)
@@ -154,8 +150,8 @@ according to the LABEL which is now the label of some parent in its lineage."
                ((bdd-find-reduction label bdd search))
                (t
                 (%bdd-node (bdd-label bdd)
-                           (recure (bdd-left bdd))
-                           (recure (bdd-right bdd))
+                           (recure (bdd-positive bdd))
+                           (recure (bdd-negative bdd))
                            :bdd-node-class (class-of bdd))))))
     (recure bdd)))
 
@@ -186,59 +182,6 @@ according to the LABEL which is now the label of some parent in its lineage."
            type-specs
            new)))))
 
-
-(defun %bdd-to-dnf (bdd)
-  "Convert a BDD to logical expression in DNF (disjunctive normal form), i.e. an OR of ANDs.
-The construction attempts re-use cons cells in order to reduce the memory footprint of a large
-set of BDDs."
-  (declare (type bdd bdd))
-  (labels (
-           (wrap (op zero forms)
-             (cond ((cdr forms)
-                    (cons op forms))
-                   (forms
-                    (car forms))
-                   (t
-                    zero)))
-           (prepend (head dnf)
-             (typecase dnf
-               ((cons (eql or))
-                (wrap
-                 'or nil
-                 (mapcar (lambda (tail)
-                           (prepend head tail))
-                         (cdr dnf))))
-               ((cons (eql and))
-                (wrap 'and t (remove-super-types (cons head (cdr dnf)))))
-               ((eql t)
-                head)
-               ((eql nil)
-                nil)
-               (t
-                (wrap 'and t (remove-supers (list head dnf))))))
-           (disjunction (left right)
-             (cond
-               ((null left)
-                right)
-               ((null right)
-                left)
-               ((and (typep left '(cons (eql or)))
-                     (typep right '(cons (eql or))))
-                (cons 'or (nconc (copy-list (cdr left)) (cdr right))))
-               ((typep left '(cons (eql or)))
-                (wrap 'or nil (cons right (cdr left))))
-               ((typep right '(cons (eql or)))
-                (wrap 'or nil (cons left (cdr right))))
-               (t
-                (wrap 'or nil (list left right))))))
-    
-    (let ((left-terms  (prepend (bdd-label bdd) (bdd-to-dnf (bdd-left bdd))))
-          (right-terms (prepend `(not ,(bdd-label bdd)) (bdd-to-dnf (bdd-right bdd)))))
-      (disjunction left-terms
-                   right-terms))))
-
-
-
 (defun bdd-subtypep (t-sub t-super)
   (declare (type bdd t-super t-sub))
   ;; TODO--isn't there a quicker way to find out whether (bdd-and-not A B)
@@ -252,7 +195,7 @@ set of BDDs."
   (bdd-empty-type (bdd-and bdd1 bdd2)))
 
 (defun bdd-type-equal (t1 t2)
-  (declare (type bdd t1 t2))
+  (declare (type (or lisp-type-bdd-node bdd-leaf) t1 t2))
   (and (bdd-subtypep t1 t2)
        (bdd-subtypep t2 t1)))
 
@@ -262,9 +205,9 @@ set of BDDs."
              (typecase bdd
                (bdd-false nil)
                (bdd-true t)
-               (bdd-node `(if (typep ,obj ',(bdd-label bdd))
-                              ,(expand (bdd-left bdd))
-                              ,(expand (bdd-right bdd)))))))
+               (lisp-type-bdd-node `(if (typep ,obj ',(bdd-label bdd))
+                                        ,(expand (bdd-positive bdd))
+                                        ,(expand (bdd-negative bdd)))))))
     (typecase bdd
       (bdd-false
        `(lambda (,obj)
@@ -274,7 +217,7 @@ set of BDDs."
        `(lambda (,obj)
           (declare (ignore ,obj))
           t))
-      (bdd-node
+      (lisp-type-bdd-node
        `(lambda (,obj)
           ,(expand bdd))))))
 
@@ -342,10 +285,10 @@ in the topological ordering (i.e., the first value)."
                  (bdd-node
                   (unless (nth-value 1 (gethash bdd constraints))
                     (setf (gethash bdd constraints) nil))
-                  (pushnew bdd (gethash (bdd-left bdd) constraints nil) :test #'eq)
-                  (pushnew bdd (gethash (bdd-right bdd) constraints nil) :test #'eq)
-                  (calc-constraints (bdd-left bdd))
-                  (calc-constraints (bdd-right bdd))))))
+                  (pushnew bdd (gethash (bdd-positive bdd) constraints nil) :test #'eq)
+                  (pushnew bdd (gethash (bdd-negative bdd) constraints nil) :test #'eq)
+                  (calc-constraints (bdd-positive bdd))
+                  (calc-constraints (bdd-negative bdd))))))
       (calc-constraints bdd)
       ;; constraints is a hash table mapping BEFORE to a list of BDDS which which BEFORE must preceed in the sorted list.
 
@@ -365,8 +308,8 @@ in the topological ordering (i.e., the first value)."
                                (bdd-node
                                 (list (cadr (assoc node name-map))
                                       `(if (typep ,obj ',(bdd-label node))
-                                           ,(cadr (assoc (bdd-left node) name-map))
-                                           ,(cadr (assoc (bdd-right node) name-map)))))))
+                                           ,(cadr (assoc (bdd-positive node) name-map))
+                                           ,(cadr (assoc (bdd-negative node) name-map)))))))
                            (reverse nodes))))
         `(lambda (,obj)
            (let* ,vars
@@ -384,21 +327,21 @@ in the topological ordering (i.e., the first value)."
                  (bdd-node
                   (unless (assoc bdd bdd->name-mapping)
                     (push (list bdd (gensym)) bdd->name-mapping)
-                    (walk-bdd (bdd-left bdd))
-                    (walk-bdd (bdd-right bdd))))))
+                    (walk-bdd (bdd-positive bdd))
+                    (walk-bdd (bdd-negative bdd))))))
              (branch (bdd)
                (typecase bdd
                  (bdd-false nil)
                  (bdd-true t)
-                 (bdd-node
+                 (lisp-type-bdd-node
                   (list (cadr (assoc bdd bdd->name-mapping))))))
              (label-function (bdd)
                (typecase bdd
                  (bdd-node
                   `(,(cadr (assoc bdd bdd->name-mapping)) ()
                     (if (typep ,obj ',(bdd-label bdd))
-                        ,(branch (bdd-left bdd))
-                        ,(branch (bdd-right bdd))))))))
+                        ,(branch (bdd-positive bdd))
+                        ,(branch (bdd-negative bdd))))))))
       (walk-bdd bdd)
       `(lambda (,obj)
          (labels ,(mapcar #'label-function (mapcar #'car bdd->name-mapping))
@@ -420,8 +363,8 @@ in the topological ordering (i.e., the first value)."
                  (bdd-node
                   (unless (assoc bdd bdd->name-mapping)
                     (push (list bdd (incf num)) bdd->name-mapping)
-                    (walk-bdd (bdd-left bdd))
-                    (walk-bdd (bdd-right bdd))))))
+                    (walk-bdd (bdd-positive bdd))
+                    (walk-bdd (bdd-negative bdd))))))
              (branch (bdd)
                (typecase bdd
                  (bdd-false `(return nil))
@@ -433,8 +376,8 @@ in the topological ordering (i.e., the first value)."
                  (bdd-node
                   `(,(cadr (assoc bdd bdd->name-mapping))
                     (if (typep ,obj ',(bdd-label bdd))
-                        ,(branch (bdd-left bdd))
-                        ,(branch (bdd-right bdd))))))))
+                        ,(branch (bdd-positive bdd))
+                        ,(branch (bdd-negative bdd))))))))
       (walk-bdd bdd)
       `(lambda (,obj)
          (block nil
@@ -444,12 +387,12 @@ in the topological ordering (i.e., the first value)."
 
 (defun bdd-typep (obj type-specifier)
   "This function has the same syntax as CL:TYPEP, but using a BDD based algorithm " 
-  (bdd-type-p obj (bdd type-specifier)))
+  (bdd-type-p obj (ltbdd type-specifier)))
 
 (define-compiler-macro bdd-typep (obj type-specifier)
   (typecase type-specifier
     ((cons (eql quote))
-     (bdd-with-new-hash (&aux (bdd (bdd (cadr type-specifier))))
+     (bdd-with-new-hash (&aux (bdd (ltbdd (cadr type-specifier))))
        `(funcall ,(bdd-to-if-then-else-3 bdd (gensym)) ,obj)))
     (t
      `(typep ,obj ,type-specifier))))
@@ -471,22 +414,22 @@ Returns NIL otherwise."
      nil)
     (bdd-true
      t)
-    (bdd-node
+    (lisp-type-bdd-node
      (bdd-type-p obj 
                  (if (typep obj (bdd-label bdd))
-                     (bdd-left bdd)
-                     (bdd-right bdd))))
+                     (bdd-positive bdd)
+                     (bdd-negative bdd))))
     (t
-     (bdd-type-p obj (the bdd (bdd bdd))))))
+     (bdd-type-p obj (the lisp-type-bdd (ltbdd bdd))))))
 
 (defun bdd-reduce-lisp-type (type)
     "Given a common lisp type designator such as (AND A (or (not B) C)), 
 convert it to DNF (disjunctive-normal-form)"
-  (bdd-to-dnf (bdd type)))
+  (bdd-to-dnf (ltbdd type)))
 
 (defun %bdd-decompose-types (type-specifiers)
   ;;(declare (optimize (debug 0) (speed 3))) ;; optimize tail call 
-  (bdd-with-new-hash (&aux (bdds (remove-if #'bdd-empty-type (mapcar #'bdd type-specifiers))))
+  (bdd-with-new-hash (&aux (bdds (remove-if #'bdd-empty-type (mapcar #'ltbdd type-specifiers))))
     (declare (type list bdds))
     (labels ((try (bdds disjoint-bdds &aux (bdd-a (car bdds)))
                (declare (type (or null bdd) bdd-a))
@@ -542,12 +485,12 @@ of min-terms, this function returns a list of the min-terms."
                (bdd-false
                 nil)
                (bdd-node
-                (nconc (mapcar (lambda (left)
-                                 (%bdd-node (bdd-label term) left *bdd-false* :bdd-node-class (class-of term)))
-                               (recure (bdd-left term)))
-                       (mapcar (lambda (right)
-                                 (%bdd-node (bdd-label term) *bdd-false* right :bdd-node-class (class-of term)))
-                               (recure (bdd-right term))))))))
+                (nconc (mapcar (lambda (positive)
+                                 (%bdd-node (bdd-label term) positive *bdd-false* :bdd-node-class (class-of term)))
+                               (recure (bdd-positive term)))
+                       (mapcar (lambda (negative)
+                                 (%bdd-node (bdd-label term) *bdd-false* negative :bdd-node-class (class-of term)))
+                               (recure (bdd-negative term))))))))
     (recure bdd)))
 
 (defun bdd-decompose-types-strong (type-specifiers)
@@ -587,59 +530,12 @@ in the given list have the same dnf form."
                   nil)
                  (bdd-node
                   (pushnew (bdd-label bdd) labels :test #'equal)
-                  (recure (bdd-left bdd))
-                  (recure (bdd-right bdd))))))
+                  (recure (bdd-positive bdd))
+                  (recure (bdd-negative bdd))))))
       (recure bdd)
       labels)))
 
-(defun check-decomposition (given calculated)
-  "debugging function to assure that a given list of types GIVEN corresponds correctly
-to a set of types returned from %bdd-decompose-types."
-  (bdd-with-new-hash ()
-    (let ((bdd-given (bdd `(or ,@given)))
-          (bdd-calculated (bdd `(or ,@calculated))))
-      (unless (bdd-subtypep bdd-given bdd-calculated)
-        (error "union of given types ~A is not a subset of union of~%    calculated types ~A~%difference is ~A"
-               given calculated (bdd-to-dnf (bdd-and-not bdd-given bdd-calculated))))
-      (unless (bdd-subtypep bdd-calculated bdd-given)
-        (error "union of calculated types ~A is not a subset of~%    union of given types ~A~%difference is ~A"
-               calculated given (bdd-to-dnf (bdd-and-not bdd-calculated bdd-given))))
-      (dolist (c calculated)
-        (when (bdd-empty-type (bdd c))
-          (error "calculated empty type ~A" c))
-        (unless (exists g given
-                  (bdd-subtypep (bdd c) (bdd g)))
-          (error "calculated type ~A is not a subset of any given type ~A"
-                 c given))
-        (dolist (c2 (remove c calculated))
-          (when (bdd-type-equal (bdd c2) (bdd c))
-            (error "calculated two equal types ~A = ~A" c c2)))))))
 
-(defun boolean-expr-to-latex (expr &optional (stream t))
-  (etypecase expr
-    ((eql nil)
-     (format stream "\\bot"))
-    ((eql t)
-     (format stream "\\top"))
-    ((not list)
-     (format stream "~A" expr))
-    ((cons (eql and))
-          (format stream "(")
-     (boolean-expr-to-latex (cadr expr) stream)
-     (dolist (subexpr (cddr expr))
-       (format stream " \\wedge ")
-       (boolean-expr-to-latex subexpr stream))
-     (format stream ")")
-     )
-    ((cons (eql or))
-     (format stream "(")
-     (boolean-expr-to-latex (cadr expr) stream)
-     (dolist (subexpr (cddr expr))
-       (format stream " \\vee ")
-       (boolean-expr-to-latex subexpr stream))
-     (format stream ")")
-     )
-    ((cons (eql not))
-     (format stream "\\neg ")
-     (boolean-expr-to-latex (cadr expr) stream))))
+
+
 
