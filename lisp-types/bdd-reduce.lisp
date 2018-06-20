@@ -60,7 +60,7 @@
                                               (eq :negative (getf r :child))))))
 
     (defun lisp-type-bdd-allocate (label positive-bdd negative-bdd &key (bdd-node-class 'lisp-type-bdd-node))
-      (let ((new-positive (bdd-reduce label positive-bdd  positive-reductions))
+      (let ((new-positive (bdd-reduce label positive-bdd positive-reductions))
             (new-negative (bdd-reduce label negative-bdd negative-reductions)))
         (cond
           ((eq new-positive new-negative) ;; 2.5%
@@ -141,7 +141,7 @@ Each element of REDUCTION-RULES is a plist having at least the keys
 recursive descent, LEVEL remains fixed, while BDD walks the BDD dag.  At each step,
 until we reach a leaf, we call BDD-FIND-REDUCTION to see if the BDD can be reduced
 according to the LABEL which is now the label of some parent in its lineage."
-  (declare (type bdd bdd)
+  (declare (type lisp-type-bdd bdd)
            (type list search))
   (labels ((recure (bdd)
              (cond

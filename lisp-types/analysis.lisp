@@ -1572,32 +1572,34 @@ sleeping before the code finishes evaluating."
                                         (create-png-p t)
                                         (destination-dir *destination-dir*))
   (declare (ignore prefix re-run suite-time-out time-out num-tries hilite-min profile))
-  (when normalize
-    (assert (member normalize decomposition-functions) (normalize decomposition-functions)))
-  (dolist (df decomposition-functions)
-    (unless (exists plist *decomposition-function-descriptors*
-              (member df (getf plist :names)))
-      (let ((*package* (find-package :keyword)))
-        (error "No plist has :name ~A in ~A"
-               df *decomposition-function-descriptors*))))
-  (let ((*bdd-hash-struct* (bdd-new-hash))
-        (*decomposition-functions*  decomposition-functions))
-    (loop for (tag bucket-reporter) in bucket-reporters
-          for sample = (/ 1 (length bucket-reporters)) then (+ sample (/ 1 (length bucket-reporters)))
-          do (funcall bucket-reporter multiplier sample options :create-png-p create-png-p :destination-dir destination-dir))))
+  (let ((*bdd-node-type* '(or bdd-leaf lisp-type-bdd-node)))
+    (when normalize
+      (assert (member normalize decomposition-functions) (normalize decomposition-functions)))
+    (dolist (df decomposition-functions)
+      (unless (exists plist *decomposition-function-descriptors*
+                (member df (getf plist :names)))
+        (let ((*package* (find-package :keyword)))
+          (error "No plist has :name ~A in ~A"
+                 df *decomposition-function-descriptors*))))
+    (let ((*bdd-hash-struct* (bdd-new-hash))
+          (*decomposition-functions*  decomposition-functions))
+      (loop for (tag bucket-reporter) in bucket-reporters
+            for sample = (/ 1 (length bucket-reporters)) then (+ sample (/ 1 (length bucket-reporters)))
+            do (funcall bucket-reporter multiplier sample options :create-png-p create-png-p :destination-dir destination-dir)))))
 
 (defun parameterization-report (&key (re-run t) (multiplier 1) (create-png-p t) (destination-dir *destination-dir*)
                                   (bucket-reporters *bucket-reporters*))
-  (big-test-report :re-run re-run
-                   :prefix "param-"
-                   :normalize 'decompose-types-bdd-graph
-                   :hilite-min t
-                   :destination-dir destination-dir
-                   :multiplier multiplier
-                   :create-png-p create-png-p
-                   :bucket-reporters bucket-reporters
-                   :decomposition-functions (cons 'decompose-types-bdd-graph
-                                                  *decompose-fun-parameterized-names*)))
+  (let ((*bdd-node-type* '(or bdd-leaf lisp-type-bdd-node)))
+    (big-test-report :re-run re-run
+                     :prefix "param-"
+                     :normalize 'decompose-types-bdd-graph
+                     :hilite-min t
+                     :destination-dir destination-dir
+                     :multiplier multiplier
+                     :create-png-p create-png-p
+                     :bucket-reporters bucket-reporters
+                     :decomposition-functions (cons 'decompose-types-bdd-graph
+                                                    *decompose-fun-parameterized-names*))))
 
 (defun best-2-report (&key (re-run t) (multiplier 1.8) (create-png-p t) (destination-dir *destination-dir*)
                         (bucket-reporters *bucket-reporters*))
@@ -1684,7 +1686,3 @@ sleeping before the code finishes evaluating."
                          :destination-dir "/Users/jnewton/analysis"
                          :prefix (format nil "bdd-profile-~D-~D-" decompose-function-index bucket-index))))))
 
-
-
-
-;; (bdd-report-profile :num-tries 1 :multiplier 0.2 :create-png-p nil)
