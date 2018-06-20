@@ -22,10 +22,12 @@
 (in-package   :lisp-types)
 
 (defclass lisp-type-bdd (bdd)
-  ())
+  ()
+  (:documentation "Subclass of bdd for represeting an ROBDD with lisp-type semantics"))
 
 (defclass lisp-type-bdd-node (lisp-type-bdd bdd-node)
-  ())
+  ()
+  (:documentation "Subclass of bdd-node for represeting an ROBDD with lisp-type semantics"))
 
 ;; TODO bdd-to-dnf or %bdd-to-dnf should remove superclasses from conjunctions, and remove subclasses from disjunctions
 
@@ -37,3 +39,5 @@
 (defun ltbdd (obj)
   (bdd obj :bdd-node-class 'lisp-type-bdd-node))
 
+(defun ltbdd-node (label positive negative)
+  (bdd-node label positive negative :bdd-node-class 'lisp-type-bdd-node))

@@ -21,10 +21,20 @@
 
 (in-package :lisp-types-test)
 
+(shadow-all-symbols :package-from :lisp-types          :package-into :lisp-types-test)
 
-(shadow-all-symbols :package-from :lisp-types :package-into :lisp-types-test)
-
-
+#+sbcl
+(define-test disjoint-cmp-j
+  (setf *perf-results* nil)
+  (bdd-with-new-hash ()
+    (types/cmp-perf :types '((MEMBER 0 1 2 4 5 6 8 9 10) (MEMBER 1 2 4 6 8)
+                             (MEMBER 1 2 3 5 6 7 8 10) (MEMBER 1 5 6 7 9 10) (MEMBER 0 1 6 7 8 10)
+                             (MEMBER 0 1 2 3 5 6 10) (MEMBER 0 1 3 4 5 6 8 9 10)
+                             (MEMBER 0 3 5 6 8) (MEMBER 0 1 2 3 6 7 9) (MEMBER 0 2 4 8 10)
+                             (MEMBER 0 1 5 9) (MEMBER 0 1 2 4 8) (MEMBER 1 3 5 6 8 9 10)
+                             (MEMBER 3 5 7 9) (MEMBER 5 6 7 8 9 10) (MEMBER 0 4 6 7 8 9)
+                             (MEMBER 1 4 7 9) (MEMBER 0 3 4 7 8 10) (MEMBER 0 1 4 5 7 8)
+                             (MEMBER 0 2 4 5 7 9 10) (MEMBER 0 9 10)))))
 
 
 #+sbcl
@@ -35,6 +45,17 @@
                    :types '(sb-pcl::SYSTEM-CLASS
                             sb-pcl::SLOT-DEFINITION
                             sb-pcl::EQL-SPECIALIZER) :time-out nil))
+
+#+sbcl
+(define-test test/bdd-numbers
+  (bdd-with-new-hash ()
+    (assert-true (types/cmp-perfs :limit 15
+                                  :file-name "bdd-numbers"
+                                  :destination-dir "/tmp"
+                                  :decompose 'lisp-types::bdd-decompose-types
+                                  :types (valid-subtypes 'number)))))
+
+
 
 
 #+sbcl
@@ -231,17 +252,6 @@
                      :types '(STRING STANDARD-GENERIC-FUNCTION ATOM METHOD SIMPLE-BASE-STRING
                               SEQUENCE COMPLEX STANDARD-OBJECT STANDARD-METHOD))))
 
-(define-test disjoint-cmp-j
-  (setf *perf-results* nil)
-  (bdd-with-new-hash ()
-    (types/cmp-perf :types '((MEMBER 0 1 2 4 5 6 8 9 10) (MEMBER 1 2 4 6 8)
-                             (MEMBER 1 2 3 5 6 7 8 10) (MEMBER 1 5 6 7 9 10) (MEMBER 0 1 6 7 8 10)
-                             (MEMBER 0 1 2 3 5 6 10) (MEMBER 0 1 3 4 5 6 8 9 10)
-                             (MEMBER 0 3 5 6 8) (MEMBER 0 1 2 3 6 7 9) (MEMBER 0 2 4 8 10)
-                             (MEMBER 0 1 5 9) (MEMBER 0 1 2 4 8) (MEMBER 1 3 5 6 8 9 10)
-                             (MEMBER 3 5 7 9) (MEMBER 5 6 7 8 9 10) (MEMBER 0 4 6 7 8 9)
-                             (MEMBER 1 4 7 9) (MEMBER 0 3 4 7 8 10) (MEMBER 0 1 4 5 7 8)
-                             (MEMBER 0 2 4 5 7 9 10) (MEMBER 0 9 10)))))
 
 (define-test disjoint-cmp-k
   (let ((type-specifiers

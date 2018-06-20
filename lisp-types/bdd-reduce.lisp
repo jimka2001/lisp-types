@@ -59,8 +59,8 @@
          (negative-reductions (mapcar #'cddddr (setof r reductions
                                               (eq :negative (getf r :child))))))
 
-    (defmethod bdd-allocate (label (positive-bdd lisp-type-bdd) (negative-bdd lisp-type-bdd) &key (bdd-node-class 'lisp-type-bdd-node))
-      (let ((new-positive  (bdd-reduce label positive-bdd  positive-reductions))
+    (defun lisp-type-bdd-allocate (label positive-bdd negative-bdd &key (bdd-node-class 'lisp-type-bdd-node))
+      (let ((new-positive (bdd-reduce label positive-bdd  positive-reductions))
             (new-negative (bdd-reduce label negative-bdd negative-reductions)))
         (cond
           ((eq new-positive new-negative) ;; 2.5%
@@ -76,6 +76,13 @@
              (setf (gethash key (bdd-hash)) bdd)
              (setf (gethash key (bdd-hash))
                    (bdd-reduce-allocated bdd new-positive new-negative)))))))))
+
+(defmethod bdd-allocate (label (positive-bdd lisp-type-bdd) (negative-bdd bdd) &key (bdd-node-class 'lisp-type-bdd-node))
+  (lisp-type-bdd-allocate label positive-bdd negative-bdd :bdd-node-class bdd-node-class))
+
+(defmethod bdd-allocate (label (positive-bdd bdd) (negative-bdd lisp-type-bdd) &key (bdd-node-class 'lisp-type-bdd-node))
+  (lisp-type-bdd-allocate label positive-bdd negative-bdd :bdd-node-class bdd-node-class))
+
 
 (defmethod bdd-reduce-allocated ((bdd lisp-type-bdd-node) new-positive new-negative)
   (cond
@@ -188,7 +195,7 @@ according to the LABEL which is now the label of some parent in its lineage."
   (bdd-empty-type (bdd-and bdd1 bdd2)))
 
 (defun bdd-type-equal (t1 t2)
-  (declare (type bdd t1 t2))
+  (declare (type lisp-type-bdd t1 t2))
   (and (bdd-subtypep t1 t2)
        (bdd-subtypep t2 t1)))
 
@@ -198,9 +205,9 @@ according to the LABEL which is now the label of some parent in its lineage."
              (typecase bdd
                (bdd-false nil)
                (bdd-true t)
-               (bdd-node `(if (typep ,obj ',(bdd-label bdd))
-                              ,(expand (bdd-positive bdd))
-                              ,(expand (bdd-negative bdd)))))))
+               (lisp-type-bdd-node `(if (typep ,obj ',(bdd-label bdd))
+                                        ,(expand (bdd-positive bdd))
+                                        ,(expand (bdd-negative bdd)))))))
     (typecase bdd
       (bdd-false
        `(lambda (,obj)
@@ -528,28 +535,7 @@ in the given list have the same dnf form."
       (recure bdd)
       labels)))
 
-(defun check-decomposition (given calculated)
-  "debugging function to assure that a given list of types GIVEN corresponds correctly
-to a set of types returned from %bdd-decompose-types."
-  (bdd-with-new-hash ()
-    (let ((bdd-given (bdd `(or ,@given)))
-          (bdd-calculated (bdd `(or ,@calculated))))
-      (unless (bdd-subtypep bdd-given bdd-calculated)
-        (error "union of given types ~A is not a subset of union of~%    calculated types ~A~%difference is ~A"
-               given calculated (bdd-to-dnf (bdd-and-not bdd-given bdd-calculated))))
-      (unless (bdd-subtypep bdd-calculated bdd-given)
-        (error "union of calculated types ~A is not a subset of~%    union of given types ~A~%difference is ~A"
-               calculated given (bdd-to-dnf (bdd-and-not bdd-calculated bdd-given))))
-      (dolist (c calculated)
-        (when (bdd-empty-type (bdd c))
-          (error "calculated empty type ~A" c))
-        (unless (exists g given
-                  (bdd-subtypep (bdd c) (bdd g)))
-          (error "calculated type ~A is not a subset of any given type ~A"
-                 c given))
-        (dolist (c2 (remove c calculated))
-          (when (bdd-type-equal (bdd c2) (bdd c))
-            (error "calculated two equal types ~A = ~A" c c2)))))))
+
 
 
 

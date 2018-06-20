@@ -22,10 +22,46 @@
 (defpackage :lisp-types-analysis
   (:use :cl :lisp-types :cl-robdd :cl-robdd-analysis)
   (:export
+   "VALID-SUBTYPES"
    "BDD-REPORT-PROFILE"
+   "TYPES/CMP-PERF"
+   "TYPES/CMP-PERFS"
+   "*PERF-RESULTS*"
 ))
 
 (in-package :lisp-types-analysis)
+
+(defun run-program (program args &rest options)
+  #+sbcl (apply #'sb-ext:run-program program args :search t options)
+  #+allegro (apply #'excl:run-shell-command
+                   (apply #'vector (cons program args))
+                   :wait t
+                   options
+                   )
+  )
+
+(defmacro exists (obj data &body body)
+  (typecase obj
+    (list
+     (let ((var (gensym "exists")))
+       `(member-if (lambda (,var)
+                     (destructuring-bind ,obj ,var
+                       ,@body)) ,data)))
+    (t
+     `(member-if (lambda (,obj) ,@body) ,data))))
+
+(defmacro forall (var data &body body)
+  `(every #'(lambda (,var) ,@body) ,data))
+
+(defmacro while (test &body body)
+  `(loop :while ,test
+	 :do (progn ,@body)))
+
+(defmacro setof (var data &body body)
+  `(remove-if-not (lambda (,var) ,@body) ,data))
+
+(defun getter (field)
+  (lambda (obj) (getf obj field)))
 
 (defun user-read (&rest args)
   "Calls read with the specified ARGS, but with *PACKAGE* bound to the CL-USER package.  
@@ -207,6 +243,11 @@ than as keywords."
         (format str "~A ~A" day-of-week month)
         (format str " ~2D ~2D:~2,'0D:~2,'0D ~S" date hour minute second year)))))
 
+(defun garbage-collect ()
+  #+sbcl (sb-ext::gc :full t)
+  #+allegro (excl:gc t)
+)
+
 (defun types/cmp-perfs (&key
                           (re-run t)
                           (verify nil)
@@ -314,6 +355,8 @@ than as keywords."
 
 
 (defvar *perf-results* nil)
+(assert (find-symbol "*PERF-RESULTS*" :lisp-types-analysis))
+
 (defun types/cmp-perf (&key types (decompose 'bdd-decompose-types-weak) (time-out 15) (num-tries 2) profile
                        &aux (f (symbol-function decompose)))
   (declare (type list types)
@@ -406,6 +449,29 @@ than as keywords."
                   ;; case independent search
                   (string-equal name (symbol-name f))))
               *decomposition-function-descriptors*))))
+
+(defun check-decomposition (given calculated)
+  "debugging function to assure that a given list of types GIVEN corresponds correctly
+to a set of types returned from %bdd-decompose-types."
+  (bdd-with-new-hash ()
+    (let ((bdd-given (bdd `(or ,@given)))
+          (bdd-calculated (bdd `(or ,@calculated))))
+      (unless (bdd-subtypep bdd-given bdd-calculated)
+        (error "union of given types ~A is not a subset of union of~%    calculated types ~A~%difference is ~A"
+               given calculated (bdd-to-dnf (bdd-and-not bdd-given bdd-calculated))))
+      (unless (bdd-subtypep bdd-calculated bdd-given)
+        (error "union of calculated types ~A is not a subset of~%    union of given types ~A~%difference is ~A"
+               calculated given (bdd-to-dnf (bdd-and-not bdd-calculated bdd-given))))
+      (dolist (c calculated)
+        (when (bdd-empty-type (bdd c))
+          (error "calculated empty type ~A" c))
+        (unless (exists g given
+                  (bdd-subtypep (bdd c) (bdd g)))
+          (error "calculated type ~A is not a subset of any given type ~A"
+                 c given))
+        (dolist (c2 (remove c calculated))
+          (when (bdd-type-equal (bdd c2) (bdd c))
+            (error "calculated two equal types ~A = ~A" c c2)))))))
 
 (defun find-decomposition-discrepancy (&optional (type-specs '(test-array-rank test-array-total-size bignum bit
                                                                complex fixnum float test-float-digits
@@ -1621,20 +1687,7 @@ sleeping before the code finishes evaluating."
                          :destination-dir "/Users/jnewton/analysis"
                          :prefix (format nil "bdd-profile-~D-~D-" decompose-function-index bucket-index))))))
 
-(defun replace-all (string part replacement &key (test #'char=))
-  "Returns a new string in which all the occurences of the part 
-is replaced with replacement."
-  (with-output-to-string (out)
-    (loop with part-length = (length part)
-          for old-pos = 0 then (+ pos part-length)
-          for pos = (search part string
-                            :start2 old-pos
-                            :test test)
-          do (write-string string out
-                           :start old-pos
-                           :end (or pos (length string)))
-          when pos do (write-string replacement out)
-            while pos)))
+
 
 
 ;; (bdd-report-profile :num-tries 1 :multiplier 0.2 :create-png-p nil)

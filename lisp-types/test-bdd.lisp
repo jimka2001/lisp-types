@@ -24,7 +24,6 @@
 (shadow-all-symbols :package-from :lisp-types :package-into :lisp-types-test)
 
 
-
 (define-test test/lisp-type-bdd
   (let ((bdd (ltbdd 'z1)))
     (assert-true (typep bdd 'lisp-type-bdd))
@@ -36,33 +35,33 @@
 (define-test test/bdd-to-dnf
   (bdd-with-new-hash ()
     (assert-true (equal 'integer
-                        (bdd-to-dnf (bdd 'integer))))
-    (assert-true (bdd-to-dnf (bdd '(or string integer))))
-    (assert-true (bdd-to-dnf (bdd '(or (and integer (not string)) (and string (not integer))))))))
+                        (bdd-to-dnf (ltbdd 'integer))))
+    (assert-true (bdd-to-dnf (ltbdd '(or string integer))))
+    (assert-true (bdd-to-dnf (ltbdd '(or (and integer (not string)) (and string (not integer))))))))
 
 (define-test test/bdd-create
   (bdd-with-new-hash ()
-    (assert-true (bdd 'integer))
-    (assert-true (bdd '(or integer float)))
-    (assert-true (bdd '(or (and integer (not string)) (and string (not integer)))))
-    (assert-true (eq (bdd '(or integer string))
-                     (bdd '(or string integer))))
-    (assert-true (eq (bdd '(or (and integer (not string)) (and string (not integer))))
-                     (bdd '(or (and (not integer) string) (and integer (not string))))))
+    (assert-true (ltbdd 'integer))
+    (assert-true (ltbdd '(or integer float)))
+    (assert-true (ltbdd '(or (and integer (not string)) (and string (not integer)))))
+    (assert-true (eq (ltbdd '(or integer string))
+                     (ltbdd '(or string integer))))
+    (assert-true (eq (ltbdd '(or (and integer (not string)) (and string (not integer))))
+                     (ltbdd '(or (and (not integer) string) (and integer (not string))))))
 
     ))
 
 (define-test types/bdd-collect-atomic-types
   (bdd-with-new-hash ()
-    (assert-false (set-exclusive-or (bdd-collect-atomic-types (bdd '(or (and integer (not string)) (and string (not integer)))))
+    (assert-false (set-exclusive-or (bdd-collect-atomic-types (ltbdd '(or (and integer (not string)) (and string (not integer)))))
                                   
                                   '(integer string)))))
 
   
 (define-test test/certain-reductions
   (bdd-with-new-hash ()
-    (assert-true (bdd '(or (and integer (not string)) (and string (not integer)))))
-    (assert-false (bdd-to-dnf (bdd-and-not (bdd 'integer) (bdd 'number))))))
+    (assert-true (ltbdd '(or (and integer (not string)) (and string (not integer)))))
+    (assert-false (bdd-to-dnf (bdd-and-not (ltbdd 'integer) (ltbdd 'number))))))
 
 
 (define-test type/bdd-sample-a
@@ -89,17 +88,17 @@
         (assert-false (smarter-subtypep t2 t1))))))
 
 (define-test type/bdd-subtypep
-  (assert-true (bdd-subtypep (bdd 'float) (bdd 'number)))
-  (assert-true (bdd-subtypep (bdd '(eql :x)) (bdd 'keyword)))
-  (assert-true (bdd-subtypep (bdd '(not keyword)) (bdd '(not (eql :x)))))
-  (assert-false (bdd-subtypep (bdd 'keyword) (bdd '(eql :x))))
-  (assert-false (bdd-subtypep (bdd '(not keyword)) (bdd '(eql :x))))
-  (assert-false (bdd-subtypep (bdd '(not (eql :x))) (bdd 'keyword)))
+  (assert-true (bdd-subtypep (ltbdd 'float) (ltbdd 'number)))
+  (assert-true (bdd-subtypep (ltbdd '(eql :x)) (ltbdd 'keyword)))
+  (assert-true (bdd-subtypep (ltbdd '(not keyword)) (ltbdd '(not (eql :x)))))
+  (assert-false (bdd-subtypep (ltbdd 'keyword) (ltbdd '(eql :x))))
+  (assert-false (bdd-subtypep (ltbdd '(not keyword)) (ltbdd '(eql :x))))
+  (assert-false (bdd-subtypep (ltbdd '(not (eql :x))) (ltbdd 'keyword)))
 
-  (assert-true (bdd-type-equal (bdd '(and (member :a :b) keyword))
-                               (bdd '(member :a :b))))
+  (assert-true (bdd-type-equal (ltbdd '(and (member :a :b) keyword))
+                               (ltbdd '(member :a :b))))
 
-  (assert-true (equal (bdd-to-dnf (bdd '(and (member :a :b) keyword)))
+  (assert-true (equal (bdd-to-dnf (ltbdd '(and (member :a :b) keyword)))
                       '(member :a :b)))
   )
 
@@ -123,12 +122,12 @@
                    (AND CLASS (NOT CELL-ERROR) (NOT BUILT-IN-CLASS) ARITHMETIC-ERROR)
                    (AND (NOT CLASS) CELL-ERROR ARITHMETIC-ERROR) BROADCAST-STREAM BOOLEAN BIGNUM
                    (AND (NOT BIT-VECTOR) (NOT BASE-STRING) ARRAY) BIT-VECTOR BASE-STRING))
-         (t3 (bdd 'CONCATENATED-STREAM))
-         (t2 (bdd `(or ,@decomp)))
+         (t3 (ltbdd 'CONCATENATED-STREAM))
+         (t2 (ltbdd `(or ,@decomp)))
          (t4 (bdd-and-not t3 t2)))
 
     (dolist (t1 decomp)
-      (let ((bdd1 (bdd t1)))
+      (let ((bdd1 (ltbdd t1)))
         (dolist (f (list #'bdd-and #'bdd-and-not #'(lambda (a b) (bdd-and-not b a))))
           (let ((t5 (funcall f bdd1 t4)))
             (if (bdd-empty-type t5) nil 'not-nil)))))))
@@ -180,55 +179,46 @@
     ;;  (number (string nil t) nil)
     ;;  --> (number t nil)
     (assert-true (equal (bdd-serialize
-                         (bdd-node 'number
-                                   (bdd-node 'string nil t)
+                         (ltbdd-node 'number
+                                   (ltbdd-node 'string nil t)
                                    nil))
                         '(number t nil)))
         
     ;; 2) disjoint on right of negative type
     (assert-true (equal (bdd-serialize
-                         (bdd-node 'non-number
+                         (ltbdd-node 'non-number
                                    nil
-                                   (bdd-node 'string nil t)))
+                                   (ltbdd-node 'string nil t)))
                         '(non-number nil t)))
                       
     ;; 3) subtype on right
     (assert-true (equal (bdd-serialize
-                         (bdd-node 'integer
-                                   (bdd-node 'number t nil)
+                         (ltbdd-node 'integer
+                                   (ltbdd-node 'number t nil)
                                    nil))
                         '(integer t nil)))
 
     ;; 4) subtype on left of negative type
     (assert-true (equal (bdd-serialize
-                         (bdd-node 'non-number
-                                   (bdd-node 'integer nil t)
+                         (ltbdd-node 'non-number
+                                   (ltbdd-node 'integer nil t)
                                    nil))
                         '(non-number t nil)))
                       
 
     ;; 5) supertype on left
     (assert-true (equal (bdd-serialize
-                         (bdd-node 'integer
-                                   (bdd-node 'number t nil)
+                         (ltbdd-node 'integer
+                                   (ltbdd-node 'number t nil)
                                    nil))
                         '(integer t nil)))
 
     ;; 6) supertype on right of negative type
     (assert-true (equal (bdd-serialize
-                         (bdd-node 'non-integer
+                         (ltbdd-node 'non-integer
                                    nil
-                                   (bdd-node 'number t nil)))
+                                   (ltbdd-node 'number t nil)))
                         '(non-integer nil t)))))
-
-(define-test test/bdd-numbers
-  (bdd-with-new-hash ()
-    (assert-true (types/cmp-perfs :limit 15
-                                  :file-name "bdd-numbers"
-                                  :destination-dir "/tmp"
-                                  :decompose 'lisp-types::bdd-decompose-types
-                                  :types (valid-subtypes 'number)))))
-
 
                    
 (define-test test/bdd-type-p
