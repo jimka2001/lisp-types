@@ -22,11 +22,12 @@
 (defpackage :lisp-types-analysis
   (:use :cl :lisp-types :cl-robdd :cl-robdd-analysis)
   (:export
-   "VALID-SUBTYPES"
+   "*BUCKET-REPORTERS*"
+   "*PERF-RESULTS*"
    "BDD-REPORT-PROFILE"
    "TYPES/CMP-PERF"
    "TYPES/CMP-PERFS"
-   "*PERF-RESULTS*"
+   "VALID-SUBTYPES"
 ))
 
 (in-package :lisp-types-analysis)
