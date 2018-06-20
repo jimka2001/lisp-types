@@ -152,7 +152,7 @@ according to the LABEL which is now the label of some parent in its lineage."
                 (%bdd-node (bdd-label bdd)
                            (recure (bdd-positive bdd))
                            (recure (bdd-negative bdd))
-                           :bdd-node-class (class-of bdd))))))
+                           :bdd-node-class 'lisp-type-bdd-node)))))
     (recure bdd)))
 
 (defun check-table ()
@@ -486,10 +486,10 @@ of min-terms, this function returns a list of the min-terms."
                 nil)
                (bdd-node
                 (nconc (mapcar (lambda (positive)
-                                 (%bdd-node (bdd-label term) positive *bdd-false* :bdd-node-class (class-of term)))
+                                 (%bdd-node (bdd-label term) positive *bdd-false* :bdd-node-class 'lisp-type-bdd-node))
                                (recure (bdd-positive term)))
                        (mapcar (lambda (negative)
-                                 (%bdd-node (bdd-label term) *bdd-false* negative :bdd-node-class (class-of term)))
+                                 (%bdd-node (bdd-label term) *bdd-false* negative :bdd-node-class 'lisp-type-bdd-node))
                                (recure (bdd-negative term))))))))
     (recure bdd)))
 
