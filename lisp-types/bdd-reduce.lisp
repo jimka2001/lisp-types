@@ -79,12 +79,10 @@
 
 (defmethod bdd-allocate (label (positive-bdd lisp-type-bdd-node) (negative-bdd bdd) &key (bdd-node-class (class-of positive-bdd)))
   (declare (type (not (eql bdd-node)) bdd-node-class))
-  (assert (typep bdd-node-class '(not (eql bdd-node))))
   (lisp-type-bdd-allocate label positive-bdd negative-bdd :bdd-node-class bdd-node-class))
 
 (defmethod bdd-allocate (label (positive-bdd bdd) (negative-bdd lisp-type-bdd-node) &key (bdd-node-class (class-of negative-bdd)))
   (declare (type (not (eql bdd-node)) bdd-node-class))
-  (assert (typep bdd-node-class '(not (eql bdd-node))))
   (lisp-type-bdd-allocate label positive-bdd negative-bdd :bdd-node-class bdd-node-class))
 
 (defmethod bdd-reduce-allocated ((bdd lisp-type-bdd-node) new-positive new-negative)

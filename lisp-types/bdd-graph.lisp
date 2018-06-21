@@ -155,7 +155,7 @@
                                (declare #+sbcl (notinline length))
                                (length (bdd-collect-atomic-types bdd))))
                 :test #'bdd-type-equal))
-         (bdd-type-orig (bdd `(or ,@type-specifiers)))
+         (bdd-type-orig (ltbdd `(or ,@type-specifiers)))
          (graph (loop :for bdd :in bdds
                       :collect (list :bdd bdd
                                      :super-types nil
