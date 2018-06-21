@@ -133,6 +133,7 @@
            (optimize (speed 3) (compilation-speed 0) (debug 0) (space 0))
            ;;(optimize (speed 0) (compilation-speed 0) (debug 3) )
            )
+  (format t "type-specifiers = ~A~%" type-specifiers)
 
   (when (eq :strict do-break-sub)
     (assert do-break-loop (do-break-sub do-break-loop)

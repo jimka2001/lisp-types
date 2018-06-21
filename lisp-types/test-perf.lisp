@@ -298,8 +298,6 @@
                                       :do-break-sub :strict
                                       :do-break-loop t))))
 
-
-
 (define-test disjoint-cmp-l
   (let ((type-specifiers
           '(CONDITION RESTART RATIONAL CONS RATIO READER-ERROR STRUCTURE-CLASS
@@ -382,3 +380,28 @@ if the function returned the same as it was passed as input (according to EQUAL)
     (print-trace (with-open-file (str filename :direction :input)
                    (read-trace str)))))
     
+(define-test test/parameterization-report-1
+  (let* ((bucket-index 1)
+         (bucket (nth bucket-index *bucket-reporters* )))
+    (parameterization-report :create-png-p nil
+                             :multiplier 0.3
+                             :bucket-reporters (list bucket)
+                             :destination-dir "/tmp/jnewton/analysis/.")))
+
+
+(define-test test/parameterization-report-2
+  (let* ((bucket-index 2)
+         (bucket (nth bucket-index *bucket-reporters* )))
+    (parameterization-report :create-png-p nil
+                             :multiplier 0.3
+                             :bucket-reporters (list bucket)
+                             :destination-dir "/tmp/jnewton/analysis/.")))
+
+(define-test test/parameterization-report-3
+  (let* ((bucket-index 3)
+         (bucket (nth bucket-index *bucket-reporters* )))
+    (parameterization-report :create-png-p nil
+                             :multiplier 0.3
+                             :bucket-reporters (list bucket)
+                             :destination-dir "/tmp/jnewton/analysis/.")))
+
