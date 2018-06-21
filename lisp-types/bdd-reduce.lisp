@@ -77,12 +77,13 @@
              (setf (gethash key (bdd-hash))
                    (bdd-reduce-allocated bdd new-positive new-negative)))))))))
 
-(defmethod bdd-allocate (label (positive-bdd lisp-type-bdd) (negative-bdd bdd) &key (bdd-node-class 'lisp-type-bdd-node))
+(defmethod bdd-allocate (label (positive-bdd lisp-type-bdd-node) (negative-bdd bdd) &key (bdd-node-class (class-of positive-bdd)))
+  (declare (type (not (eql bdd-node)) bdd-node-class))
   (lisp-type-bdd-allocate label positive-bdd negative-bdd :bdd-node-class bdd-node-class))
 
-(defmethod bdd-allocate (label (positive-bdd bdd) (negative-bdd lisp-type-bdd) &key (bdd-node-class 'lisp-type-bdd-node))
+(defmethod bdd-allocate (label (positive-bdd bdd) (negative-bdd lisp-type-bdd-node) &key (bdd-node-class (class-of negative-bdd)))
+  (declare (type (not (eql bdd-node)) bdd-node-class))
   (lisp-type-bdd-allocate label positive-bdd negative-bdd :bdd-node-class bdd-node-class))
-
 
 (defmethod bdd-reduce-allocated ((bdd lisp-type-bdd-node) new-positive new-negative)
   (cond
