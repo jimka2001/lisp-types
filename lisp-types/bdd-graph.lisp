@@ -114,15 +114,16 @@
 
 
 (defun slow-decompose-types-bdd-graph (type-specifiers
-                                   &key
-                                     (sort-strategy "DECREASING-CONNECTIONS") ;; "BOTTOM-TO-TOP" or "DECREASING-CONNECTIONS"
-                                     (recursive t)
-                                     (inner-loop :operation)
-                                     (do-break-sub :relaxed)
-                                     (do-break-loop nil) ;; t or nil
-                                     (sort-nodes (find-sort-strategy-function sort-strategy))
-                                     (do-disjoint t)
-                                     (do-break-touch t))
+                                       &key
+                                         (sort-strategy "DECREASING-CONNECTIONS") ;; "BOTTOM-TO-TOP" or "DECREASING-CONNECTIONS"
+                                         (recursive t)
+                                         (inner-loop :operation)
+                                         (do-break-sub :relaxed)
+                                         (do-break-loop nil) ;; t or nil
+                                         (sort-nodes (find-sort-strategy-function sort-strategy))
+                                         (do-disjoint t)
+                                         (do-break-touch t)
+                                       &aux (*bdd-node-type* '(or lisp-type-bdd-node bdd-leaf)))
   (declare #+sbcl (notinline sort +)
            ;;(ignore sort-strategy)
            (type (member :node :operation) inner-loop)
