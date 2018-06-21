@@ -141,7 +141,7 @@ Each element of REDUCTION-RULES is a plist having at least the keys
 recursive descent, LEVEL remains fixed, while BDD walks the BDD dag.  At each step,
 until we reach a leaf, we call BDD-FIND-REDUCTION to see if the BDD can be reduced
 according to the LABEL which is now the label of some parent in its lineage."
-  (declare (type lisp-type-bdd bdd)
+  (declare (type (or lisp-type-bdd bdd-leaf) bdd)
            (type list search))
   (labels ((recure (bdd)
              (cond
