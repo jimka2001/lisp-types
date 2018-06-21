@@ -89,19 +89,20 @@
         (assert-false (smarter-subtypep t2 t1))))))
 
 (define-test type/bdd-subtypep
-  (assert-true (bdd-subtypep (ltbdd 'float) (ltbdd 'number)))
-  (assert-true (bdd-subtypep (ltbdd '(eql :x)) (ltbdd 'keyword)))
-  (assert-true (bdd-subtypep (ltbdd '(not keyword)) (ltbdd '(not (eql :x)))))
-  (assert-false (bdd-subtypep (ltbdd 'keyword) (ltbdd '(eql :x))))
-  (assert-false (bdd-subtypep (ltbdd '(not keyword)) (ltbdd '(eql :x))))
-  (assert-false (bdd-subtypep (ltbdd '(not (eql :x))) (ltbdd 'keyword)))
+  (bdd-with-new-hash ()
+    (assert-true (bdd-subtypep (ltbdd 'float) (ltbdd 'number)))
+    (assert-true (bdd-subtypep (ltbdd '(eql :x)) (ltbdd 'keyword)))
+    (assert-true (bdd-subtypep (ltbdd '(not keyword)) (ltbdd '(not (eql :x)))))
+    (assert-false (bdd-subtypep (ltbdd 'keyword) (ltbdd '(eql :x))))
+    (assert-false (bdd-subtypep (ltbdd '(not keyword)) (ltbdd '(eql :x))))
+    (assert-false (bdd-subtypep (ltbdd '(not (eql :x))) (ltbdd 'keyword)))
 
-  (assert-true (bdd-type-equal (ltbdd '(and (member :a :b) keyword))
-                               (ltbdd '(member :a :b))))
+    (assert-true (bdd-type-equal (ltbdd '(and (member :a :b) keyword))
+                                 (ltbdd '(member :a :b))))
 
-  (assert-true (equal (bdd-to-dnf (ltbdd '(and (member :a :b) keyword)))
-                      '(member :a :b)))
-  )
+    (assert-true (equal (bdd-to-dnf (ltbdd '(and (member :a :b) keyword)))
+                        '(member :a :b)))
+    ))
 
 
 
