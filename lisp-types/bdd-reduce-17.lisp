@@ -323,9 +323,9 @@
 
 
 (defmethod decompose-graph-1 :around ((g bdd-graph) u)
-  (bdd-with-new-hash ()
+  (ltbdd-with-new-hash ()
    (call-next-method)))
 
 (defmethod decompose-graph-2 :around ((g bdd-graph) u)
-  (bdd-with-new-hash ()
+  (ltbdd-with-new-hash ()
    (call-next-method)))

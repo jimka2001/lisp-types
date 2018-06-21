@@ -47,3 +47,6 @@
 
 (defun ltbdd-node (label positive negative)
   (bdd-node label positive negative :bdd-node-class 'lisp-type-bdd-node))
+
+(defmacro ltbdd-with-new-hash (vars &body body)
+  `(bdd-call-with-new-hash (lambda ,vars ,@body) :bdd-node-type '(or lisp-types-bdd-node bdd-leaf)))

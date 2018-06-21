@@ -25,7 +25,7 @@
 
 
 (define-test test/lisp-type-bdd
-  (bdd-with-new-hash ()
+  (ltbdd-with-new-hash ()
     (let ((bdd (ltbdd 'z1)))
       (assert-true (typep bdd 'lisp-type-bdd))
       (assert-true (typep bdd 'lisp-type-bdd-node))
@@ -34,14 +34,14 @@
   
 
 (define-test test/bdd-to-dnf
-  (bdd-with-new-hash ()
+  (ltbdd-with-new-hash ()
     (assert-true (equal 'integer
                         (bdd-to-dnf (ltbdd 'integer))))
     (assert-true (bdd-to-dnf (ltbdd '(or string integer))))
     (assert-true (bdd-to-dnf (ltbdd '(or (and integer (not string)) (and string (not integer))))))))
 
 (define-test test/bdd-create
-  (bdd-with-new-hash ()
+  (ltbdd-with-new-hash ()
     (assert-true (ltbdd 'integer))
     (assert-true (ltbdd '(or integer float)))
     (assert-true (ltbdd '(or (and integer (not string)) (and string (not integer)))))
@@ -53,20 +53,20 @@
     ))
 
 (define-test types/bdd-collect-atomic-types
-  (bdd-with-new-hash ()
+  (ltbdd-with-new-hash ()
     (assert-false (set-exclusive-or (bdd-collect-atomic-types (ltbdd '(or (and integer (not string)) (and string (not integer)))))
                                   
                                   '(integer string)))))
 
   
 (define-test test/certain-reductions
-  (bdd-with-new-hash ()
+  (ltbdd-with-new-hash ()
     (assert-true (ltbdd '(or (and integer (not string)) (and string (not integer)))))
     (assert-false (bdd-to-dnf (bdd-and-not (ltbdd 'integer) (ltbdd 'number))))))
 
 
 (define-test type/bdd-sample-a
-  (bdd-with-new-hash ()
+  (ltbdd-with-new-hash ()
     (let ((types '((member 1 2) (member 2 3) (member 1 2 3 4))))
       (assert-false (set-exclusive-or (bdd-decompose-types types)
                                       (decompose-types types)
@@ -89,7 +89,7 @@
         (assert-false (smarter-subtypep t2 t1))))))
 
 (define-test type/bdd-subtypep
-  (bdd-with-new-hash ()
+  (ltbdd-with-new-hash ()
     (assert-true (bdd-subtypep (ltbdd 'float) (ltbdd 'number)))
     (assert-true (bdd-subtypep (ltbdd '(eql :x)) (ltbdd 'keyword)))
     (assert-true (bdd-subtypep (ltbdd '(not keyword)) (ltbdd '(not (eql :x)))))
@@ -143,7 +143,7 @@
     (setf all-types (set-difference all-types '(compiled-function control-error division-by-zero error
                                                 test-char-code base-char)))
     (setf all-types (sort all-types #'string<))
-    (bdd-with-new-hash ()
+    (ltbdd-with-new-hash ()
      
       (let ((n 1)
             (testing-types (list (pop all-types))))
@@ -173,7 +173,7 @@
 (deftype non-number () `(not number))
 (deftype non-integer () `(not integer))
 (define-test type/bdd-reduce
-  (bdd-with-new-hash ()
+  (ltbdd-with-new-hash ()
 
     ;; there are six cases to test
 
@@ -224,7 +224,7 @@
 
                    
 (define-test test/bdd-type-p
-  (bdd-with-new-hash ()
+  (ltbdd-with-new-hash ()
     (assert-false (bdd-type-p  t (ltbdd '(or (and sequence (not array))
                                         number
                                         (and (not sequence) array)))))
@@ -233,7 +233,7 @@
                                        (and (not sequence) array)))))))
 
 (define-test test/bdd-dnf
-  (bdd-with-new-hash ()
+  (ltbdd-with-new-hash ()
      (assert-true (member 'number (bdd-to-dnf (ltbdd '(or (and sequence (not array))
                                                      number
                                                      (and (not sequence) array))))))

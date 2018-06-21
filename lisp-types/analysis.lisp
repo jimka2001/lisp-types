@@ -455,7 +455,7 @@ than as keywords."
 (defun check-decomposition (given calculated)
   "debugging function to assure that a given list of types GIVEN corresponds correctly
 to a set of types returned from %bdd-decompose-types."
-  (bdd-with-new-hash ()
+  (ltbdd-with-new-hash ()
     (let ((bdd-given (bdd `(or ,@given)))
           (bdd-calculated (bdd `(or ,@calculated))))
       (unless (bdd-subtypep bdd-given bdd-calculated)
@@ -528,7 +528,7 @@ to a set of types returned from %bdd-decompose-types."
   ;;  in different types being calculated
   (labels ((equiv-type-sets (set1 set2)
              (and (= (length set1) (length set2))
-                  (bdd-with-new-hash ()
+                  (ltbdd-with-new-hash ()
                     (or (null (set-exclusive-or set1 set2 :test #'%equal))
                         (let ((bdd-set1 (bdd `(or ,@set1)))
                               (bdd-set2 (bdd `(or ,@set2))))
@@ -623,7 +623,7 @@ to a set of types returned from %bdd-decompose-types."
                             (bdd-to-dnf (bdd-and-not bdd-given bdd-calc)))))))))
     (when good-results
       (let ((res1 (car good-results)))
-        (bdd-with-new-hash ()
+        (ltbdd-with-new-hash ()
           (check-1 (getf res1 :types) (getf res1 :value) (getf res1 :decompose))))
       
       (dolist (res (cdr good-results))
@@ -1573,34 +1573,32 @@ sleeping before the code finishes evaluating."
                                         (create-png-p t)
                                         (destination-dir *destination-dir*))
   (declare (ignore prefix re-run suite-time-out time-out num-tries hilite-min profile))
-  (let ((*bdd-node-type* '(or bdd-leaf lisp-type-bdd-node)))
-    (when normalize
-      (assert (member normalize decomposition-functions) (normalize decomposition-functions)))
-    (dolist (df decomposition-functions)
-      (unless (exists plist *decomposition-function-descriptors*
-                (member df (getf plist :names)))
-        (let ((*package* (find-package :keyword)))
-          (error "No plist has :name ~A in ~A"
-                 df *decomposition-function-descriptors*))))
-    (let ((*bdd-hash-struct* (bdd-new-hash))
-          (*decomposition-functions*  decomposition-functions))
-      (loop for (tag bucket-reporter) in bucket-reporters
-            for sample = (/ 1 (length bucket-reporters)) then (+ sample (/ 1 (length bucket-reporters)))
-            do (funcall bucket-reporter multiplier sample options :create-png-p create-png-p :destination-dir destination-dir)))))
+  (when normalize
+    (assert (member normalize decomposition-functions) (normalize decomposition-functions)))
+  (dolist (df decomposition-functions)
+    (unless (exists plist *decomposition-function-descriptors*
+              (member df (getf plist :names)))
+      (let ((*package* (find-package :keyword)))
+        (error "No plist has :name ~A in ~A"
+               df *decomposition-function-descriptors*))))
+  (let ((*bdd-hash-struct* (bdd-new-hash))
+        (*decomposition-functions*  decomposition-functions))
+    (loop for (tag bucket-reporter) in bucket-reporters
+          for sample = (/ 1 (length bucket-reporters)) then (+ sample (/ 1 (length bucket-reporters)))
+          do (funcall bucket-reporter multiplier sample options :create-png-p create-png-p :destination-dir destination-dir))))
 
 (defun parameterization-report (&key (re-run t) (multiplier 1) (create-png-p t) (destination-dir *destination-dir*)
                                   (bucket-reporters *bucket-reporters*))
-  (let ((*bdd-node-type* '(or bdd-leaf lisp-type-bdd-node)))
-    (big-test-report :re-run re-run
-                     :prefix "param-"
-                     :normalize 'decompose-types-bdd-graph
-                     :hilite-min t
-                     :destination-dir destination-dir
-                     :multiplier multiplier
-                     :create-png-p create-png-p
-                     :bucket-reporters bucket-reporters
-                     :decomposition-functions (cons 'decompose-types-bdd-graph
-                                                    *decompose-fun-parameterized-names*))))
+  (big-test-report :re-run re-run
+                   :prefix "param-"
+                   :normalize 'decompose-types-bdd-graph
+                   :hilite-min t
+                   :destination-dir destination-dir
+                   :multiplier multiplier
+                   :create-png-p create-png-p
+                   :bucket-reporters bucket-reporters
+                   :decomposition-functions (cons 'decompose-types-bdd-graph
+                                                  *decompose-fun-parameterized-names*)))
 
 (defun best-2-report (&key (re-run t) (multiplier 1.8) (create-png-p t) (destination-dir *destination-dir*)
                         (bucket-reporters *bucket-reporters*))

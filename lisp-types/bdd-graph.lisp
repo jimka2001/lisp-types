@@ -122,8 +122,7 @@
                                          (do-break-loop nil) ;; t or nil
                                          (sort-nodes (find-sort-strategy-function sort-strategy))
                                          (do-disjoint t)
-                                         (do-break-touch t)
-                                       &aux (*bdd-node-type* '(or lisp-type-bdd-node bdd-leaf)))
+                                         (do-break-touch t))
   (declare #+sbcl (notinline sort +)
            ;;(ignore sort-strategy)
            (type (member :node :operation) inner-loop)
@@ -522,7 +521,7 @@
 
                 (push `(setf (get ',fun-name 'decompose-properties) ',props) prop-defs)
                 (push `(defun ,fun-name (type-specifiers)
-                         (bdd-with-new-hash ()
+                         (ltbdd-with-new-hash ()
                            (let ((*bdd-hash-strength* :weak))
                              (slow-decompose-types-bdd-graph type-specifiers ,@props))))
                       fun-defs)))))))

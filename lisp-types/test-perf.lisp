@@ -26,7 +26,7 @@
 #+sbcl
 (define-test disjoint-cmp-j
   (setf *perf-results* nil)
-  (bdd-with-new-hash ()
+  (ltbdd-with-new-hash ()
     (types/cmp-perf :types '((MEMBER 0 1 2 4 5 6 8 9 10) (MEMBER 1 2 4 6 8)
                              (MEMBER 1 2 3 5 6 7 8 10) (MEMBER 1 5 6 7 9 10) (MEMBER 0 1 6 7 8 10)
                              (MEMBER 0 1 2 3 5 6 10) (MEMBER 0 1 3 4 5 6 8 9 10)
@@ -48,7 +48,7 @@
 
 #+sbcl
 (define-test test/bdd-numbers-3
-  (bdd-with-new-hash ()
+  (ltbdd-with-new-hash ()
     (assert-true (types/cmp-perfs :limit 3
                                   :file-name "bdd-numbers"
                                   :destination-dir "/tmp"
@@ -57,7 +57,7 @@
 
 #+sbcl
 (define-test test/bdd-numbers-6
-  (bdd-with-new-hash ()
+  (ltbdd-with-new-hash ()
     (assert-true (types/cmp-perfs :limit 6
                                   :file-name "bdd-numbers"
                                   :destination-dir "/tmp"
@@ -66,7 +66,7 @@
 
 #+sbcl
 (define-test test/bdd-numbers
-  (bdd-with-new-hash ()
+  (ltbdd-with-new-hash ()
     (assert-true (types/cmp-perfs :limit 15
                                   :file-name "bdd-numbers"
                                   :destination-dir "/tmp"
@@ -155,14 +155,14 @@
                             (MEMBER 0 2 4))))
 
 (define-test disjoint-cmp-9
-  (bdd-with-new-hash ()
+  (ltbdd-with-new-hash ()
    (assert-test (= 3 (length (bdd-decompose-types '((MEMBER 0 2)
                                                       (MEMBER 0 1 2)
                                                       (MEMBER 0 2 4))))))))
 
 (define-test disjoint-cmp-a
-  (bdd-with-new-hash ()
-    (bdd-with-new-hash ()
+  (ltbdd-with-new-hash ()
+    (ltbdd-with-new-hash ()
       (let* ((t1 (ltbdd '(member 0 2)))
              (t2 (ltbdd '(member 0 1 2)))
              (t3 (ltbdd '(member 0 2 4)))
@@ -237,7 +237,7 @@
 
 (define-test disjoint-cmp-g
   (setf *perf-results* nil)
-  (bdd-with-new-hash ()
+  (ltbdd-with-new-hash ()
     (types/cmp-perfs :file-name "disjoint-cmp-g"
                      :destination-dir "/tmp"
                      :types '((MEMBER 0 3 4)
@@ -251,7 +251,7 @@
 
 (define-test disjoint-cmp-h
   (setf *perf-results* nil)
-  (bdd-with-new-hash ()
+  (ltbdd-with-new-hash ()
     (types/cmp-perfs :file-name "disjoint-cmp-h"
                      :destination-dir "/tmp"
                      :limit 5
@@ -263,7 +263,7 @@
 
 (define-test disjoint-cmp-i
   (setf *perf-results* nil)
-  (bdd-with-new-hash ()
+  (ltbdd-with-new-hash ()
     (types/cmp-perfs :limit 5
                      :file-name "disjoint-cmp-i"
                      :destination-dir "/tmp"
@@ -288,7 +288,7 @@
             (or (and (not reader-error) stream-error) (and reader-error (not style-warning)))
             (and (not arithmetic-error) reader-error (not structure-class) (not style-warning))
             (and (not arithmetic-error) (not reader-error) (not structure-class) style-warning))))
-    (bdd-with-new-hash ()
+    (ltbdd-with-new-hash ()
       (slow-decompose-types-bdd-graph type-specifiers 
                                       :sort-nodes #'(lambda (graph)
                                                       (declare (notinline sort))
@@ -303,7 +303,7 @@
           '(CONDITION RESTART RATIONAL CONS RATIO READER-ERROR STRUCTURE-CLASS
             SYNONYM-STREAM ARITHMETIC-ERROR TEST-CHAR-CODE WARNING FLOAT-RADIX
             SIMPLE-BIT-VECTOR STREAM-ERROR ARRAY STYLE-WARNING)))
-    (bdd-with-new-hash ()
+    (ltbdd-with-new-hash ()
       (slow-decompose-types-bdd-graph type-specifiers 
                                       :sort-nodes #'(lambda (graph)
                                                       (declare (notinline sort))
@@ -316,7 +316,7 @@
 ;; (lisp-types-test::sort-results "/Users/jnewton/newton.16.edtchs/src/member.sexp" nil)
 
 (defun perf-test-1 (&key (size 11))
-  (bdd-with-new-hash (&aux (type-specifiers (lisp-types::choose-randomly (loop :for name being the external-symbols in "SB-PCL"
+  (ltbdd-with-new-hash (&aux (type-specifiers (lisp-types::choose-randomly (loop :for name being the external-symbols in "SB-PCL"
                                                                                :when (find-class name nil)
                                                                                  :collect name) size)))
     (slow-decompose-types-bdd-graph type-specifiers
@@ -404,4 +404,27 @@ if the function returned the same as it was passed as input (according to EQUAL)
                              :multiplier 0.3
                              :bucket-reporters (list bucket)
                              :destination-dir "/tmp/jnewton/analysis/.")))
+
+(define-test test/slow-decompose-types-bdd-graph
+  (ltbdd-with-new-hash ()
+    (slow-decompose-types-bdd-graph '((and function program-error) concatenated-stream
+                                      (or package floating-point-overflow)
+                                      (and simple-string program-error) (or method vector)
+                                      (or concatenated-stream synonym-stream) simple-warning
+                                      control-error (or package-error parse-error)
+                                      (and string control-error) (and function unbound-variable)
+                                      (or integer undefined-function) (and simple-error base-char)
+                                      (or logical-pathname built-in-class)
+                                      (or built-in-class division-by-zero)
+                                      (and unsigned-byte signed-byte) floating-point-inexact
+                                      (and integer undefined-function) (or complex two-way-stream)
+                                      (and package-error fixnum))
+                                    :sort-strategy "BOTTOM-TO-TOP"
+                                    :recursive t
+                                    :inner-loop :operation
+                                    :do-break-sub :relaxed
+                                    :do-break-loop nil
+                                    :do-disjoint t
+                                    :do-break-touch t
+                                    )))
 

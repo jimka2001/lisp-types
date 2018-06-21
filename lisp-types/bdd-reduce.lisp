@@ -392,7 +392,7 @@ in the topological ordering (i.e., the first value)."
 (define-compiler-macro bdd-typep (obj type-specifier)
   (typecase type-specifier
     ((cons (eql quote))
-     (bdd-with-new-hash (&aux (bdd (ltbdd (cadr type-specifier))))
+     (ltbdd-with-new-hash (&aux (bdd (ltbdd (cadr type-specifier))))
        `(funcall ,(bdd-to-if-then-else-3 bdd (gensym)) ,obj)))
     (t
      `(typep ,obj ,type-specifier))))
@@ -429,7 +429,7 @@ convert it to DNF (disjunctive-normal-form)"
 
 (defun %bdd-decompose-types (type-specifiers)
   ;;(declare (optimize (debug 0) (speed 3))) ;; optimize tail call 
-  (bdd-with-new-hash (&aux (bdds (remove-if #'bdd-empty-type (mapcar #'ltbdd type-specifiers))))
+  (ltbdd-with-new-hash (&aux (bdds (remove-if #'bdd-empty-type (mapcar #'ltbdd type-specifiers))))
     (declare (type list bdds))
     (labels ((try (bdds disjoint-bdds &aux (bdd-a (car bdds)))
                (declare (type (or null bdd) bdd-a))
