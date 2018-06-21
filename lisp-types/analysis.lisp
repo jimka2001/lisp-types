@@ -1581,11 +1581,11 @@ sleeping before the code finishes evaluating."
       (let ((*package* (find-package :keyword)))
         (error "No plist has :name ~A in ~A"
                df *decomposition-function-descriptors*))))
-  (let ((*bdd-hash-struct* (bdd-new-hash))
-        (*decomposition-functions*  decomposition-functions))
-    (loop for (tag bucket-reporter) in bucket-reporters
-          for sample = (/ 1 (length bucket-reporters)) then (+ sample (/ 1 (length bucket-reporters)))
-          do (funcall bucket-reporter multiplier sample options :create-png-p create-png-p :destination-dir destination-dir))))
+  (ltbdd-with-new-hash ()
+    (let ((*decomposition-functions*  decomposition-functions))
+      (loop for (tag bucket-reporter) in bucket-reporters
+            for sample = (/ 1 (length bucket-reporters)) then (+ sample (/ 1 (length bucket-reporters)))
+            do (funcall bucket-reporter multiplier sample options :create-png-p create-png-p :destination-dir destination-dir)))))
 
 (defun parameterization-report (&key (re-run t) (multiplier 1) (create-png-p t) (destination-dir *destination-dir*)
                                   (bucket-reporters *bucket-reporters*))
