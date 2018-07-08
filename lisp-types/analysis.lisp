@@ -1091,6 +1091,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
       (ensure-directories-exist ltxdat-name)
       (with-open-file (stream ltxdat-name :direction :output :if-exists :supersede :if-does-not-exist :create)
         (format t "writing to ~A~%" ltxdat-name)
+	(format stream "%% autocreated by print-ltxdat  tag=~A~%" tag)
         (format stream "\\begin{tikzpicture}~%")
         (format stream "\\begin{axis}[~% ")
         (when tag
