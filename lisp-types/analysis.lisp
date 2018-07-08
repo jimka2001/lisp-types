@@ -1116,7 +1116,13 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
                      (format stream "\\definecolor{color~A}{RGB}{~A,~A,~A}~%" (getf descr :gnu-color) red green blue)
                      (format stream "\\addplot[color=color~A] coordinates {~%" (getf descr :gnu-color)))
                    (dolist (xy xys)
-                     (format stream "(~D, ~S)~%" (car xy) (cadr xy)))
+		     (cond
+		       ;; don't print y=0 because it's a logy plot
+		       ((zerop (cadr xy)))
+		       ;; don't print x=0 because it's a logy plot
+		       ((zerop (car xy)))
+		       (t
+                    (format stream "(~D, ~S)~%" (car xy) (cadr xy)))))
                    (format stream "};~%")
                    (push (if (getf descr :legend)
                              (format nil "~A" decompose)
@@ -1236,7 +1242,6 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
   (when profile
     (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p :smooth nil :comment "1324")
     (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p :smooth t   :comment "1325"))
-
 
   (print-ltxdat ltxdat-name           sorted-name include-decompose t nil)
   (print-ltxdat ltxdat-no-legend-name sorted-name include-decompose nil tag)
