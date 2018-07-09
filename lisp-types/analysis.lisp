@@ -1366,7 +1366,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                  (:ltxdat-name
                   "~A/~A~A.ltxdat")
                  (:ltxdat-no-legend-name
-                  "~A/no-legend/~A~A.ltxdat")
+                  "~A/no-legend-~A~A.ltxdat")
                  (:dat-name
                   "~A/~A~A.dat")
                  (:png-name
