@@ -1126,7 +1126,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
                                                  (blue  (logand decimal #x0000ff)))
                                             (format stream "\\definecolor{color~A}{RGB}{~A,~A,~A}~%" (getf descr :gnu-color) red green blue)
                                             (addplot stream
-                                                     descr
+                                                     (format nil "~A" decompose)
                                                      (list (list "color" (format nil "color~A" (getf descr :gnu-color))))
                                                      "(~D, ~S)"
                                                      xys ))
