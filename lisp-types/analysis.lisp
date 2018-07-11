@@ -1096,7 +1096,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
                      (lambda ()
                        (axis stream
                              (list (when tag
-                                     (list "title" (format t "~A" tag)))
+                                     (list "title" (format nil "~A" tag)))
                                    '("xlabel" "Size")
                                    '("ylabel" "Time")
                                    '("legend style" "{at={(0.5,-0.2)},anchor=north}")
