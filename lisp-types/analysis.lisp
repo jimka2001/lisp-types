@@ -955,7 +955,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
          (format t "]~%"))))
     ((eq out :return)
      ;; (reduce (lambda (num string) (format nil "~D~S" num string)) '(1 2 3) :initial-value "")
-     (destructuring-bind (&key summary limit data time-out-count run-count time-out-run-time run-time wall-time unknown known)
+     (destructuring-bind (&key (summary "missing summary") limit data time-out-count run-count time-out-run-time run-time wall-time unknown known)
          (user-read in nil nil)
        (declare (type string summary))
        (let (observed-max-time observed-min-time observed-min-prod observed-max-prod)
@@ -1091,63 +1091,69 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
       (ensure-directories-exist ltxdat-name)
       (with-open-file (stream ltxdat-name :direction :output :if-exists :supersede :if-does-not-exist :create)
         (format t "writing to ~A~%" ltxdat-name)
-	(format stream "%% autocreated by print-ltxdat  tag=~A~%" tag)
-        (format stream "\\begin{tikzpicture}~%")
-        (format stream "\\begin{axis}[~% ")
-        (when tag
-          (format stream "title=~A,~% " tag))
-        (format stream "xlabel=Size,~% ylabel=Time,~% xmode=log,~% ymode=log,~% legend style={at={(0.5,-0.2)},anchor=north},~% xmajorgrids,~% xminorgrids,~% ymajorgrids,~% legend style={font=\\tiny},~% xticklabel style={font=\\tiny},~% yticklabel style={font=\\tiny},~% label style={font=\\tiny}~%]~%")
-        (let ((*print-case* :downcase)
-              (min-curve (reduce (lambda (curve1 curve2)
-                                  (if (< (getf curve1 :integral)
-                                         (getf curve2 :integral))
-                                      curve1
-                                      curve2)) (cdr sorted) :initial-value (car sorted)))
-              legend)
-          (setf min-curve (if (cdr (getf (find-decomposition-function-descriptor (getf min-curve :decompose)) :names))
-                              ;; this is one of the 45 curves of the parameterized functions
-                              `(:decompose "LOCAL-MINIMUM" ,@min-curve)
-                              nil))
-          (flet ((plot (xys decompose descr)
-                   (let* ((decimal (parse-integer (getf descr :gnu-color) :radix 16))
-                          (red   (/ (logand decimal #xff0000) #x10000))
-                          (green (/ (logand decimal #x00ff00) #x100))
-                          (blue  (logand decimal #x0000ff)))
-                     (format stream "\\definecolor{color~A}{RGB}{~A,~A,~A}~%" (getf descr :gnu-color) red green blue)
-                     (format stream "\\addplot[color=color~A] coordinates {~%" (getf descr :gnu-color)))
-                   (dolist (xy xys)
-		     (cond
-		       ;; don't print y=0 because it's a logy plot
-		       ((zerop (cadr xy)))
-		       ;; don't print x=0 because it's a logy plot
-		       ((zerop (car xy)))
-		       (t
-                    (format stream "(~D, ~S)~%" (car xy) (cadr xy)))))
-                   (format stream "};~%")
-                   (push (if (getf descr :legend)
-                             (format nil "~A" decompose)
-                             "") legend)))
-            (dolist (descr *decomposition-function-descriptors*)
-              (dolist (curve sorted)
-                (destructuring-bind (&key decompose xys &allow-other-keys
-                                     &aux (name (find-if (lambda (name)
-                                                           (string= (symbol-name name) decompose))
-                                                         include-decompose))
-                                       (descr2 (find-decomposition-function-descriptor name)))
-                    curve
-                  ;; decompose is a string such as "DECOMPOSE-TYPES-BDD-GRAPH"
-                  ;; include-decompose contains symbols such as DECOMPOSE-TYPES-BDD-GRAPH
-                  (when (and (eq descr descr2) name)
-                    (plot xys decompose descr)))))
-            (when min-curve
-              (let ((descr (find-decomposition-function-descriptor (getf min-curve :decompose))))
-                (plot (getf min-curve :xys)
-                      (getf min-curve :decompose)
-                      descr))))
-          (format stream "~A\\legend{~A};~%" (if legendp "" "%% ") (build-string ", " (reverse legend)))
-          (format stream "~A\\legend{};~%" (if legendp "%% " "")))
-        (format stream "\\end{axis}~%")
-        (format stream "\\end{tikzpicture}~%")))))
+        (tikzpicture stream
+                     (format nil "autocreated by print-ltxdat  tag=~A" tag)
+                     (lambda ()
+                       (axis stream
+                             (list (when tag
+                                     (list "title" (format t "~A" tag)))
+                                   '("xlabel" "Size")
+                                   '("ylabel" "Time")
+                                   '("legend style" "{at={(0.5,-0.2)},anchor=north}")
+                                   "xmajorgrids"
+                                   "xminorgrids"
+                                   "ymajorgrids"
+                                   '("legend style" "{font=\\tiny}")
+                                   '("xticklabel style" "{font=\\tiny}")
+                                   '("yticklabel style" "{font=\\tiny}")
+                                   '("label style" "{font=\\tiny}"))
+                             (lambda ()
+                               (let ((*print-case* :downcase)
+                                     (min-curve (reduce (lambda (curve1 curve2)
+                                                          (if (< (getf curve1 :integral)
+                                                                 (getf curve2 :integral))
+                                                              curve1
+                                                              curve2)) (cdr sorted) :initial-value (car sorted)))
+                                     legend)
+                                 (setf min-curve (if (cdr (getf (find-decomposition-function-descriptor (getf min-curve :decompose)) :names))
+                                                     ;; this is one of the 45 curves of the parameterized functions
+                                                     `(:decompose "LOCAL-MINIMUM" ,@min-curve)
+                                                     nil))
+                                 (flet ((plot (xys decompose descr)
+                                          (let* ((decimal (parse-integer (getf descr :gnu-color) :radix 16))
+                                                 (red   (/ (logand decimal #xff0000) #x10000))
+                                                 (green (/ (logand decimal #x00ff00) #x100))
+                                                 (blue  (logand decimal #x0000ff)))
+                                            (format stream "\\definecolor{color~A}{RGB}{~A,~A,~A}~%" (getf descr :gnu-color) red green blue)
+                                            (addplot stream
+                                                     descr
+                                                     (list (list "color" (format nil "color~A" (getf descr :gnu-color))))
+                                                     "(~D, ~S)"
+                                                     xys ))
+                                          (push (if (getf descr :legend)
+                                                    (format nil "~A" decompose)
+                                                    "") legend)))
+                                   (dolist (descr *decomposition-function-descriptors*)
+                                     (dolist (curve sorted)
+                                       (destructuring-bind (&key decompose xys &allow-other-keys
+                                                            &aux (name (find-if (lambda (name)
+                                                                                  (string= (symbol-name name) decompose))
+                                                                                include-decompose))
+                                                              (descr2 (find-decomposition-function-descriptor name)))
+                                           curve
+                                         ;; decompose is a string such as "DECOMPOSE-TYPES-BDD-GRAPH"
+                                         ;; include-decompose contains symbols such as DECOMPOSE-TYPES-BDD-GRAPH
+                                         (when (and (eq descr descr2) name)
+                                           (plot xys decompose descr)))))
+                                   (when min-curve
+                                     (let ((descr (find-decomposition-function-descriptor (getf min-curve :decompose))))
+                                       (plot (getf min-curve :xys)
+                                             (getf min-curve :decompose)
+                                             descr))))
+                                 (format stream "~A\\legend{~A};~%" (if legendp "" "%% ") (build-string ", " (reverse legend)))
+                                 (format stream "~A\\legend{};~%" (if legendp "%% " ""))))
+                             :logx t
+                             :logy t)))))))
             
 (defun print-dat (dat-name include-decompose)
   (with-open-file (stream dat-name :direction :output :if-exists :supersede :if-does-not-exist :create)
@@ -1567,7 +1573,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
       (sb-ext:process-kill caff 1))))
 
 (defmacro caffeinate (&body body)
-  "Evaluate the given code body, but using the caffeinate MACOS program to prevent the system from
+  "Evaluate the given code body, but using the caffeinate macOS program to prevent the system from
 sleeping before the code finishes evaluating."
   `(call-with-caffeinate (lambda () ,@body)))
 
