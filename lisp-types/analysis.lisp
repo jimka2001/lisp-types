@@ -648,16 +648,6 @@ to a set of types returned from %bdd-decompose-types."
     (loop for key being the hash-keys of hash
           collect (list key (gethash key hash)))))
 
-(defun build-string (delimiter data)
-  (cond
-    ((null data)
-     "")
-    (t
-     (with-output-to-string (str)
-       (format str "~A" (car data))
-       (dolist (next (cdr data))
-         (format str "~A~A" delimiter next))))))
-
 (defun create-gnuplot (sorted-file gnuplot-file png-filename normalize hilite-min include-decompose key create-png-p comment)
   (declare (type (member :smooth :xys) key)
            (type (or list (and symbol (satisfies symbol-function))) include-decompose))
@@ -799,7 +789,7 @@ to a set of types returned from %bdd-decompose-types."
                     (unless (null-curves sorted)
                       (format stream "# plot ~D curves~%" (length sorted))
                       (format stream "plot ~A"
-                              (build-string (format nil ",\\~%")
+                              (join-strings (format nil ",\\~%")
                                             (mapcar (lambda (data-plist &aux (decompose (getf data-plist :decompose)))
                                                       (let ((mapping-plist (find-if (lambda (mapping-plist)
                                                                                       (exists name (getf mapping-plist :names)
@@ -1152,7 +1142,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
                                        (plot (getf min-curve :xys)
                                              (getf min-curve :decompose)
                                              descr))))
-                                 (format stream "~A\\legend{~A};~%" (if legendp "" "%% ") (build-string ", " (reverse legend)))
+                                 (format stream "~A\\legend{~A};~%" (if legendp "" "%% ") (join-strings ", " (reverse legend)))
                                  (format stream "~A\\legend{};~%" (if legendp "%% " ""))))
                              :logx t
                              :logy t)))))))
@@ -1255,6 +1245,82 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
   (print-ltxdat ltxdat-no-legend-name sorted-name include-decompose nil tag)
   (print-dat dat-name include-decompose))
 
+(defun create-ltxdat-profile-scatter-plot (hash ltxdat-name &key smooth (comment "") summary decompose top-names)
+  (with-open-file (stream ltxdat-name
+                          :direction :output
+                          :if-exists :supersede
+                          :if-does-not-exist :create)
+    (format t "[writing to ~A~%" ltxdat-name)
+    (tikzpicture stream
+                 (format nil "scatter plot of ~A ~A" summary decompose)
+                 (lambda ()
+                   (format stream "%% label = ~%")
+                   (axis stream 
+                         '(("xlabel" "execution time (seconds)")
+                           ("ylabel" "profile percentage")
+                           ("legend style" "{font=\\tiny,at={(1,0)},anchor=south west}")
+                           ("label style" "{font=\\tiny}"))
+                         (lambda ()
+                           (dolist (function-name top-names)
+                             (addplot stream
+                                      function-name
+                                      ()
+                                      "(~A, ~A)"
+                                      (let ((xys (gethash function-name hash)))
+                                        (mapcar (lambda (xy)
+                                                  (list (car xy) (* 100 (cadr xy))))
+                                                (if smooth (smoothen xys) xys)))
+                                      :addplot "addplot+"
+                                      :logx t))
+                           (format stream "\\legend{~A}~%"
+                                   (join-strings "," top-names)))
+                         :logx t)))))
+
+(defun create-gnu-profile-scatter-plot (hash gnu-name &key smooth (comment "") summary decompose top-names create-png-p)
+  (with-open-file (gnu gnu-name
+                       :direction :output
+                       :if-exists :supersede
+                       :if-does-not-exist :create)
+    (format t "[writing to ~A~%" gnu-name)
+    (format gnu "# ~A~%" comment)
+    (format gnu "# scatter plot for ~A ~S~%" summary decompose)
+    (format gnu "set term png~%")
+    (format gnu "set logscale x~%")
+    (format gnu "set xlabel ~S~%" "execution time (seconds)")
+    (format gnu "set ylabel ~S~%" "profile percentage")
+    (format gnu "set key bmargin~%")
+    (format gnu "set title ~S~%" (format nil "~A ~A" summary decompose))
+      
+    (when top-names
+      (format gnu "plot ")
+      (let ((header (make-string-output-stream))
+            (footer (make-string-output-stream)))
+        (flet ((plot (function-name)
+                 (declare (notinline sort) (type string function-name))
+                 (format header "~S using 1:2" "-")
+                 (if (cdr (gethash function-name hash))
+                     (format header " with linespoints")
+                     (format header " with points"))
+                 (format header " title ~S" function-name)
+                 (format footer "# ~S~%" function-name)
+                 (let ((xys (gethash function-name hash)))
+                   (dolist (xy (if smooth (smoothen xys) xys))
+                     (format footer "~A ~A~%" (car xy) (* 100 (cadr xy)))))
+                 (format footer "end~%")))
+          (plot (car top-names))
+          (dolist (function-name (cdr top-names))
+            (format header ",\\~%    ")
+            (plot function-name)))
+        (format gnu "~A~%" (get-output-stream-string header))
+        (format gnu "~A" (get-output-stream-string footer))))
+    (format t "   ~A]~%" gnu-name)
+    (when create-png-p
+      (run-program "gnuplot" (list gnu-name)
+                   :search t
+                   :output (change-extension gnu-name "png")
+                   :error *error-output*
+                   :if-output-exists :supersede)) ))
+
 (defun create-profile-scatter-plot (sexp-name destination-dir prefix file-name create-png-p
                                     &key smooth (threshold 0.15) (comment ""))
   (let ((sexp (with-open-file (stream sexp-name :direction :input)
@@ -1262,79 +1328,55 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
     (destructuring-bind (&key summary data &allow-other-keys) sexp
       (dolist (data-plist data)
         (destructuring-bind (&key decompose profile-plists &allow-other-keys) data-plist
-          (let ((gnu-name (insert-suffix (make-output-file-name :gnuscatter-name destination-dir prefix file-name)
-                                         (concatenate 'string "-" decompose
-                                                      (if smooth "-smooth" "")))))
-            (with-open-file (gnu gnu-name
-                                 :direction :output
-                                 :if-exists :supersede
-                                 :if-does-not-exist :create)
-              (format t "[writing to ~A~%" gnu-name)
-              (format gnu "# ~A~%" comment)
-              (format gnu "# scatter plot for ~A ~S~%" summary decompose)
-              (format gnu "set term png~%")
-              (format gnu "set logscale x~%")
-              (format gnu "set xlabel ~S~%" "execution time (seconds)")
-              (format gnu "set ylabel ~S~%" "profile percentage")
-              (format gnu "set key bmargin~%")
-              (format gnu "set title ~S~%" (format nil "~A ~A" summary decompose))
-              (let ((hash (make-hash-table :test #'equal))
-                    top-names)
-                (declare (notinline sort))
-                (dolist (profile-plist profile-plists)
-                  (destructuring-bind (&key dprofile-total dprof &allow-other-keys) profile-plist
-                    (dolist (dprof-plist (subseq dprof 0 1))
-                      (destructuring-bind (&key (seconds 0.0) name &allow-other-keys) dprof-plist
-                        (when (plusp seconds)
-                          (let ((y (/ seconds dprofile-total)))
-                            (when (> y threshold)
-                              (pushnew name top-names :test #'string=))))))))
+          
+          (let ((hash (make-hash-table :test #'equal))
+                top-names)
+            (declare (notinline sort))
+            (dolist (profile-plist profile-plists)
+              (destructuring-bind (&key dprofile-total dprof &allow-other-keys) profile-plist
+                (dolist (dprof-plist (subseq dprof 0 1))
+                  (destructuring-bind (&key (seconds 0.0) name &allow-other-keys) dprof-plist
+                    (when (plusp seconds)
+                      (let ((y (/ seconds dprofile-total)))
+                        (when (> y threshold)
+                          (pushnew name top-names :test #'string=))))))))
 
-                (dolist (profile-plist profile-plists)
-                  (destructuring-bind (&key n-dtimes dprofile-total dprof &allow-other-keys) profile-plist
-                    (dolist (dprof-plist dprof)
-                      (destructuring-bind (&key (seconds 0.0) name &allow-other-keys) dprof-plist
-                        (when (and (plusp seconds)
-                                   (member name top-names :test #'string=))
-                          (let ((x (/ dprofile-total n-dtimes))
-                                (y (/ seconds dprofile-total)))
-                            (push (list x y) (gethash name hash nil))))))))
-                (when (< 5 (length top-names))
-                  (setf top-names (subseq (sort top-names #'> :key (lambda (name)
-                                                                     (unless (gethash name hash nil)
-                                                                       (format t "~A has no xy points~%" name))
-                                                                     (integral (gethash name hash nil) :logx t)))
-                                          0 5)))
-                (setf top-names (sort top-names #'string<))
-                (when top-names
-                  (format gnu "plot ")
-                  (let ((header (make-string-output-stream))
-                        (footer (make-string-output-stream)))
-                    (flet ((plot (function-name)
-                             (declare (notinline sort) (type string function-name))
-                             (format header "~S using 1:2" "-")
-                             (if (cdr (gethash function-name hash))
-                                 (format header " with linespoints")
-                                 (format header " with points"))
-                             (format header " title ~S" function-name)
-                             (format footer "# ~S~%" function-name)
-                             (let ((xys (sort (gethash function-name hash) #'< :key #'car)))
-                               (dolist (xy (if smooth (smoothen xys) xys))
-                                 (format footer "~A ~A~%" (car xy) (* 100 (cadr xy)))))
-                             (format footer "end~%")))
-                      (plot (car top-names))
-                      (dolist (function-name (cdr top-names))
-                        (format header ",\\~%    ")
-                        (plot function-name)))
-                    (format gnu "~A~%" (get-output-stream-string header))
-                    (format gnu "~A" (get-output-stream-string footer))))))
-            (format t "   ~A]~%" gnu-name)
-            (when create-png-p
-              (run-program "gnuplot" (list gnu-name)
-                           :search t
-                           :output (change-extension gnu-name "png")
-                           :error *error-output*
-                           :if-output-exists :supersede))))))))
+            (dolist (profile-plist profile-plists)
+              (destructuring-bind (&key n-dtimes dprofile-total dprof &allow-other-keys) profile-plist
+                (dolist (dprof-plist dprof)
+                  (destructuring-bind (&key (seconds 0.0) name &allow-other-keys) dprof-plist
+                    (when (and (plusp seconds)
+                               (member name top-names :test #'string=))
+                      (let ((x (/ dprofile-total n-dtimes))
+                            (y (/ seconds dprofile-total)))
+                        (push (list x y) (gethash name hash nil))))))))
+            (when (< 5 (length top-names))
+              (setf top-names (subseq (sort top-names #'> :key (lambda (name)
+                                                                 (unless (gethash name hash nil)
+                                                                   (format t "~A has no xy points~%" name))
+                                                                 (integral (gethash name hash nil) :logx t)))
+                                      0 5)))
+            (setf top-names (sort top-names #'string<))
+            (dolist (function-name top-names)
+              (setf (gethash function-name hash)
+                    (sort (gethash function-name hash) #'< :key #'car)))
+            (create-gnu-profile-scatter-plot hash
+                                             (insert-suffix (make-output-file-name :gnuscatter-name destination-dir prefix file-name)
+                                                            (concatenate 'string "-" decompose (if smooth "-smooth" "")))
+                                             :smooth smooth
+                                             :comment comment
+                                             :summary summary
+                                             :decompose decompose
+                                             :top-names top-names
+                                             :create-png-p create-png-p)
+            (create-ltxdat-profile-scatter-plot hash
+                                             (insert-suffix (make-output-file-name :ltxdatscatter-name destination-dir prefix file-name)
+                                                            (concatenate 'string "-" decompose (if smooth "-smooth" "")))
+                                             :smooth smooth
+                                             :comment comment
+                                             :summary summary
+                                             :decompose decompose
+                                             :top-names top-names))))))))
 
 (defvar *destination-dir* "/Users/jnewton/newton.16.edtchs/src")
 (defun test-report (&key sample (prefix "") (re-run t) (suite-time-out (* 60 60 4))
@@ -1381,6 +1423,8 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                   "~A/~A~A.png")
                  (:png-normalized-name
                   "~A/~A~A-normalized.png")
+                 (:ltxdatscatter-name
+                  "~A/~A~A-scatter.ltxdat")
                  (:gnuscatter-name
                   "~A/~A~A-scatter.gnu")
                  (:gnuplot-name
