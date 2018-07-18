@@ -1722,32 +1722,34 @@ sleeping before the code finishes evaluating."
                    :create-png-p create-png-p
                    :decomposition-functions decomposition-functions))
 
-(defun rebuild-plots ()
+(defun rebuild-plots (&key (destination-dir "/Users/jnewton/analysis"))
   (dotimes (bucket-index (length *bucket-reporters*))
     (let ((*bucket-reporters* (list (nth bucket-index *bucket-reporters*))))
       (big-test-report :re-run nil
                        :create-png-p t
                        :bucket-reporters *bucket-reporters*
                        :prefix "big-"
-                       :destination-dir "/Users/jnewton/analysis")
+                       :destination-dir destination-dir)
       (best-2-report :re-run nil
                      :create-png-p t
                      :bucket-reporters *bucket-reporters*
-                     :destination-dir  "/Users/jnewton/analysis")
+                     :destination-dir  destination-dir)
       (parameterization-report :re-run nil
                                :create-png-p t
                                :bucket-reporters *bucket-reporters*
-                               :destination-dir  "/Users/jnewton/analysis")
+                               :destination-dir  destination-dir)
       (bdd-report :re-run nil
                   :create-png-p nil
                   :bucket-reporters *bucket-reporters*
-                  :destination-dir  "/Users/jnewton/analysis")
+                  :destination-dir  destination-dir)
       (dotimes (decompose-function-index (length *decomposition-functions*))
         (big-test-report :re-run nil
                          :profile t
-                         :decomposition-functions (list (nth decompose-function-index *decomposition-functions*))
+                         :decomposition-functions (list (nth decompose-function-index
+                                                             *decomposition-functions*))
                          :bucket-reporters *bucket-reporters*
                          :create-png-p t
-                         :destination-dir "/Users/jnewton/analysis"
-                         :prefix (format nil "bdd-profile-~D-~D-" decompose-function-index bucket-index))))))
+                         :destination-dir destination-dir
+                         :prefix (format nil "bdd-profile-~D-~D-"
+                                         decompose-function-index bucket-index))))))
 
