@@ -1148,7 +1148,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
                                  (format stream "~A\\legend{};~%" (if legendp "%% " ""))))
                              :logx t
                              :logy t)))))))
-            
+
 (defun print-dat (dat-name include-decompose)
   (with-open-file (stream dat-name :direction :output :if-exists :supersede :if-does-not-exist :create)
     (format stream "given calculated sum product touching disjoint disjoint*given touching*given new time decompose~%")    
@@ -1284,6 +1284,12 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
                                    (join-strings "," top-names)))
                          :logx t)))))
 
+(defun empty-file-p (fname)
+  (with-open-file (stream fname :direction :input
+                                :element-type 'unsigned-byte
+                                :if-does-not-exist nil)
+    (null (read-byte stream nil nil))))
+
 (defun create-gnu-profile-scatter-plot (hash gnu-name &key smooth (comment "") summary decompose top-names create-png-p)
   (with-open-file (gnu gnu-name
                        :direction :output
@@ -1321,13 +1327,17 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
             (plot function-name)))
         (format gnu "~A~%" (get-output-stream-string header))
         (format gnu "~A" (get-output-stream-string footer))))
-    (format t "   ~A]~%" gnu-name)
-    (when create-png-p
-      (run-program "gnuplot" (list gnu-name)
-                   :search t
-                   :output (change-extension gnu-name "png")
-                   :error *error-output*
-                   :if-output-exists :supersede)) ))
+    (format t "   ~A]~%" gnu-name))
+  (when create-png-p
+    (let* ((gnu-file (change-extension gnu-name "png"))
+           (process (run-program "gnuplot" (list gnu-name)
+                                 :search t
+                                 :output gnu-file
+                                 :error *error-output*
+                                 :if-output-exists :supersede)))
+      (when (empty-file-p gnu-file)
+        (warn "gnuplot exited with code=~A produced empty output file ~A from input ~A"
+              (sb-ext:process-exit-code process) gnu-file gnu-name)))))
 
 (defun create-profile-scatter-plot (sexp-name destination-dir prefix file-name create-png-p
                                     &key smooth (threshold 0.15) (comment ""))
