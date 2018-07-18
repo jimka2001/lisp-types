@@ -1073,7 +1073,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
     (format stream "))~%"))
   nil)
 
-(defun print-ltxdat (ltxdat-name sorted-name include-decompose legendp tag)
+(defun print-ltxdat (ltxdat-name sorted-name include-decompose legendp tag smooth)
   (declare (type list include-decompose))
   (let ((content (with-open-file (stream sorted-name :direction :input :if-does-not-exist :error)
                    (user-read stream))))
@@ -1119,7 +1119,9 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
                                                      (format nil "~A" decompose)
                                                      (list (list "color" (format nil "color~A" (getf descr :gnu-color))))
                                                      "(~D, ~S)"
-                                                     xys
+                                                     (if smooth
+                                                         (smoothen xys)
+                                                         xys)
                                                      :logx t
                                                      :logy t))
                                           (push (if (getf descr :legend)
@@ -1241,8 +1243,14 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
     (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p :smooth nil :comment "1324")
     (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p :smooth t   :comment "1325"))
 
-  (print-ltxdat ltxdat-name           sorted-name include-decompose t nil)
-  (print-ltxdat ltxdat-no-legend-name sorted-name include-decompose nil tag)
+  (dolist (smooth '(t nil))
+    (print-ltxdat (if smooth
+                      (insert-suffix ltxdat-name "-smooth")
+                      ltxdat-name) sorted-name include-decompose t nil smooth)
+    (print-ltxdat (if smooth
+                      (insert-suffix ltxdat-no-legend-name "-smooth")
+                      ltxdat-no-legend-name)
+                      sorted-name include-decompose nil tag smooth))
   (print-dat dat-name include-decompose))
 
 (defun create-ltxdat-profile-scatter-plot (hash ltxdat-name &key smooth (comment "") summary decompose top-names)
