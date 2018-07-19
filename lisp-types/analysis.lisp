@@ -25,6 +25,7 @@
    "*BUCKET-REPORTERS*"
    "*PERF-RESULTS*"
    "MDTD-REPORT-PROFILE"
+   "MDTD-REPORT"
    "PARAMETERIZATION-REPORT"
    "TYPES/CMP-PERF"
    "TYPES/CMP-PERFS"
@@ -221,11 +222,11 @@ than as keywords."
       (:names (bdd-decompose-types-strong)  :gnu-color ,(nth (incf color) *colors*) :color "orange" :legend t)
       (:names (bdd-decompose-types-weak) :gnu-color ,(nth (incf color) *colors*) :color "gold" :legend t)
       (:names (bdd-decompose-types-weak-dynamic) :gnu-color ,(nth (incf color) *colors*) :color "gold" :legend t)
-      (:names ,*decompose-fun-parameterized-names*  :gnu-color ,(nth (incf color) *colors*) :color "light-blue" :legend nil)
+      (:names ,*decompose-fun-parameterized-names*  :gnu-color "b2daff" :color "light-blue" :legend nil)
       (:names (decompose-types-bdd-graph-strong)  :gnu-color ,(nth (incf color) *colors*) :color "red" :linewidth 1  :legend t)
       (:names (decompose-types-bdd-graph-weak-dynamic)  :gnu-color ,(nth (incf color) *colors*) :color "rust" :linewidth 1  :legend t)
       (:names (decompose-types-bdd-graph-weak)  :gnu-color ,(nth (incf color) *colors*) :color "rust" :linewidth 1  :legend t)
-      (:names (decompose-types-bdd-graph)  :gnu-color ,(nth (incf color) *colors*) :color "rust" :linewidth 2  :legend t)
+      (:names (decompose-types-bdd-graph)  :gnu-color "991818" :color "rust" :linewidth 2  :legend t)
       (:names (local-minimum) :gnu-color "000000" :color "black" :linewidth 2 :legend t))))
 
 (defvar *decomposition-functions*
@@ -811,7 +812,7 @@ to a set of types returned from %bdd-decompose-types."
 
     (when (and create-png-p
                (plusp min-num-points))
-      (run-program "gnuplot" (list gnuplot-file)
+      (run-program "/opt/local/bin/gnuplot" (list gnuplot-file)
                    :search t 
                    :output png-filename
                    :error *error-output*
@@ -1114,7 +1115,8 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
                                                  (red   (/ (logand decimal #xff0000) #x10000))
                                                  (green (/ (logand decimal #x00ff00) #x100))
                                                  (blue  (logand decimal #x0000ff)))
-                                            (format stream "\\definecolor{color~A}{RGB}{~A,~A,~A}~%" (getf descr :gnu-color) red green blue)
+                                            (format stream "\\definecolor{color~A}{RGB}{~A,~A,~A}~%"
+						    (getf descr :gnu-color) red green blue)
                                             (addplot stream
                                                      (format nil "~A" decompose)
                                                      (list (list "color" (format nil "color~A" (getf descr :gnu-color))))
@@ -1260,13 +1262,14 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
                           :if-does-not-exist :create)
     (format t "[writing to ~A~%" ltxdat-name)
     (tikzpicture stream
-                 (format nil "scatter plot of ~A ~A" summary decompose)
+                 (format nil "scatter plot of ~A ~A ~A" summary decompose comment)
                  (lambda ()
                    (format stream "%% label = ~%")
                    (axis stream 
-                         '(("xlabel" "execution time (seconds)")
+                         `(("title" ,(format nil "~A ~A" summary decompose))
+			   ("xlabel" "execution time (seconds)")
                            ("ylabel" "profile percentage")
-                           ("legend style" "{font=\\tiny,at={(1,0)},anchor=south west}")
+			   ("legend style" "{at={(0.5,-0.2)},anchor=north}")
                            ("label style" "{font=\\tiny}"))
                          (lambda ()
                            (dolist (function-name top-names)
@@ -1288,7 +1291,8 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
   (with-open-file (stream fname :direction :input
                                 :element-type 'unsigned-byte
                                 :if-does-not-exist nil)
-    (null (read-byte stream nil nil))))
+    (and stream
+	 (zerop (file-length stream)))))
 
 (defun create-gnu-profile-scatter-plot (hash gnu-name &key smooth (comment "") summary decompose top-names create-png-p)
   (with-open-file (gnu gnu-name
@@ -1330,7 +1334,7 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
     (format t "   ~A]~%" gnu-name))
   (when create-png-p
     (let* ((gnu-file (change-extension gnu-name "png"))
-           (process (run-program "gnuplot" (list gnu-name)
+           (process (run-program "/opt/local/bin/gnuplot" (list gnu-name)
                                  :search t
                                  :output gnu-file
                                  :error *error-output*
@@ -1394,7 +1398,7 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
                                              :comment comment
                                              :summary summary
                                              :decompose decompose
-                                             :top-names top-names))))))))
+                                             :top-names top-names)))))))
 
 (defvar *destination-dir* "/Users/jnewton/newton.16.edtchs/src")
 (defun test-report (&key sample (prefix "") (re-run t) (suite-time-out (* 60 60 4))
@@ -1502,12 +1506,12 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                                                'null))))
                         :test #'equal))
 
-(defun analysis (file-names)
+(defun analysis (sorted-fnames)
   (declare #+sbcl (notinline sort))
   (let* ((measures '(:recursive :inner-loop :sort-strategy :do-break-sub :do-break-loop))
         (table (make-hash-table :test #'eq))
-        (data (sort (mapcan (lambda (file-name)
-                              (with-open-file (stream file-name)
+        (data (sort (mapcan (lambda (sorted-fname)
+                              (with-open-file (stream sorted-fname)
                                 (destructuring-bind (&key summary sorted &allow-other-keys) (user-read stream)
                                   (mapcar (lambda (sorted-plist)
                                             (destructuring-bind (&key score integral arguments &allow-other-keys) sorted-plist
@@ -1523,7 +1527,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                                                       :integral integral
                                                       :summary summary))))
                                           sorted))))
-                            file-names)
+                            sorted-fnames)
                     #'< :key (getter :score))))
     (flet ((mean (numbers &aux (c 0))
              (/ (reduce (lambda (acc next)
@@ -1539,15 +1543,16 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                   #'< :key #'caddr)
             :data data))))
 
-(defun do-analysis ()
-  (analysis '("/Users/jnewton/newton.16.edtchs/src/bdd-graph-cl-combos.sorted"
-              "/Users/jnewton/newton.16.edtchs/src/bdd-graph-cl-types.sorted"
-              "/Users/jnewton/newton.16.edtchs/src/bdd-graph-member.sorted"
-              "/Users/jnewton/newton.16.edtchs/src/bdd-graph-pcl-types.sorted"
-              "/Users/jnewton/newton.16.edtchs/src/bdd-graph-subtypes-of-condition.sorted"
-              "/Users/jnewton/newton.16.edtchs/src/bdd-graph-subtypes-of-number-or-condition.sorted"
-              "/Users/jnewton/newton.16.edtchs/src/bdd-graph-subtypes-of-number.sorted"
-              "/Users/jnewton/newton.16.edtchs/src/bdd-graph-subtypes-of-t.sorted")))
+(defun do-analysis (&key (path "/Users/jnewton/Disk2/research/autogen"))
+  (analysis (loop :for sorted in '("cl-combos"
+				   "cl-types"
+				   "member"
+				   "pcl-types"
+				   "subtypes-of-condition"
+				   "subtypes-of-number-or-condition"
+				   "subtypes-of-number"
+				   "subtypes-of-t")
+		  :collect (format nil "~A/bdd-graph-~A.sorted" path sorted))))
 
 (defvar *bucket-reporters* nil)
 
@@ -1697,7 +1702,7 @@ sleeping before the code finishes evaluating."
                                               decompose-types-rtev2
                                               decompose-types-graph)))
 
-(defun bdd-report (&key (re-run t) (multiplier 2.5) (create-png-p t) (bucket-reporters *bucket-reporters*) (destination-dir *destination-dir*))
+(defun mdtd-report (&key (re-run t) (multiplier 2.5) (create-png-p t) (bucket-reporters *bucket-reporters*) (destination-dir *destination-dir*))
   (big-test-report :re-run re-run
                    :prefix "bdd-ws-" ;; should change to best-4-
                    :multiplier multiplier
@@ -1715,8 +1720,8 @@ sleeping before the code finishes evaluating."
                                               bdd-decompose-types-weak
                                               bdd-decompose-types-weak-dynamic)))
 
-(defun bdd-report-profile (&key (re-run t) (multiplier 0.2) (destination-dir *destination-dir*)
-                             (num-tries 4) (prefix "bdd-profile-1-") (decomposition-functions *decomposition-functions*)
+(defun mdtd-report-profile (&key (re-run t) (multiplier 0.2) (destination-dir *destination-dir*)
+			      (num-tries 4) (prefix "mdtd-profile-1-") (decomposition-functions *decomposition-functions*)
                              (bucket-reporters *bucket-reporters*)
                              (create-png-p t))
   (big-test-report :re-run re-run
@@ -1748,7 +1753,7 @@ sleeping before the code finishes evaluating."
                                :create-png-p t
                                :bucket-reporters *bucket-reporters*
                                :destination-dir  destination-dir)
-      (bdd-report :re-run nil
+      (mdtd-report :re-run nil
                   :create-png-p nil
                   :bucket-reporters *bucket-reporters*
                   :destination-dir  destination-dir)
@@ -1760,6 +1765,11 @@ sleeping before the code finishes evaluating."
                          :bucket-reporters *bucket-reporters*
                          :create-png-p t
                          :destination-dir destination-dir
-                         :prefix (format nil "bdd-profile-~D-~D-"
+                         :prefix (format nil "mdtd-profile-~D-~D-"
                                          decompose-function-index bucket-index))))))
 
+(defun rebuild-analysis (&key (destination-dir "/Users/jnewton/analysis") (autogen-dir "/Users/jnewton/research/autogen"))
+  (rebuild-plots :destination-dir destination-dir)
+  (generate-latex-plots :analysis-dir destination-dir
+			:gen-samples nil
+		 	:autogen-dir autogen-dir))
