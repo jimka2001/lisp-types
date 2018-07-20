@@ -112,7 +112,6 @@
     (t ;; 1.7%
      bdd)))
 
-
 (defmethod bdd-find-reduction (label (bdd lisp-type-bdd) reduction-rules)
   (declare (type list reduction-rules)
            (optimize (speed 3)))
@@ -535,8 +534,3 @@ in the given list have the same dnf form."
                   (recure (bdd-negative bdd))))))
       (recure bdd)
       labels)))
-
-
-
-
-
