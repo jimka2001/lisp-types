@@ -812,7 +812,7 @@ to a set of types returned from %bdd-decompose-types."
 
     (when (and create-png-p
                (plusp min-num-points))
-      (run-program "/opt/local/bin/gnuplot" (list gnuplot-file)
+      (run-program "gnuplot" (list gnuplot-file)
                    :search t 
                    :output png-filename
                    :error *error-output*
@@ -1334,7 +1334,7 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
     (format t "   ~A]~%" gnu-name))
   (when create-png-p
     (let* ((gnu-file (change-extension gnu-name "png"))
-           (process (run-program "/opt/local/bin/gnuplot" (list gnu-name)
+           (process (run-program "gnuplot" (list gnu-name)
                                  :search t
                                  :output gnu-file
                                  :error *error-output*
