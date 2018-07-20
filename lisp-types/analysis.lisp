@@ -1242,17 +1242,18 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
                       normalize hilite-min include-decompose :smooth create-png-p "1321")))
 
   (when profile
-    (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p :smooth nil :comment "1324")
-    (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p :smooth t   :comment "1325"))
+    (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p :smooth nil :comment tag)
+    (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p :smooth t   :comment tag))
 
   (dolist (smooth '(t nil))
     (print-ltxdat (if smooth
                       (insert-suffix ltxdat-name "-smooth")
-                      ltxdat-name) sorted-name include-decompose t nil smooth)
+                      ltxdat-name)
+                  sorted-name include-decompose t tag smooth)
     (print-ltxdat (if smooth
                       (insert-suffix ltxdat-no-legend-name "-smooth")
                       ltxdat-no-legend-name)
-                      sorted-name include-decompose nil tag smooth))
+                  sorted-name include-decompose nil tag smooth))
   (print-dat dat-name include-decompose))
 
 (defun create-ltxdat-profile-scatter-plot (hash ltxdat-name &key smooth (comment "") summary decompose top-names)
