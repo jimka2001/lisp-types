@@ -105,34 +105,45 @@
     ))
 
 
+(define-test type/test1
+  (ltbdd-with-new-hash ()
+    (equal 'number
+           (bdd-to-dnf (ltbdd '(AND number (not array)))))
+    (equal '(and (not array) sequence) 
+           (bdd-to-dnf (ltbdd '(AND (NOT ARRAY) (NOT NUMBER) SEQUENCE))))
+    (member 'number
+            (bdd-to-dnf (ltbdd '(OR (AND ARRAY (NOT SEQUENCE))
+                                 NUMBER
+                                 (AND (NOT ARRAY) (NOT NUMBER) SEQUENCE)))))))
 
 (define-test type/bdd-performance-test
-  (let* ((decomp '((AND (NOT BIT) TEST-ARRAY-RANK) BIT (AND (NOT TEST-CHAR-INT) TEST-ARRAY-TOTAL-SIZE)
-                   (AND TEST-CHAR-INT (NOT TEST-ARRAY-RANK)) BASE-CHAR (AND CHARACTER (NOT BASE-CHAR))
-                   (AND (NOT CELL-ERROR) BUILT-IN-CLASS ARITHMETIC-ERROR)
-                   (AND (NOT CLASS) (NOT CELL-ERROR) ARITHMETIC-ERROR)
-                   (AND CELL-ERROR BUILT-IN-CLASS ARITHMETIC-ERROR)
-                   (AND CLASS CELL-ERROR (NOT BUILT-IN-CLASS) (NOT ARITHMETIC-ERROR))
-                   (AND (NOT CELL-ERROR) BUILT-IN-CLASS (NOT ARITHMETIC-ERROR))
-                   (AND CLASS (NOT CELL-ERROR) (NOT BUILT-IN-CLASS) (NOT ARITHMETIC-ERROR))
-                   (AND (NOT COMPLEX) (NOT CLASS) (NOT CHARACTER) (NOT CELL-ERROR)
-                    (NOT BROADCAST-STREAM) (NOT BOOLEAN) (NOT BIGNUM) ATOM
-                    (NOT TEST-ARRAY-TOTAL-SIZE) (NOT ARRAY) (NOT ARITHMETIC-ERROR))
-                   COMPLEX (AND (NOT CLASS) CELL-ERROR (NOT ARITHMETIC-ERROR))
-                   (AND CELL-ERROR BUILT-IN-CLASS (NOT ARITHMETIC-ERROR))
-                   (AND CLASS CELL-ERROR (NOT BUILT-IN-CLASS) ARITHMETIC-ERROR)
-                   (AND CLASS (NOT CELL-ERROR) (NOT BUILT-IN-CLASS) ARITHMETIC-ERROR)
-                   (AND (NOT CLASS) CELL-ERROR ARITHMETIC-ERROR) BROADCAST-STREAM BOOLEAN BIGNUM
-                   (AND (NOT BIT-VECTOR) (NOT BASE-STRING) ARRAY) BIT-VECTOR BASE-STRING))
-         (t3 (ltbdd 'CONCATENATED-STREAM))
-         (t2 (ltbdd `(or ,@decomp)))
-         (t4 (bdd-and-not t3 t2)))
+  (ltbdd-with-new-hash ()
+    (let* ((decomp '((AND (NOT BIT) TEST-ARRAY-RANK) BIT (AND (NOT TEST-CHAR-INT) TEST-ARRAY-TOTAL-SIZE)
+                     (AND TEST-CHAR-INT (NOT TEST-ARRAY-RANK)) BASE-CHAR (AND CHARACTER (NOT BASE-CHAR))
+                     (AND (NOT CELL-ERROR) BUILT-IN-CLASS ARITHMETIC-ERROR)
+                     (AND (NOT CLASS) (NOT CELL-ERROR) ARITHMETIC-ERROR)
+                     (AND CELL-ERROR BUILT-IN-CLASS ARITHMETIC-ERROR)
+                     (AND CLASS CELL-ERROR (NOT BUILT-IN-CLASS) (NOT ARITHMETIC-ERROR))
+                     (AND (NOT CELL-ERROR) BUILT-IN-CLASS (NOT ARITHMETIC-ERROR))
+                     (AND CLASS (NOT CELL-ERROR) (NOT BUILT-IN-CLASS) (NOT ARITHMETIC-ERROR))
+                     (AND (NOT COMPLEX) (NOT CLASS) (NOT CHARACTER) (NOT CELL-ERROR)
+                      (NOT BROADCAST-STREAM) (NOT BOOLEAN) (NOT BIGNUM) ATOM
+                      (NOT TEST-ARRAY-TOTAL-SIZE) (NOT ARRAY) (NOT ARITHMETIC-ERROR))
+                     COMPLEX (AND (NOT CLASS) CELL-ERROR (NOT ARITHMETIC-ERROR))
+                     (AND CELL-ERROR BUILT-IN-CLASS (NOT ARITHMETIC-ERROR))
+                     (AND CLASS CELL-ERROR (NOT BUILT-IN-CLASS) ARITHMETIC-ERROR)
+                     (AND CLASS (NOT CELL-ERROR) (NOT BUILT-IN-CLASS) ARITHMETIC-ERROR)
+                     (AND (NOT CLASS) CELL-ERROR ARITHMETIC-ERROR) BROADCAST-STREAM BOOLEAN BIGNUM
+                     (AND (NOT BIT-VECTOR) (NOT BASE-STRING) ARRAY) BIT-VECTOR BASE-STRING))
+           (t3 (ltbdd 'CONCATENATED-STREAM))
+           (t2 (ltbdd `(or ,@decomp)))
+           (t4 (bdd-and-not t3 t2)))
 
-    (dolist (t1 decomp)
-      (let ((bdd1 (ltbdd t1)))
-        (dolist (f (list #'bdd-and #'bdd-and-not #'(lambda (a b) (bdd-and-not b a))))
-          (let ((t5 (funcall f bdd1 t4)))
-            (if (bdd-empty-type t5) nil 'not-nil)))))))
+      (dolist (t1 decomp)
+        (let ((bdd1 (ltbdd t1)))
+          (dolist (f (list #'bdd-and #'bdd-and-not #'(lambda (a b) (bdd-and-not b a))))
+            (let ((t5 (funcall f bdd1 t4)))
+              (if (bdd-empty-type t5) nil 'not-nil))))))))
 
 (defun types/perf-bdd ()
   (declare (notinline sort))
