@@ -156,7 +156,7 @@
 
 (define-test disjoint-cmp-9
   (ltbdd-with-new-hash ()
-   (assert-test (= 3 (length (bdd-decompose-types '((MEMBER 0 2)
+   (assert-true (= 3 (length (bdd-decompose-types '((MEMBER 0 2)
                                                       (MEMBER 0 1 2)
                                                       (MEMBER 0 2 4))))))))
 

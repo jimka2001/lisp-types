@@ -37,19 +37,19 @@
 
 (define-test lisp-types/typecase-to-type
   (let ((*satisfies-symbols* nil))
-    (assert-test (cmp-equal nil
+    (assert-true (cmp-equal nil
                             (typecase-to-type 
                              '( ;; typecase obj
                                ))))
   
-    (assert-test (cmp-equal
+    (assert-true (cmp-equal
                   '(OR NIL (AND (NOT (OR)) FLOAT (SATISFIES 100)))
                   (typecase-to-type 
                    '( ;; typecase obj
                      (float 100)
                      ))))
 
-    (assert-test (cmp-equal
+    (assert-true (cmp-equal
                   '(OR (OR NIL (AND (NOT (OR)) FLOAT (SATISFIES 100)))
                     (AND (NOT (OR FLOAT)) NUMBER (SATISFIES 200)))
                   (typecase-to-type 
@@ -57,7 +57,7 @@
                      (float 100)
                      (number 200)))))
 
-    (assert-test (cmp-equal
+    (assert-true (cmp-equal
                   '(OR
                     (OR
                      (OR (OR NIL (AND (NOT (OR)) FLOAT (SATISFIES 100)))
