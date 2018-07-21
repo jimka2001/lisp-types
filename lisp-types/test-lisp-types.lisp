@@ -39,7 +39,7 @@
 	(*print-failures* t)
 	(*summarize-results* t)
 	(*print-errors* t))
-    (run-tests :all (list :lisp-types-test))))
+    (run-tests :all :lisp-types-test)))
 
 (define-test type/reduce-b
   (assert-true (equal (reduce-lisp-type '(AND ARITHMETIC-ERROR (NOT CELL-ERROR)))
