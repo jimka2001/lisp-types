@@ -649,6 +649,10 @@ to a set of types returned from %bdd-decompose-types."
     (loop for key being the hash-keys of hash
           collect (list key (gethash key hash)))))
 
+(defvar *gnuplot* (if (probe-file "/opt/local/bin/gnuplot")
+		      "/opt/local/bin/gnuplot"
+		      "gnuplot"))
+
 (defun create-gnuplot (sorted-file gnuplot-file png-filename normalize hilite-min include-decompose key create-png-p comment)
   (declare (type (member :smooth :xys) key)
            (type (or list (and symbol (satisfies symbol-function))) include-decompose))
@@ -812,7 +816,7 @@ to a set of types returned from %bdd-decompose-types."
 
     (when (and create-png-p
                (plusp min-num-points))
-      (run-program "gnuplot" (list gnuplot-file)
+      (run-program *gnuplot* (list gnuplot-file)
                    :search t 
                    :output png-filename
                    :error *error-output*
@@ -1335,7 +1339,7 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
     (format t "   ~A]~%" gnu-name))
   (when create-png-p
     (let* ((gnu-file (change-extension gnu-name "png"))
-           (process (run-program "gnuplot" (list gnu-name)
+           (process (run-program *gnuplot* (list gnu-name)
                                  :search t
                                  :output gnu-file
                                  :error *error-output*
