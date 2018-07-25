@@ -187,32 +187,6 @@ than as keywords."
                  with t1 = (car types)
                  nconc (list t1 `(and ,t1 ,t2) `(or ,t1, t2)))))
 
-(defvar *colors* 
- '(
-    ;;"000000"
-   "e6194b"      ;;Red	(230, 25, 75)	(0, 100, 66, 0)
-   "3cb44b"      ;;Green	(60, 180, 75)	(75, 0, 100, 0)
-   "ffe119"	;;Yellow	(255, 225, 25)	(0, 25, 95, 0)
-   "0082c8"	;;Blue	(0, 130, 200)	(100, 35, 0, 0)
-   "f58231"	;;Orange	(245, 130, 48)	(0, 60, 92, 0)
-   "911eb4"	;;Purple	(145, 30, 180)	(35, 70, 0, 0)
-   "46f0f0"	;;Cyan	(70, 240, 240)	(70, 0, 0, 0)
-   "f032e6"	;;Magenta	(240, 50, 230)	(0, 100, 0, 0)
-   "d2f53c"	;;Lime	(210, 245, 60)	(35, 0, 100, 0)
-   "fabebe"	;;Pink	(250, 190, 190)	(0, 30, 15, 0)
-   "008080"	;;Teal	(0, 128, 128)	(100, 0, 0, 50)
-   "e6beff"	;;Lavender	(230, 190, 255)	(10, 25, 0, 0)
-   "aa6e28"	;;Brown	(170, 110, 40)	(0, 35, 75, 33)
-   "fffac8"	;;Beige	(255, 250, 200)	(5, 10, 30, 0)
-   "800000"	;;Maroon	(128, 0, 0)	(0, 100, 100, 50)
-   "aaffc3"	;;Mint	(170, 255, 195)	(33, 0, 23, 0)
-   "808000"	;;Olive	(128, 128, 0)	(0, 0, 100, 50)
-   "ffd8b1"	;;Coral	(255, 215, 180)	(0, 15, 30, 0)
-   "000080"	;;Navy	(0, 0, 128)	(100, 100, 0, 50)
-   "808080"	;;Grey	(128, 128, 128)	(0, 0, 0, 50)
-    ))
-
-
 (defvar *decomposition-function-descriptors*
   (let ((color 0))
     `((:names (decompose-types) :max-num-types 15 :gnu-color ,(nth (incf color) *colors*) :color "blue" :legend t)
@@ -1115,21 +1089,16 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
                                                      `(:decompose "LOCAL-MINIMUM" ,@min-curve)
                                                      nil))
                                  (flet ((plot (xys decompose descr)
-                                          (let* ((decimal (parse-integer (getf descr :gnu-color) :radix 16))
-                                                 (red   (/ (logand decimal #xff0000) #x10000))
-                                                 (green (/ (logand decimal #x00ff00) #x100))
-                                                 (blue  (logand decimal #x0000ff)))
-                                            (format stream "\\definecolor{color~A}{RGB}{~A,~A,~A}~%"
-						    (getf descr :gnu-color) red green blue)
-                                            (addplot stream
-                                                     (format nil "~A" decompose)
-                                                     (list (list "color" (format nil "color~A" (getf descr :gnu-color))))
-                                                     "(~D, ~S)"
-                                                     (if smooth
-                                                         (smoothen xys)
-                                                         xys)
-                                                     :logx t
-                                                     :logy t))
+                                          (addplot stream
+						   (format nil "~A" decompose)
+						   nil ; plot-options
+						   "(~D, ~S)"
+						   (if smooth
+						       (smoothen xys)
+						       xys)
+						   :color (getf descr :gnu-color)
+						   :logx t
+						   :logy t)
                                           (push (if (getf descr :legend)
                                                     (format nil "~A" decompose)
                                                     "") legend)))
