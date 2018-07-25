@@ -1068,14 +1068,15 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
                                      (list "title" (format nil "~A" tag)))
                                    '("xlabel" "Size")
                                    '("ylabel" "Time")
-                                   '("legend style" "{at={(0.5,-0.2)},anchor=north}")
+                                   '("legend style" (("at" "{(0.5,-0.2)}")
+						     ("anchor" "north")))
                                    "xmajorgrids"
                                    "xminorgrids"
                                    "ymajorgrids"
-                                   '("legend style" "{font=\\tiny}")
-                                   '("xticklabel style" "{font=\\tiny}")
-                                   '("yticklabel style" "{font=\\tiny}")
-                                   '("label style" "{font=\\tiny}"))
+                                   '("legend style" (("font" "\\tiny")))
+                                   '("xticklabel style" (("font" "\\tiny")))
+                                   '("yticklabel style" (("font" "\\tiny")))
+                                   '("label style" (("font" "\\tiny"))))
                              (lambda ()
                                (let ((*print-case* :downcase)
                                      (min-curve (reduce (lambda (curve1 curve2)
