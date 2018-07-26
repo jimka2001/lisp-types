@@ -1482,36 +1482,47 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                   #'< :key #'caddr)
             :data data))))
 
-(defun gen-parameters-summary-tabular (path)
-  (destructuring-bind (&key attributes &allow-other-keys) (do-analysis :path path)
-    
-    ;; generate figure fig.summary.parameters
-    (format stream "\\begin{tabular}{ |l|l|l| }~%")
-    (format stream "\\hline~%")
-    (format stream "\\multicolumn{3}{ |c| }{Ranking Results} \\\\~%")
-    (format stream "\\hline~%")
-    (format stream "Parameter & Value & Average Score \\\\~%")
-    (format stream "\\hline~%")
-    (format stream "\\multirow{2}{*}{Break subset} & relaxed & -0.28656462 \\\\~%")
-    (format stream "& strict &  0.62518245\\\\~%")
-    (format stream "\\hline~%")
-    (format stream "\\multirow{2}{*}{Break loop} & no & -0.49688414 \\\\~%")
-    (format stream "& yes & 0.2650052 \\\\~%")
-    (format stream "\\hline~%")
-    (format stream "\\multirow{2}{*}{Iteration topology} & node first & 0.0048906407 \\\\~%")
-    (format stream " & operation first & 0.042273182 \\\\~%")
-    (format stream "\\hline~%")
-    (format stream "\\multirow{2}{*}{Recursive} & yes & -0.29216018 \\\\~%")
-    (format stream " & no & 0.14136852 \\\\~%")
-    (format stream "\\hline~%")
-    (format stream "\\multirow{5}{*}{Node visitation order} & BOTTOM-TO-TOP & -0.2333628\\\\~%")
-    (format stream "& DECREASING-CONNECTIONS & -0.17516118\\\\~%")
-    (format stream "& SHUFFLE & 0.10092279\\\\~%")
-    (format stream "& INCREASING-CONNECTIONS & 0.12181535\\\\~%")
-    (format stream "& TOP-TO-BOTTOM & 0.27254203 \\\\~%")
-    (format stream "\\hline~%")
-    (format stream "\\end{tabular}~%"))
-  )
+(defun gen-parameters-summary-tabular (&key (destination-dir "/Users/jnewton/analysis") (autogen-dir "/Users/jnewton/research/autogen"))
+  "generate latex tabular fig.summary.parameters"
+  (destructuring-bind (&key attributes &allow-other-keys) (do-analysis :path autogen-dir)
+    ;; attributes
+    ;; ((:SORT-STRATEGY "BOTTOM-TO-TOP" -0.32810208)
+    ;;  (:SORT-STRATEGY "DECREASING-CONNECTIONS" -0.30069458)
+    ;;  (:RECURSIVE T -0.20963657)
+    ;;  (:DO-BREAK-SUB :RELAXED -0.16636024)
+    ;;  (:SORT-STRATEGY "INCREASING-CONNECTIONS" -0.15354815)
+    ;;  (:INNER-LOOP :OPERATION -0.09068349)
+    ;;  (:SORT-STRATEGY "TOP-TO-BOTTOM" -0.06722509)
+    ;;  (:DO-BREAK-LOOP NIL -0.03817523)
+    ;;  (:DO-BREAK-LOOP T 0.020360056)
+    ;;  (:INNER-LOOP :NODE 0.037834547)
+    ;;  (:RECURSIVE NIL 0.10143699)
+    ;;  (:DO-BREAK-SUB :STRICT 0.18918778)
+    ;;  (:SORT-STRATEGY "SHUFFLE" 0.610349)
+    ;;  (:INNER-LOOP NIL 2.1529908)
+    ;;  (:SORT-STRATEGY NIL 2.1529908)
+    ;;  (:DO-BREAK-SUB NIL 2.1529908))
+    (with-open-file (stream (format nil "~A/params-summary.ltxdat" destination-dir)
+			    :direction :output :if-does-not-exist :create :if-exists :supersede)
+      (format t "writing to ~A" stream)
+      (format stream "\\begin{tabular}{ |l|l|l| }~%")
+      (format stream "\\hline~%")
+      (format stream "\\multicolumn{3}{ |c| }{Ranking Results} \\\\~%")
+      (format stream "\\hline~%")
+      (format stream "Parameter & Value & Average Student Score \\\\~%")
+      (format stream "\\hline~%")
+
+      (let ((*print-case* :downcase)
+	    (keys (sort (remove-duplicates (mapcar #'car attributes))
+			#'string< :key #'symbol-name )))
+	(dolist (key keys)
+	  (let ((same-key (setof triple attributes
+			     (eq (car triple) key))))
+	    (format stream "\\multirow{~D}{*}{~A}~%" (length same-key) key)
+	    (dolist (triple same-key)
+	      (format stream " & ~A  & ~A \\\\~%" (cadr triple) (caddr triple)))
+	    (format stream "\\hline~%"))))
+      (format stream "\\end{tabular}~%"))))
 
 
 
@@ -1636,15 +1647,13 @@ sleeping before the code finishes evaluating."
     (unless (exists plist *decomposition-function-descriptors*
               (member df (getf plist :names)))
       (let ((*package* (find-package :keyword)))
-        (error "No plist has :name ~A in ~A"
+        (error "No plist in *decomposition-function-descriptors* has :name ~A in ~A"
                df *decomposition-function-descriptors*))))
   (ltbdd-with-new-hash ()
     (let ((*decomposition-functions*  decomposition-functions))
       (loop for (tag bucket-reporter) in bucket-reporters
             for sample = (/ 1 (length bucket-reporters)) then (+ sample (/ 1 (length bucket-reporters)))
             do (funcall bucket-reporter multiplier sample options :create-png-p create-png-p :destination-dir destination-dir)))))
-
-
 
 (defun best-2-report (&key (re-run t) (multiplier 1.8) (create-png-p t) (destination-dir *destination-dir*)
                         (bucket-reporters *bucket-reporters*))
@@ -1658,12 +1667,13 @@ sleeping before the code finishes evaluating."
                    :destination-dir destination-dir
                    :create-png-p create-png-p
                    :bucket-reporters bucket-reporters
-                   :decomposition-functions '(decompose-types-bdd-graph-strong
-                                              decompose-types-bdd-graph-weak
-                                              decompose-types-bdd-graph-weak-dynamic
-                                              bdd-decompose-types-strong
-                                              bdd-decompose-types-weak
-                                              bdd-decompose-types-weak-dynamic
+                   :decomposition-functions '( ;; decompose-types-bdd-graph-strong
+                                              ;; decompose-types-bdd-graph-weak
+					      slow-decompose-types-bdd-graph ;; tuned by params- simulation
+                                              decompose-types-bdd-graph ;; same as decompose-types-bdd-graph-weak-dynamic
+                                              ;;bdd-decompose-types-strong
+                                              ;;bdd-decompose-types-weak
+                                              bdd-decompose-types ;; same as bdd-decompose-types-weak-dynamic
                                               decompose-types-rtev2
                                               decompose-types-graph)))
 
@@ -1737,4 +1747,5 @@ sleeping before the code finishes evaluating."
   (rebuild-plots :destination-dir destination-dir)
   (generate-latex-plots :analysis-dir destination-dir
 			:gen-samples nil
-		 	:autogen-dir autogen-dir))
+		 	:autogen-dir autogen-dir)
+  (gen-parameters-summary-tabular :destination-dir destination-dir :autogen-dir autogen-dir))
