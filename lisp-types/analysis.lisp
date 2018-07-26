@@ -1208,6 +1208,7 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
                            ("label style" "{font=\\tiny}"))
                          (lambda ()
                            (dolist (function-name top-names)
+			     ;; TODO add :color flag to addplot, but associate color with function-name if possible
                              (addplot stream
                                       function-name
                                       ()
