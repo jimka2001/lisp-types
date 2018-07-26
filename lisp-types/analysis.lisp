@@ -1057,6 +1057,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
 						       (smoothen xys)
 						       xys)
 						   :color (getf descr :gnu-color)
+						   :thick t
 						   :logx t
 						   :logy t)
                                           (push (if (getf descr :legend)
