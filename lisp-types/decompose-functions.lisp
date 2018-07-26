@@ -108,11 +108,14 @@
       (:names (bdd-decompose-types-strong)  :gnu-color ,(nth (incf color) *colors*) :color "orange" :legend t)
       (:names (bdd-decompose-types-weak) :gnu-color ,(nth (incf color) *colors*) :color "gold" :legend t)
       (:names (bdd-decompose-types-weak-dynamic) :gnu-color ,(nth (incf color) *colors*) :color "gold" :legend t)
+      (:names (bdd-decompose-types) :gnu-color ,(nth (incf color) *colors*) :color "gold" :legend t)
       (:names ,*decompose-fun-parameterized-names*  :gnu-color "b2daff" :color "light-blue" :legend nil)
       (:names (decompose-types-bdd-graph-strong)  :gnu-color ,(nth (incf color) *colors*) :color "red" :linewidth 1  :legend t)
       (:names (decompose-types-bdd-graph-weak-dynamic)  :gnu-color ,(nth (incf color) *colors*) :color "rust" :linewidth 1  :legend t)
+      (:names (decompose-types-bdd-graph)  :gnu-color ,(nth (incf color) *colors*) :color "rust" :linewidth 1  :legend t)
       (:names (decompose-types-bdd-graph-weak)  :gnu-color ,(nth (incf color) *colors*) :color "rust" :linewidth 1  :legend t)
       (:names (decompose-types-bdd-graph)  :gnu-color "991818" :color "rust" :linewidth 2  :legend t)
+      (:names (slow-decompose-types-bdd-graph) :gnu-color ,(nth (incf color) *colors*) :linewidth 1 :legend t)
       (:names (local-minimum) :gnu-color "000000" :color "black" :linewidth 2 :legend t))))
 
 (setf *decomposition-functions*
@@ -130,8 +133,9 @@
                    :multiplier multiplier
                    :create-png-p create-png-p
                    :bucket-reporters bucket-reporters
-                   :decomposition-functions (cons 'decompose-types-bdd-graph
-                                                  *decompose-fun-parameterized-names*)))
+                   :decomposition-functions (list* 'decompose-types-bdd-graph
+						   'slow-decompose-types-bdd-graph
+						   *decompose-fun-parameterized-names*)))
 
 (defun find-decomposition-function-descriptor (name)
   (typecase name
