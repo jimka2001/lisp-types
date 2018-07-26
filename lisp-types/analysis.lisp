@@ -823,27 +823,24 @@ the list of xys need not be already ordered."
                                     (destructuring-bind (&key integral samples decompose arguments xys smooth &allow-other-keys
                                                          &aux (score (unless (member sigma '(0 0.0 nil))
                                                                        (/ (- integral mean) sigma)))) plist
-                                    (list :integral integral
-                                          :score score
-                                          :delta (when score
-                                                   (prog1 (when previous
-                                                            (- previous score))
-                                                     (setf previous score)))
-                                          :samples samples
-                                          :decompose decompose
-                                          :arguments arguments
-                                          :smooth smooth
-                                          :xys xys)))
+				      (list :integral integral
+					    :score score
+					    :delta (when score
+						     (prog1 (when previous
+							      (- previous score))
+						       (setf previous score)))
+					    :samples samples
+					    :decompose decompose
+					    :arguments arguments
+					    :smooth smooth
+					    :xys xys)))
                                 sorted))))))))
 
 (defun append-tail (l1 l2 value)
   (append l1 (mapcar (constantly value) (nthcdr (length l1) l2))))
 
 ;; (append-tail '(a b c d) '(0 0 0 0 1 2 3 4 5 6 7) -1)
-;;(append-tail '(0 0 0 0 1 2 3 4 5 6 7) '(a b c d) -1)
-
-
-
+;; (append-tail '(0 0 0 0 1 2 3 4 5 6 7) '(a b c d) -1)
 ;; (reduce (lambda (string num) (format nil "~D~S" num string)) '(1 2 3) :initial-value "")
 
 
@@ -904,6 +901,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
                                                (min observed-min-time time)
                                                time)))
                  (getf plist :given) (getf plist :calculated) (getf plist :run-time)))
+	 
          (statistics
           (list :summary summary
                 :time-out-count time-out-count
@@ -918,7 +916,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
                 :known known
                 :sorted (sort 
                          (loop for plist in data
-                               collect (destructuring-bind (&key decompose given calculated run-time &allow-other-keys) plist
+                               collect (destructuring-bind (&key decompose given calculated run-time options &allow-other-keys) plist
                                          (flet ((cmp (a b)
                                                   (if (= (car a) (car b))
                                                       (< (cadr a) (cadr b))
@@ -938,14 +936,14 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
                                                                           :key #'car :from-end t))
                                              (setf xys-extended (remove-duplicates (sort (copy-list xys-extended) #'cmp)
                                                                                    :key #'car :from-end t))
-                                             (list :integral (integral xys-extended)
-                                                   :xys xys
-                                                   :smooth (smoothen xys)
-                                                   :samples (length xys)
-                                                   :decompose decompose
-                                                   :arguments (get (intern decompose (find-package :lisp-types))
-                                                                   'decompose-properties))))))
-                         #'< :key (lambda (obj) (getf obj :integral))))))))
+					     (list :integral (integral xys-extended)
+						   :xys xys
+						   :smooth (smoothen xys)
+						   :samples (length xys)
+						   :decompose decompose
+						   :arguments (get (find-symbol decompose :lisp-types-analysis) 'decompose-properties)
+						   :options options)))))
+                         #'< :key (getter :integral)))))))
     (t
      (let ((*package* (find-package "CL")))
        (format out "~S~%" (apply #'sort-results in :return options))))))
@@ -1447,23 +1445,27 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
   (let* ((measures '(:recursive :inner-loop :sort-strategy :do-break-sub :do-break-loop))
         (table (make-hash-table :test #'eq))
         (data (sort (mapcan (lambda (sorted-fname)
-                              (with-open-file (stream sorted-fname)
-                                (destructuring-bind (&key summary sorted &allow-other-keys) (user-read stream)
-                                  (mapcar (lambda (sorted-plist)
-                                            (destructuring-bind (&key score integral arguments &allow-other-keys) sorted-plist
-                                              (dolist (measure measures)
-                                                (pushnew (getf arguments measure) (gethash measure table) :test #'equal))
-                                              (destructuring-bind (&key sort-strategy inner-loop recursive do-break-sub do-break-loop &allow-other-keys) arguments
-                                                (list :score score
-                                                      :recursive recursive
-                                                      :inner-loop inner-loop
-                                                      :sort-strategy sort-strategy
-                                                      :do-break-sub do-break-sub
-                                                      :do-break-loop do-break-loop
-                                                      :integral integral
-                                                      :summary summary))))
-                                          sorted))))
-                            sorted-fnames)
+                              (with-open-file (stream sorted-fname :if-does-not-exist nil)
+				(if stream 
+				    (destructuring-bind (&key summary sorted &allow-other-keys) (user-read stream)
+				      (mapcar (lambda (sorted-plist)
+						(destructuring-bind (&key score integral arguments &allow-other-keys) sorted-plist
+						  (dolist (measure measures)
+						    (pushnew (getf arguments measure) (gethash measure table) :test #'equal))
+						  (destructuring-bind (&key sort-strategy inner-loop recursive do-break-sub do-break-loop
+								       &allow-other-keys) arguments
+						    (list :score score
+							  :recursive recursive
+							  :inner-loop inner-loop
+							  :sort-strategy sort-strategy
+							  :do-break-sub do-break-sub
+							  :do-break-loop do-break-loop
+							  :integral integral
+							  :summary summary))))
+					      sorted))
+				    (progn (warn "cannot read file ~A" sorted-fname)
+					   nil))))
+			    sorted-fnames)
                     #'< :key (getter :score))))
     (flet ((mean (numbers &aux (c 0))
              (/ (reduce (lambda (acc next)
@@ -1479,18 +1481,47 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                   #'< :key #'caddr)
             :data data))))
 
-(defun do-analysis (&key (path "/Users/jnewton/Disk2/research/autogen"))
-  (analysis (loop :for sorted in '("cl-combos"
-				   "cl-types"
-				   "member"
-				   "pcl-types"
-				   "subtypes-of-condition"
-				   "subtypes-of-number-or-condition"
-				   "subtypes-of-number"
-				   "subtypes-of-t")
-		  :collect (format nil "~A/bdd-graph-~A.sorted" path sorted))))
+(defun gen-parameters-summary-tabular (path)
+  (destructuring-bind (&key attributes &allow-other-keys) (do-analysis :path path)
+    
+    ;; generate figure fig.summary.parameters
+    (format stream "\\begin{tabular}{ |l|l|l| }~%")
+    (format stream "\\hline~%")
+    (format stream "\\multicolumn{3}{ |c| }{Ranking Results} \\\\~%")
+    (format stream "\\hline~%")
+    (format stream "Parameter & Value & Average Score \\\\~%")
+    (format stream "\\hline~%")
+    (format stream "\\multirow{2}{*}{Break subset} & relaxed & -0.28656462 \\\\~%")
+    (format stream "& strict &  0.62518245\\\\~%")
+    (format stream "\\hline~%")
+    (format stream "\\multirow{2}{*}{Break loop} & no & -0.49688414 \\\\~%")
+    (format stream "& yes & 0.2650052 \\\\~%")
+    (format stream "\\hline~%")
+    (format stream "\\multirow{2}{*}{Iteration topology} & node first & 0.0048906407 \\\\~%")
+    (format stream " & operation first & 0.042273182 \\\\~%")
+    (format stream "\\hline~%")
+    (format stream "\\multirow{2}{*}{Recursive} & yes & -0.29216018 \\\\~%")
+    (format stream " & no & 0.14136852 \\\\~%")
+    (format stream "\\hline~%")
+    (format stream "\\multirow{5}{*}{Node visitation order} & BOTTOM-TO-TOP & -0.2333628\\\\~%")
+    (format stream "& DECREASING-CONNECTIONS & -0.17516118\\\\~%")
+    (format stream "& SHUFFLE & 0.10092279\\\\~%")
+    (format stream "& INCREASING-CONNECTIONS & 0.12181535\\\\~%")
+    (format stream "& TOP-TO-BOTTOM & 0.27254203 \\\\~%")
+    (format stream "\\hline~%")
+    (format stream "\\end{tabular}~%"))
+  )
+
+
 
 (defvar *bucket-reporters* nil)
+(defvar *bucket-reporter-properites* nil)
+
+(defun do-analysis (&key (path "/Users/jnewton/Disk2/research/autogen"))
+  (analysis (loop :for (tag bucket-reporter) :in  *bucket-reporters*
+		  :for properties := (find tag *bucket-reporter-properites* :test #'equal :key (getter :tag))
+		  :for sorted := (getf properties :file-name)
+		  :collect (format nil "~A/param-~A.sorted" path sorted))))
 
 (defun make-bucket-reporter (&key tag scale types file-name)
   (declare (type string file-name))
@@ -1507,6 +1538,14 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
 (defun add-bucket-reporter (&key tag scale types file-name)
   (declare (type string file-name))
   (let ((pair (assoc tag *bucket-reporters* :test #'equal)))
+    
+    (setf *bucket-reporter-properites*
+	  (remove-if (lambda (plist)
+		       (equal (getf plist :tag) tag))
+		     *bucket-reporter-properites*))	     
+    (push (list :tag tag :scale scale :types types :file-name file-name)
+	  *bucket-reporter-properites*)
+
     (setf *bucket-reporters* (remove pair *bucket-reporters*))
     (push (list tag (make-bucket-reporter :tag tag :scale scale :types types :file-name file-name))
           *bucket-reporters*)))
@@ -1604,18 +1643,7 @@ sleeping before the code finishes evaluating."
             for sample = (/ 1 (length bucket-reporters)) then (+ sample (/ 1 (length bucket-reporters)))
             do (funcall bucket-reporter multiplier sample options :create-png-p create-png-p :destination-dir destination-dir)))))
 
-(defun parameterization-report (&key (re-run t) (multiplier 1) (create-png-p t) (destination-dir *destination-dir*)
-                                  (bucket-reporters *bucket-reporters*))
-  (big-test-report :re-run re-run
-                   :prefix "param-"
-                   :normalize 'decompose-types-bdd-graph
-                   :hilite-min t
-                   :destination-dir destination-dir
-                   :multiplier multiplier
-                   :create-png-p create-png-p
-                   :bucket-reporters bucket-reporters
-                   :decomposition-functions (cons 'decompose-types-bdd-graph
-                                                  *decompose-fun-parameterized-names*)))
+
 
 (defun best-2-report (&key (re-run t) (multiplier 1.8) (create-png-p t) (destination-dir *destination-dir*)
                         (bucket-reporters *bucket-reporters*))
