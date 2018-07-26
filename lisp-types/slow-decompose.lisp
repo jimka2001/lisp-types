@@ -58,15 +58,7 @@
            (optimize (speed 3) (compilation-speed 0) (debug 0) (space 0))
            ;;(optimize (speed 0) (compilation-speed 0) (debug 3) )
            )
-  (format t "type-specifiers = ~A~%" type-specifiers)
-  (format t "arguments = ~A~%" `(sort-strategy ,sort-strategy
-                                               recursive ,recursive
-                                               inner-loop ,inner-loop
-                                               do-break-sub ,do-break-sub
-                                               do-break-loop ,do-break-loop
-                                               sort-nodes ,sort-nodes
-                                               do-disjoint ,do-disjoint
-                                               do-break-touch ,do-break-touch))
+
   (when (eq :strict do-break-sub)
     (assert do-break-loop (do-break-sub do-break-loop)
             "Unsupported combination do-break-loop=~A do-break-sub=~A" do-break-loop do-break-loop))
