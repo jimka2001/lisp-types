@@ -502,7 +502,7 @@ of min-terms, this function returns a list of the min-terms."
 (defun bdd-decompose-types-weak-dynamic (type-specifiers)
   (bdd-decompose-types type-specifiers :bdd-hash-strength :weak-dynamic))
 
-(defun bdd-decompose-types (type-specifiers &key ((:bdd-hash-strength *bdd-hash-strength*) :weak))
+(defun bdd-decompose-types (type-specifiers &key ((:bdd-hash-strength *bdd-hash-strength*) :weak-dynamic))
   (when type-specifiers
     (caching-types
       (mapcar #'bdd-to-dnf
