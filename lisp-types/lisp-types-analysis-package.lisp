@@ -1,4 +1,4 @@
-;; Copyright (c) 2016 EPITA Research and Development Laboratory
+;; Copyright (c) 2016-18 EPITA Research and Development Laboratory
 ;;
 ;; Permission is hereby granted, free of charge, to any person obtaining
 ;; a copy of this software and associated documentation
@@ -19,17 +19,16 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-
-(asdf:defsystem :lisp-types-analysis
-  :depends-on (:lisp-types
-               :cl-robdd
-               :cl-robdd-analysis
-	       (:version :lisp-unit "0.9.0"))
-  :components
-  ((:module "lisp-types"
-    :components
-    ((:file "lisp-types-analysis-package")
-     (:file "analysis")
-     (:file "decompose-functions")
-     (:file "slow-decompose")
-     ))))
+(defpackage :lisp-types-analysis
+  (:use :cl :lisp-types :cl-robdd :cl-robdd-analysis)
+  (:export
+   "*DECOMPOSE-FUN-PARAMETERIZED-NAMES*"
+   "*BUCKET-REPORTERS*"
+   "*PERF-RESULTS*"
+   "MDTD-REPORT-PROFILE"
+   "MDTD-REPORT"
+   "PARAMETERIZATION-REPORT"
+   "TYPES/CMP-PERF"
+   "TYPES/CMP-PERFS"
+   "VALID-SUBTYPES"
+))

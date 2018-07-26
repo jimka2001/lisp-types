@@ -19,20 +19,11 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(defpackage :lisp-types-analysis
-  (:use :cl :lisp-types :cl-robdd :cl-robdd-analysis)
-  (:export
-   "*BUCKET-REPORTERS*"
-   "*PERF-RESULTS*"
-   "MDTD-REPORT-PROFILE"
-   "MDTD-REPORT"
-   "PARAMETERIZATION-REPORT"
-   "TYPES/CMP-PERF"
-   "TYPES/CMP-PERFS"
-   "VALID-SUBTYPES"
-))
 
 (in-package :lisp-types-analysis)
+
+(defparameter *decomposition-function-descriptors* nil)
+(defparameter *decomposition-functions* nil)
 
 (defun run-program (program args &rest options)
   #+sbcl (apply #'sb-ext:run-program program args :search t options)
@@ -187,26 +178,7 @@ than as keywords."
                  with t1 = (car types)
                  nconc (list t1 `(and ,t1 ,t2) `(or ,t1, t2)))))
 
-(defvar *decomposition-function-descriptors*
-  (let ((color 0))
-    `((:names (decompose-types) :max-num-types 15 :gnu-color ,(nth (incf color) *colors*) :color "blue" :legend t)
-      (:names (decompose-types-rtev2) :max-num-types nil  :gnu-color ,(nth (incf color) *colors*) :color "olive" :legend t)
-      (:names (decompose-types-sat)  :gnu-color ,(nth (incf color) *colors*) :color "dark-cyan"  :legend t)
-      (:names (decompose-types-graph)  :gnu-color ,(nth (incf color) *colors*) :color "lavender" :legend t)
-      (:names (bdd-decompose-types-strong)  :gnu-color ,(nth (incf color) *colors*) :color "orange" :legend t)
-      (:names (bdd-decompose-types-weak) :gnu-color ,(nth (incf color) *colors*) :color "gold" :legend t)
-      (:names (bdd-decompose-types-weak-dynamic) :gnu-color ,(nth (incf color) *colors*) :color "gold" :legend t)
-      (:names ,*decompose-fun-parameterized-names*  :gnu-color "b2daff" :color "light-blue" :legend nil)
-      (:names (decompose-types-bdd-graph-strong)  :gnu-color ,(nth (incf color) *colors*) :color "red" :linewidth 1  :legend t)
-      (:names (decompose-types-bdd-graph-weak-dynamic)  :gnu-color ,(nth (incf color) *colors*) :color "rust" :linewidth 1  :legend t)
-      (:names (decompose-types-bdd-graph-weak)  :gnu-color ,(nth (incf color) *colors*) :color "rust" :linewidth 1  :legend t)
-      (:names (decompose-types-bdd-graph)  :gnu-color "991818" :color "rust" :linewidth 2  :legend t)
-      (:names (local-minimum) :gnu-color "000000" :color "black" :linewidth 2 :legend t))))
 
-(defvar *decomposition-functions*
-  (set-difference (mapcan (lambda (plist)
-                            (copy-list (getf plist :names))) *decomposition-function-descriptors*)
-                  (cons 'local-minimum *decompose-fun-parameterized-names*)))
 
 (defun encode-time (time &aux (decoded-time (multiple-value-list (decode-universal-time time))))
   "Create a string similar to the UNIX date command: e.g., \"Thu Aug  3 10:39:18 2017\""
@@ -414,18 +386,7 @@ than as keywords."
                                        keyword compiled-function ;; sbcl has problems with keyword and compiled-function, so lets ignore these
                                        )))
 
-(defun find-decomposition-function-descriptor (name)
-  (typecase name
-    (symbol
-     (find-if (lambda (plist)
-                (member name (getf plist :names))) 
-              *decomposition-function-descriptors*))
-    (string
-     (find-if (lambda (plist)
-                (exists f (getf plist :names)
-                  ;; case independent search
-                  (string-equal name (symbol-name f))))
-              *decomposition-function-descriptors*))))
+
 
 (defun check-decomposition (given calculated)
   "debugging function to assure that a given list of types GIVEN corresponds correctly

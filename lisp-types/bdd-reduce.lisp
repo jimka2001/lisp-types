@@ -522,15 +522,4 @@ in the given list have the same dnf form."
              hash)
     dups))
 
-(defun bdd-collect-atomic-types (bdd)
-  (let (labels)
-    (labels ((recure (bdd)
-               (etypecase bdd
-                 (bdd-leaf
-                  nil)
-                 (bdd-node
-                  (pushnew (bdd-label bdd) labels :test #'equal)
-                  (recure (bdd-positive bdd))
-                  (recure (bdd-negative bdd))))))
-      (recure bdd)
-      labels)))
+
