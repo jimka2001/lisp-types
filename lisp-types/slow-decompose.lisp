@@ -41,7 +41,7 @@
 
 (defun slow-decompose-types-bdd-graph (type-specifiers
                                        &key
-                                         (sort-strategy "DECREASING-CONNECTIONS") ;; "BOTTOM-TO-TOP" or "DECREASING-CONNECTIONS"
+                                         (sort-strategy "BOTTOM-TO-TOP") ;; "BOTTOM-TO-TOP" or "DECREASING-CONNECTIONS"
                                          (recursive t)
                                          (inner-loop :operation)
                                          (do-break-sub :relaxed)
