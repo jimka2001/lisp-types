@@ -1013,7 +1013,10 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
 
 (defun print-ltxdat (ltxdat-name sorted-name include-decompose legendp tag smooth)
   (declare (type list include-decompose))
-  (let ((content (with-open-file (stream sorted-name :direction :input :if-does-not-exist :error)
+  (let ((content (with-open-file (stream sorted-name :direction :input :if-does-not-exist nil)
+                   (unless stream
+                     (warn "no data read from ~A" sorted-name)
+                     (return-from print-ltxdat))
                    (user-read stream))))
     (destructuring-bind (&key sorted &allow-other-keys) content
       (ensure-directories-exist ltxdat-name)
@@ -1281,8 +1284,12 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
 
 (defun create-profile-scatter-plot (sexp-name destination-dir prefix file-name create-png-p
                                     &key smooth (threshold 0.15) (comment ""))
-  (let ((sexp (with-open-file (stream sexp-name :direction :input)
+  (let ((sexp (with-open-file (stream sexp-name :direction :input :if-does-not-exist nil)
+                (unless stream
+                  (warn "no data read from ~A" sexp-name)
+                  (return-from create-profile-scatter-plot))
                 (user-read stream nil nil))))
+
     (destructuring-bind (&key summary data &allow-other-keys) sexp
       (dolist (data-plist data)
         (destructuring-bind (&key decompose profile-plists &allow-other-keys) data-plist
