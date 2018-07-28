@@ -1062,7 +1062,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
 						   :color (getf descr :gnu-color)
 						   :thick t
 						   :logx t
-						   :logy t)
+						   :logy 0.00005)
                                           (push (if (getf descr :legend)
                                                     (format nil "~A" decompose)
                                                     "") legend)))
