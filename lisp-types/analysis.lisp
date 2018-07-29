@@ -848,21 +848,22 @@ the list of xys need not be already ordered."
   "Takes a list of (x y) pairs and returns a new list of (x y) pairs with some of the noise filtered out.
 The smoothening method is an average of all the points in an x-radius of the given point, 
 i.e., of all the points whose xcoord is between x/2 and x*2."
-  (flet ((between (x y z)
-           (and (<= x y)
-                (<= y z)))
-         (mean (xs)
+  (flet ((mean (xs)
            (/ (reduce #'+ xs :initial-value 0.0)
-              (float (length xs)))))
+              (float (length xs))))
+	 (x-coord (point)
+	   (car point))
+	 (y-coord (point)
+	   (cadr point)))
 
-    (let* ((radius 2))
+    (let ((radius 2))
       (loop :for xy :in xys
             :for x0 = (car xy)
-            :for close = (loop :for sample :in xys
-                               :when (between (/ x0 radius)
-                                              (car sample)
-                                              (* x0 radius))
-                                 :collect (cadr sample))
+            :for close = (loop :for pt :in xys
+                               :when (<= (/ x0 radius)
+					 (x-coord pt)
+					 (* x0 radius))
+                                 :collect (y-coord pt))
             :collect (list x0 (mean close))))))
 
 (defun sort-results (in out &rest options)
