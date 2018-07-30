@@ -209,6 +209,7 @@ than as keywords."
                           (types (choose-randomly (valid-subtypes 'number) limit))
                           (time-out nil)
                           tag
+			  profile-function-legend
                           (decompose *decomposition-functions*)
                           normalize
                           hilite-min
@@ -245,6 +246,7 @@ than as keywords."
                              :normalize normalize
                              :time-out time-out
                              :limit limit
+			     :profile-function-legend profile-function-legend
                              :hilite-min hilite-min
                              :tag tag))
              (run1 (f len types)
@@ -1147,6 +1149,7 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
 
 (defun print-report (&key (re-run t) (profile nil)
                        limit (summary nil) normalize destination-dir
+		       profile-function-legend
                        prefix file-name (create-png-p t) (include-decompose *decomposition-functions*) (tag "NO TITLE") (hilite-min nil)
                      &allow-other-keys
                      &aux
@@ -1180,8 +1183,8 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
                       normalize hilite-min include-decompose :smooth create-png-p "1321")))
 
   (when profile
-    (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p :smooth nil :comment tag)
-    (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p :smooth t   :comment tag))
+    (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p :smooth nil :comment tag :profile-function-legend profile-function-legend)
+    (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p :smooth t   :comment tag :profile-function-legend profile-function-legend))
 
   (dolist (smooth '(t nil))
     (print-ltxdat (if smooth
@@ -1194,7 +1197,14 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
                   sorted-name include-decompose nil tag smooth))
   (print-dat dat-name include-decompose))
 
-(defun create-ltxdat-profile-scatter-plot (hash ltxdat-name &key smooth (comment "") summary decompose top-names)
+(defun hash-rassoc (target-value hash &key (test #'eql))
+  (maphash (lambda (hash-key hash-value)
+	     (when (funcall test hash-value target-value)
+	       (return-from hash-rassoc (values hash-key t))))
+	   hash)
+  (values nil nil))
+
+(defun create-ltxdat-profile-scatter-plot (hash ltxdat-name &key smooth (comment "") summary decompose top-names profile-function-legend)
   (with-open-file (stream ltxdat-name
                           :direction :output
                           :if-exists :supersede
@@ -1204,27 +1214,34 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
                  (format nil "scatter plot of ~A ~A ~A" summary decompose comment)
                  (lambda ()
                    (format stream "%% label = ~%")
-                   (axis stream 
-                         `(("title" ,(format nil "~A ~A" summary decompose))
+                   (axis stream
+                         `(("title" ,(string-downcase (format nil "~A ~A" summary decompose)))
 			   ("xlabel" "execution time (seconds)")
                            ("ylabel" "profile percentage")
-			   ("legend style" "{at={(0.5,-0.2)},anchor=north}")
+			   ("legend style" (("at" "{(0.5,-0.2)}")
+					    ("anchor" "north")))
                            ("label style" "{font=\\tiny}"))
                          (lambda ()
                            (dolist (function-name top-names)
-			     ;; TODO add :color flag to addplot, but associate color with function-name if possible
+			     (or (gethash function-name profile-function-legend)
+				 (setf (gethash function-name profile-function-legend)
+				       (or (find-if-not (lambda (c)
+							  (hash-rassoc c profile-function-legend))
+							*colors*)
+					   (error "no more colors available in *colors*"))))
                              (addplot stream
-                                      function-name
+				      (string-downcase function-name)
                                       ()
                                       "(~A, ~A)"
                                       (let ((xys (gethash function-name hash)))
                                         (mapcar (lambda (xy)
                                                   (list (car xy) (* 100 (cadr xy))))
                                                 (if smooth (smoothen xys) xys)))
-                                      :addplot "addplot+"
+				      :thick t
+				      :color (gethash function-name profile-function-legend)
                                       :logx t))
                            (format stream "\\legend{~A}~%"
-                                   (join-strings "," top-names)))
+                                   (join-strings "," (mapcar #'string-downcase top-names))))
                          :logx t)))))
 
 (defun empty-file-p (fname)
@@ -1284,7 +1301,7 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
               (sb-ext:process-exit-code process) gnu-file gnu-name)))))
 
 (defun create-profile-scatter-plot (sexp-name destination-dir prefix file-name create-png-p
-                                    &key smooth (threshold 0.15) (comment ""))
+                                    &key smooth (threshold 0.15) (comment "") profile-function-legend)
   (let ((sexp (with-open-file (stream sexp-name :direction :input :if-does-not-exist nil)
                 (unless stream
                   (warn "no data read from ~A" sexp-name)
@@ -1338,6 +1355,7 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
             (create-ltxdat-profile-scatter-plot hash
                                              (insert-suffix (make-output-file-name :ltxdatscatter-name destination-dir prefix file-name)
                                                             (concatenate 'string "-" decompose (if smooth "-smooth" "")))
+					     :profile-function-legend profile-function-legend
                                              :smooth smooth
                                              :comment comment
                                              :summary summary
@@ -1347,7 +1365,9 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
 (defvar *destination-dir* "/Users/jnewton/newton.16.edtchs/src")
 (defun test-report (&key sample (prefix "") (re-run t) (suite-time-out (* 60 60 4))
                       (time-out (* 3 60)) normalize (destination-dir *destination-dir*)
-                      types file-name (limit 15) tag hilite-min (num-tries 2) profile (create-png-p t)
+                      types file-name (limit 15) tag hilite-min (num-tries 2)
+		      profile-function-legend
+		      profile (create-png-p t)
                     &allow-other-keys)
   "TIME-OUT is the number of seconds to allow for one call to a single decompose function.
 SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
@@ -1368,6 +1388,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                      :sample sample
                      :num-tries num-tries
                      :hilite-min hilite-min
+		     :profile-function-legend profile-function-legend
                      :profile profile
                      :create-png-p create-png-p
                      :destination-dir destination-dir
@@ -1646,6 +1667,7 @@ sleeping before the code finishes evaluating."
                                         (suite-time-out (* 60 60 4)) (time-out 100) normalize hilite-min
                                         (decomposition-functions *decomposition-functions*)
                                         (bucket-reporters *bucket-reporters*)
+					profile-function-legend
                                         profile
                                         (create-png-p t)
                                         (destination-dir *destination-dir*))
@@ -1662,7 +1684,9 @@ sleeping before the code finishes evaluating."
     (let ((*decomposition-functions*  decomposition-functions))
       (loop for (tag bucket-reporter) in bucket-reporters
             for sample = (/ 1 (length bucket-reporters)) then (+ sample (/ 1 (length bucket-reporters)))
-            do (funcall bucket-reporter multiplier sample options :create-png-p create-png-p :destination-dir destination-dir)))))
+            do (funcall bucket-reporter multiplier sample options
+			:create-png-p create-png-p
+			:destination-dir destination-dir)))))
 
 (defun best-2-report (&key (re-run t) (multiplier 1.8) (create-png-p t) (destination-dir *destination-dir*)
                         (bucket-reporters *bucket-reporters*))
@@ -1722,35 +1746,41 @@ sleeping before the code finishes evaluating."
                    :decomposition-functions decomposition-functions))
 
 (defun rebuild-plots (&key (destination-dir "/Users/jnewton/analysis"))
-  (dotimes (bucket-index (length *bucket-reporters*))
-    (let ((*bucket-reporters* (list (nth bucket-index *bucket-reporters*))))
-      (big-test-report :re-run nil
-                       :create-png-p t
-                       :bucket-reporters *bucket-reporters*
-                       :prefix "big-"
-                       :destination-dir destination-dir)
-      (best-2-report :re-run nil
-                     :create-png-p t
-                     :bucket-reporters *bucket-reporters*
-                     :destination-dir  destination-dir)
-      (parameterization-report :re-run nil
-                               :create-png-p t
-                               :bucket-reporters *bucket-reporters*
-                               :destination-dir  destination-dir)
-      (mdtd-report :re-run nil
-                  :create-png-p nil
-                  :bucket-reporters *bucket-reporters*
-                  :destination-dir  destination-dir)
-      (dotimes (decompose-function-index (length *decomposition-functions*))
-        (big-test-report :re-run nil
-                         :profile t
-                         :decomposition-functions (list (nth decompose-function-index
-                                                             *decomposition-functions*))
-                         :bucket-reporters *bucket-reporters*
-                         :create-png-p t
-                         :destination-dir destination-dir
-                         :prefix (format nil "mdtd-profile-~D-~D-"
-                                         decompose-function-index bucket-index))))))
+  (let ((profile-function-legend (make-hash-table :test #'equal)))
+    (dotimes (bucket-index (length *bucket-reporters*))
+      (let ((*bucket-reporters* (list (nth bucket-index *bucket-reporters*))))
+	(big-test-report :re-run nil
+			 :create-png-p t
+			 :bucket-reporters *bucket-reporters*
+			 :prefix "big-"
+			 :destination-dir destination-dir)
+	(best-2-report :re-run nil
+		       :create-png-p t
+		       :bucket-reporters *bucket-reporters*
+		       :destination-dir  destination-dir)
+	(parameterization-report :re-run nil
+				 :create-png-p t
+				 :bucket-reporters *bucket-reporters*
+				 :destination-dir  destination-dir)
+	(mdtd-report :re-run nil
+		     :create-png-p nil
+		     :bucket-reporters *bucket-reporters*
+		     :destination-dir  destination-dir)
+	(dotimes (decompose-function-index (length *decomposition-functions*))
+	  (format t "=== generating mdtd-profile files for ~d-~d ~A ~A ~%" decompose-function-index bucket-index
+		  (getf (nth bucket-index *bucket-reporter-properites*)
+			:file-name)
+		  (nth decompose-function-index *decomposition-functions*))
+	  (big-test-report :re-run nil
+			   :profile t
+			   :decomposition-functions (list (nth decompose-function-index
+							       *decomposition-functions*))
+			   :bucket-reporters *bucket-reporters*
+			   :create-png-p t
+			   :profile-function-legend profile-function-legend
+			   :destination-dir destination-dir
+			   :prefix (format nil "mdtd-profile-~D-~D-"
+					   decompose-function-index bucket-index)))))))
 
 (defun rebuild-analysis (&key (destination-dir "/Users/jnewton/analysis") (autogen-dir "/Users/jnewton/research/autogen"))
   (rebuild-plots :destination-dir destination-dir)
