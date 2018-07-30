@@ -1197,12 +1197,30 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
                   sorted-name include-decompose nil tag smooth))
   (print-dat dat-name include-decompose))
 
-(defun hash-rassoc (target-value hash &key (test #'eql))
+(defun hash-color-p (color hash)
   (maphash (lambda (hash-key hash-value)
-	     (when (funcall test hash-value target-value)
-	       (return-from hash-rassoc (values hash-key t))))
+	     (declare (ignore hash-key))
+	     (when (string= color (getf (car hash-value) :color))
+	       (return-from hash-color-p t)))
 	   hash)
-  (values nil nil))
+  nil)
+
+(defun get-function-color (profile-function-legend function-name decompose summary)
+  (let* ((color (cond ((gethash function-name profile-function-legend)
+		       (getf (car (gethash function-name profile-function-legend)) :color))
+		      (t
+		       ;; find a color not yet used, or error
+		       (or (find-if-not (lambda (c)
+					  (hash-color-p c profile-function-legend))
+					*colors*)
+			   (error "no more colors available in *colors*")))))
+	 (plist (list :color color
+		      ;; :mark mark ???
+		      :decompose decompose
+		      :summary summary)))
+    (pushnew plist (gethash function-name profile-function-legend nil) :test #'equal)
+    color))
+
 
 (defun create-ltxdat-profile-scatter-plot (hash ltxdat-name &key smooth (comment "") summary decompose top-names profile-function-legend)
   (with-open-file (stream ltxdat-name
@@ -1217,19 +1235,10 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
                    (axis stream
                          `(("title" ,(string-downcase (format nil "~A ~A" summary decompose)))
 			   ("xlabel" "execution time (seconds)")
-                           ("ylabel" "profile percentage")
-			   ("legend style" (("at" "{(0.5,-0.2)}")
-					    ("anchor" "north")))
-                           ("label style" "{font=\\tiny}"))
+                           ("ylabel" "profile percentage"))
                          (lambda ()
                            (dolist (function-name top-names)
-			     (or (gethash function-name profile-function-legend)
-				 (setf (gethash function-name profile-function-legend)
-				       (or (find-if-not (lambda (c)
-							  (hash-rassoc c profile-function-legend))
-							*colors*)
-					   (error "no more colors available in *colors*"))))
-                             (addplot stream
+			     (addplot stream
 				      (string-downcase function-name)
                                       ()
                                       "(~A, ~A)"
@@ -1238,10 +1247,8 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
                                                   (list (car xy) (* 100 (cadr xy))))
                                                 (if smooth (smoothen xys) xys)))
 				      :thick t
-				      :color (gethash function-name profile-function-legend)
-                                      :logx t))
-                           (format stream "\\legend{~A}~%"
-                                   (join-strings "," (mapcar #'string-downcase top-names))))
+				      :color (get-function-color profile-function-legend function-name decompose summary)
+                                      :logx t)))
                          :logx t)))))
 
 (defun empty-file-p (fname)
@@ -1745,6 +1752,59 @@ sleeping before the code finishes evaluating."
                    :create-png-p create-png-p
                    :decomposition-functions decomposition-functions))
 
+(defun make-stand-alone-legends (destination-dir profile-function-legend)
+  (labels ((print-color-legend (key value used-function-names)
+	     (declare (type keyword key)
+		      (type string value))
+	     (with-open-file (stream (format nil "~A/legend-~A-~A.ltxdat" destination-dir
+					     (string-downcase (symbol-name key))
+					     value)
+				     :if-exists :supersede
+				     :if-does-not-exist :create
+				     :direction :output)
+	       (format t "writing to ~A~%" stream)
+	       (tikzpicture stream
+			    (format nil "created by make-stand-alone-legends ~A ~A" key value)
+			    (lambda ()
+			      (axis stream
+				    '("hide axis"
+				      ("xmin" "10")
+				      ("xmax" "50")
+				      ("ymin" "0")
+				      ("ymax" "0.4")
+				      ("legend style" (("draw" "white!15!black")
+						       ("legend cell align" "left"))))
+				    (lambda ()
+				      (dolist (function-name (sort used-function-names #'string<))
+					(let ((color (getf (car (gethash function-name profile-function-legend)) :color)))
+					  (destructuring-bind (red green blue) (color-to-rgb color)
+					    (format stream "\\definecolor{color~A}{RGB}{~A,~A,~A}~%"
+						    color red green blue))
+					  (format stream "\\addlegendimage{color~A,line width=0.8pt}~%"
+						  color)
+					  (format stream "\\addlegendentry{~A};~%" (string-downcase function-name))))))))))
+	   (filter (values-list key)
+	     (dolist (value values-list)
+	       (format t "~A=~A~%" key value)
+	       (let (used-function-names)
+		 (maphash (lambda (function-name plists)
+			    (dolist (plist plists)
+			      (when (string= value (getf plist key))
+				(pushnew function-name used-function-names :test #'string=))))
+			  profile-function-legend)
+		 (print-color-legend key value used-function-names)))))
+    (let (decompose-list summary-list)
+      (maphash (lambda (key plists)
+		 (declare (ignore key))
+		 (dolist (plist plists)
+		   (pushnew (getf plist :decompose) decompose-list :test #'string=)
+		   (pushnew (getf plist :summary) summary-list :test #'string=)))
+	       profile-function-legend)
+      (format t "decompose-list~%")
+      (filter decompose-list :decompose)
+      (format t "summary-list~%")
+      (filter summary-list :summary))))
+
 (defun rebuild-plots (&key (destination-dir "/Users/jnewton/analysis"))
   (let ((profile-function-legend (make-hash-table :test #'equal)))
     (dotimes (bucket-index (length *bucket-reporters*))
@@ -1780,7 +1840,9 @@ sleeping before the code finishes evaluating."
 			   :profile-function-legend profile-function-legend
 			   :destination-dir destination-dir
 			   :prefix (format nil "mdtd-profile-~D-~D-"
-					   decompose-function-index bucket-index)))))))
+					   decompose-function-index bucket-index)))))
+    (make-stand-alone-legends destination-dir profile-function-legend)
+    ))
 
 (defun rebuild-analysis (&key (destination-dir "/Users/jnewton/analysis") (autogen-dir "/Users/jnewton/research/autogen"))
   (rebuild-plots :destination-dir destination-dir)
