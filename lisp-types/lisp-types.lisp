@@ -341,9 +341,9 @@ symbol _ somewhere (recursively)."
             (error "cannot compare ~A ~A with ~A ~A" (class-of a) a (class-of b) b))))))
 
 (defun alphabetize (patterns)
-  "non-descructively sort a list of patterns into a canonical order."
+  "descructively sort a list of patterns into a canonical order."
   (declare (type list patterns))
-  (sort (copy-list patterns) #'cmp-objects))
+  (sort patterns #'cmp-objects))
 
 (defun alphabetize-type (type)
   (declare ;;(optimize (speed 3) (compilation-speed 0))
@@ -357,7 +357,7 @@ symbol _ somewhere (recursively)."
     ((eq 'cons (car type))
      (cons 'cons (mapcar #'alphabetize-type (cdr type))))
     ((eq 'member (car type))
-     (cons 'member (alphabetize (cdr type))))
+     (cons 'member (alphabetize (copy-list (cdr type)))))
     (t
      type)))
 
