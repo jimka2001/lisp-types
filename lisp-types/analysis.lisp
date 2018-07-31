@@ -1831,7 +1831,7 @@ sleeping before the code finishes evaluating."
 					  (destructuring-bind (red green blue) (color-to-rgb color)
 					    (format stream "\\definecolor{color~A}{RGB}{~A,~A,~A}~%"
 						    color red green blue))
-					  (format stream "\\addlegendimage{color~A,line width=1.0pt}~%"
+					  (format stream "\\addlegendimage{color~A,line width=1.4pt}~%"
 						  color)
 					  (format stream "\\addlegendentry{~A};~%" (string-downcase function-name))))))))))
 	   (filter (values-list key)
