@@ -1850,3 +1850,27 @@ sleeping before the code finishes evaluating."
 			:gen-samples nil
 		 	:autogen-dir autogen-dir)
   (gen-parameters-summary-tabular :destination-dir destination-dir :autogen-dir autogen-dir))
+
+
+(defun convert-name-once (destination-dir fname)
+  ;; fname = "mdtd-profile-0-6-member.sexp"
+  ;; converts name to "mdtd-profile-single-SLOW-DECOMPOSE-TYPES-BDD-GRAPH-member.sexp"
+  (with-open-file (istream (format nil "~A/~A" destination-dir fname)
+			   :direction :input
+			   :if-does-not-exist :error)
+    (format t "reading ~A~%" istream)
+    (let ((plist (user-read istream nil nil)))
+      (destructuring-bind (&key summary data date &allow-other-keys) plist
+	(assert (= 1 (length data)))
+	(unless date
+	  (setf (getf plist :date)
+		(encode-time (get-universal-time))))
+	(destructuring-bind ((&key decompose &allow-other-keys)) data
+	  (with-open-file (ostream (format nil "~A/mdtd-profile-single-~A-~A.sexp"
+					   destination-dir  decompose summary)
+				   :direction :output
+				   :if-exists :supersede
+				   :if-does-not-exist :create)
+	    (format t "writing ~A~%" ostream)
+	    (let ((*package* (find-package "CL")))
+	      (format ostream "~S~%" plist))))))))
