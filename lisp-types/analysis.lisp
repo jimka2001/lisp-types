@@ -149,9 +149,7 @@ than as keywords."
   `(call-asserting-conditions ',condition-types (lambda () ,@body)))
 
 
-(defun foo (G)
-  (allowing-conditions (warning info db-timeout-error)
-    (funcall G)))
+
 
 ;; (defmethod print-object ((c SB-KERNEL:PARSE-UNKNOWN-TYPE) stream)
 ;;   (print-unreadable-object (c stream :type t :identity nil)
@@ -210,6 +208,7 @@ than as keywords."
                           (time-out nil)
                           tag
 			  profile-function-legend
+			  plist-hash
                           (decompose *decomposition-functions*)
                           normalize
                           hilite-min
@@ -246,6 +245,7 @@ than as keywords."
                              :normalize normalize
                              :time-out time-out
                              :limit limit
+			     :plist-hash plist-hash
 			     :profile-function-legend profile-function-legend
                              :hilite-min hilite-min
                              :tag tag))
@@ -387,8 +387,6 @@ than as keywords."
   (set-difference (valid-subtypes t) '(t nil class built-in-class
                                        keyword compiled-function ;; sbcl has problems with keyword and compiled-function, so lets ignore these
                                        )))
-
-
 
 (defun check-decomposition (given calculated)
   "debugging function to assure that a given list of types GIVEN corresponds correctly
@@ -1152,6 +1150,7 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
 (defun print-report (&key (re-run t) (profile nil)
                        limit (summary nil) normalize destination-dir
 		       profile-function-legend
+		       plist-hash
                        prefix file-name (create-png-p t) (include-decompose *decomposition-functions*) (tag "NO TITLE") (hilite-min nil)
                      &allow-other-keys
                      &aux
@@ -1186,9 +1185,11 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
 
   (when profile
     (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p
-				 :smooth nil :comment tag :profile-function-legend profile-function-legend)
+				 :smooth nil :comment tag :profile-function-legend profile-function-legend
+				 :plist-hash plist-hash)
     (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p
-				 :smooth t   :comment tag :profile-function-legend profile-function-legend))
+				 :smooth t   :comment tag :profile-function-legend profile-function-legend
+				 :plist-hash plist-hash))
 
   (dolist (smooth '(t nil))
     (print-ltxdat (if smooth
@@ -1334,8 +1335,10 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
         (warn "gnuplot exited with code=~A produced empty output file ~A from input ~A"
               (sb-ext:process-exit-code process) gnu-file gnu-name)))))
 
-(defun create-profile-scatter-plot-summary-decompose (summary decompose &key smooth destination-dir (comment "") create-png-p profile-plists (threshold 0.15) (num-functions-per-plot 4) file-name prefix profile-function-legend)
-  (let ((hash (make-hash-table :test #'equal))
+(defun create-profile-scatter-plot-summary-decompose (summary decompose &key smooth destination-dir (comment "") create-png-p profile-plists
+									  (threshold 0.15) (num-functions-per-plot 4) file-name prefix
+									  profile-function-legend plist-hash)
+  (let ((curve-hash (make-hash-table :test #'equal))
 	top-names)
     (declare (notinline sort))
     (dolist (profile-plist profile-plists)
@@ -1355,20 +1358,25 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
 	    (destructuring-bind (&key (seconds 0.0) name &allow-other-keys) dprof-plist
 	      (when (and (plusp seconds)
 			 (member name top-names :test #'string=))
+		(pushnew (list* :decompose decompose
+				:summary summary
+				:n-dtimes n-dtimes :dprofile-total dprofile-total
+				dprof-plist)
+			 (gethash name plist-hash nil) :test #'equal)
 		(let ((x (/ dprofile-total n-dtimes))
 		      (y (/ seconds dprofile-total)))
-		  (push (list x y) (gethash name hash nil)))))))))
+		  (push (list x y) (gethash name curve-hash nil)))))))))
     (when (< num-functions-per-plot (length top-names))
       (setf top-names (subseq (sort top-names #'> :key (lambda (name)
-							 (unless (gethash name hash nil)
+							 (unless (gethash name curve-hash nil)
 							   (format t "~A has no xy points~%" name))
-							 (integral (gethash name hash nil) :logx t)))
+							 (integral (gethash name curve-hash nil) :logx t)))
 			      0 num-functions-per-plot)))
     (setf top-names (sort top-names #'string<))
     (dolist (function-name top-names)
-      (setf (gethash function-name hash)
-	    (sort (gethash function-name hash) #'< :key #'car)))
-    (create-gnu-profile-scatter-plot hash
+      (setf (gethash function-name curve-hash)
+	    (sort (gethash function-name curve-hash) #'< :key #'car)))
+    (create-gnu-profile-scatter-plot curve-hash
 				     (insert-suffix (make-output-file-name :gnuscatter-name destination-dir prefix file-name)
 						    (if smooth "-smooth" ""))
 				     :smooth smooth
@@ -1378,7 +1386,7 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
 				     :top-names top-names
 				     :create-png-p create-png-p)
     (loop :for title-label :in '("by-pool" "by-function")
-	  :do (create-ltxdat-profile-scatter-plot hash
+	  :do (create-ltxdat-profile-scatter-plot curve-hash
 						  (insert-suffix (make-output-file-name :ltxdatscatter-name destination-dir prefix file-name)
 								 (concatenate 'string "-" title-label (if smooth "-smooth" "")))
 						  :profile-function-legend profile-function-legend
@@ -1395,7 +1403,7 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
 						  :top-names top-names))))
 
 (defun create-profile-scatter-plot (sexp-name destination-dir prefix file-name create-png-p
-                                    &key smooth (threshold 0.15) (comment "") profile-function-legend (num-functions-per-plot 4))
+                                    &key smooth (threshold 0.15) (comment "") plist-hash profile-function-legend (num-functions-per-plot 4))
   (declare (type (and fixnum unsigned-byte) num-functions-per-plot))
   (let ((sexp (with-open-file (stream sexp-name :direction :input :if-does-not-exist nil)
                 (unless stream
@@ -1417,14 +1425,15 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
 							 :num-functions-per-plot num-functions-per-plot
 							 :threshold threshold
 							 :profile-function-legend profile-function-legend
-							 :profile-plists profile-plists)
-	  )))))
+							 :plist-hash plist-hash
+							 :profile-plists profile-plists))))))
 
 (defvar *destination-dir* "/Users/jnewton/newton.16.edtchs/src")
 (defun test-report (&key sample (prefix "") (re-run t) (suite-time-out (* 60 60 4))
                       (time-out (* 3 60)) normalize (destination-dir *destination-dir*)
                       types file-name (limit 15) tag hilite-min (num-tries 2)
 		      profile-function-legend
+		      plist-hash
 		      profile (create-png-p t)
                     &allow-other-keys)
   "TIME-OUT is the number of seconds to allow for one call to a single decompose function.
@@ -1446,6 +1455,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                      :sample sample
                      :num-tries num-tries
                      :hilite-min hilite-min
+		     :plist-hash plist-hash
 		     :profile-function-legend profile-function-legend
                      :profile profile
                      :create-png-p create-png-p
@@ -1726,10 +1736,11 @@ sleeping before the code finishes evaluating."
                                         (decomposition-functions *decomposition-functions*)
                                         (bucket-reporters *bucket-reporters*)
 					profile-function-legend
+					plist-hash
                                         profile
                                         (create-png-p t)
                                         (destination-dir *destination-dir*))
-  (declare (ignore prefix re-run suite-time-out time-out num-tries hilite-min profile))
+  (declare (ignore prefix re-run suite-time-out time-out num-tries hilite-min profile profile-function-legend plist-hash))
   (when normalize
     (assert (member normalize decomposition-functions) (normalize decomposition-functions)))
   (dolist (df decomposition-functions)
@@ -1803,7 +1814,7 @@ sleeping before the code finishes evaluating."
                    :create-png-p create-png-p
                    :decomposition-functions decomposition-functions))
 
-(defun make-stand-alone-legends (destination-dir profile-function-legend)
+(defun make-stand-alone-legends (destination-dir profile-function-legend plist-hash)
   (labels ((print-color-legend (key value used-function-names)
 	     (declare (type keyword key)
 		      (type string value))
@@ -1825,15 +1836,35 @@ sleeping before the code finishes evaluating."
 				      ("ymax" "0.4")
 				      ("legend style" (("draw" "white!15!black")
 						       ("legend cell align" "left"))))
-				    (lambda ()
+				    (lambda (&aux data (field-width (reduce #'max used-function-names :key #'length :initial-value 0)))
 				      (dolist (function-name (sort used-function-names #'string<))
 					(let ((color (getf (car (gethash function-name profile-function-legend)) :color)))
-					  (destructuring-bind (red green blue) (color-to-rgb color)
-					    (format stream "\\definecolor{color~A}{RGB}{~A,~A,~A}~%"
-						    color red green blue))
-					  (format stream "\\addlegendimage{color~A,line width=1.4pt}~%"
-						  color)
-					  (format stream "\\addlegendentry{~A};~%" (string-downcase function-name))))))))))
+					  (loop :for dprof-plist :in (gethash function-name plist-hash)
+						:for decompose = (getf dprof-plist :decompose)
+						:for summary   = (getf dprof-plist :summary)
+						:for n-dtimes  = (getf dprof-plist :n-dtimes)
+						:when (and (string= value (getf dprof-plist key))
+							   (exists color-plist (gethash function-name profile-function-legend)
+							     (and (string= value (getf color-plist key))
+								  (string= decompose (getf color-plist :decompose))
+								  (string= summary (getf color-plist :summary)))))
+						  :sum      (* n-dtimes (getf dprof-plist :calls)) :into calls
+						  :and :sum (* n-dtimes (getf dprof-plist :seconds)) :into seconds
+						:finally 
+						   (push (list seconds (with-output-to-string (str)
+									 (destructuring-bind (red green blue) (color-to-rgb color)
+									   (format str "\\definecolor{color~A}{RGB}{~A,~A,~A}~%"
+										   color red green blue))
+									  (format str "\\addlegendimage{color~A,line width=1.4pt,font=\\ttfamily}~%" color)
+									  ;; ~va means v: take argument as width of field
+									  ;; e.g., if field-with=12, this is equivalent to "~12a"
+									  (format str "\\addlegendentry{\\texttt{~v,,,'~A} ~D seconds ~:D calls};~%"
+										  field-width
+										  (string-downcase function-name)
+										  seconds calls)))
+							 data))))
+				      (dolist (datum (sort data #'> :key #'car))
+					(format stream "~A" datum))))))))
 	   (filter (values-list key)
 	     (dolist (value values-list)
 	       (format t "~A=~A~%" key value)
@@ -1857,7 +1888,8 @@ sleeping before the code finishes evaluating."
       (filter summary-list :summary))))
 
 (defun rebuild-plots (&key (destination-dir "/Users/jnewton/analysis"))
-  (let ((profile-function-legend (make-hash-table :test #'equal)))
+  (let ((plist-hash (make-hash-table :test #'equal))
+	(profile-function-legend (make-hash-table :test #'equal)))
     (dotimes (bucket-index (length *bucket-reporters*))
       (let ((*bucket-reporters* (list (nth bucket-index *bucket-reporters*))))
 	(big-test-report :re-run nil
@@ -1889,10 +1921,11 @@ sleeping before the code finishes evaluating."
 			   :bucket-reporters *bucket-reporters*
 			   :create-png-p t
 			   :profile-function-legend profile-function-legend
+			   :plist-hash plist-hash
 			   :destination-dir destination-dir
 			   :prefix (format nil "mdtd-profile-single-~A-"
 					   (nth decompose-function-index *decomposition-functions*))))))
-    (make-stand-alone-legends destination-dir profile-function-legend)
+    (make-stand-alone-legends destination-dir profile-function-legend plist-hash)
     ))
 
 (defun rebuild-analysis (&key (destination-dir "/Users/jnewton/analysis") (autogen-dir "/Users/jnewton/research/autogen"))
