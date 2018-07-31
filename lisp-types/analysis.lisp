@@ -885,9 +885,10 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
          (format t "]~%"))))
     ((eq out :return)
      ;; (reduce (lambda (num string) (format nil "~D~S" num string)) '(1 2 3) :initial-value "")
-     (destructuring-bind (&key (summary "missing summary") limit data time-out-count run-count time-out-run-time run-time wall-time unknown known)
+     (destructuring-bind (&key (summary "missing summary") date limit data time-out-count run-count time-out-run-time run-time wall-time unknown known)
          (user-read in nil nil)
-       (declare (type string summary))
+       (declare (type string summary)
+		(ignore date))
        (let (observed-max-time observed-min-time observed-min-prod observed-max-prod)
          (dolist (plist data)
            (mapc (lambda (given calculated time)
@@ -956,6 +957,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
     (format stream "(")
     (when summary
       (format stream " :SUMMARY ~S~%" summary))
+    (format stream "  :DATE ~A~%" (encode-time (get-universal-time)))
     (format stream "  :LIMIT ~D~%" limit)
     (format stream "  :TIME-OUT-COUNT ~D~%" (count-if (getter :time-out) *perf-results*))
     (format stream "  :RUN-COUNT ~D~%" (count-if (getter :calculated) *perf-results*))
@@ -1183,8 +1185,10 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
                       normalize hilite-min include-decompose :smooth create-png-p "1321")))
 
   (when profile
-    (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p :smooth nil :comment tag :profile-function-legend profile-function-legend)
-    (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p :smooth t   :comment tag :profile-function-legend profile-function-legend))
+    (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p
+				 :smooth nil :comment tag :profile-function-legend profile-function-legend)
+    (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p
+				 :smooth t   :comment tag :profile-function-legend profile-function-legend))
 
   (dolist (smooth '(t nil))
     (print-ltxdat (if smooth
@@ -1222,34 +1226,57 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
     color))
 
 
-(defun create-ltxdat-profile-scatter-plot (hash ltxdat-name &key smooth (comment "") summary decompose top-names profile-function-legend)
-  (with-open-file (stream ltxdat-name
-                          :direction :output
-                          :if-exists :supersede
-                          :if-does-not-exist :create)
-    (format t "[writing to ~A~%" ltxdat-name)
-    (tikzpicture stream
-                 (format nil "scatter plot of ~A ~A ~A" summary decompose comment)
-                 (lambda ()
-                   (format stream "%% label = ~%")
-                   (axis stream
-                         `(("title" ,(string-downcase (format nil "~A ~A" summary decompose)))
-			   ("xlabel" "execution time (seconds)")
-                           ("ylabel" "profile percentage"))
-                         (lambda ()
-                           (dolist (function-name top-names)
-			     (addplot stream
-				      (string-downcase function-name)
-                                      ()
-                                      "(~A, ~A)"
-                                      (let ((xys (gethash function-name hash)))
-                                        (mapcar (lambda (xy)
-                                                  (list (car xy) (* 100 (cadr xy))))
-                                                (if smooth (smoothen xys) xys)))
-				      :thick t
-				      :color (get-function-color profile-function-legend function-name decompose summary)
-                                      :logx t)))
-                         :logx t)))))
+(defun create-ltxdat-profile-scatter-plot (hash ltxdat &rest options
+					   &key smooth (comment "") summary decompose top-names profile-function-legend
+					     (title (lambda (summary decompose)
+						      (string-downcase (format nil "~A ~A" summary decompose))))
+					     (xlabel "execution time (seconds)")
+					     (xlabelp t)
+					     (ylabel "profile percentage")
+					     (ylabelp t))
+  ;; hash is a mapping from profiled function-name (string) to list of (x y) pairs already sorted by increasing x
+  ;; ltxdat is either an already opened stream to write to, or a string/pathname to designate a file to open for write
+  ;; title is a (or null (function (string string) string)) mapping (summary decompose) to title
+  (declare (type (or null (function (string string) string)) title)
+	   (type string xlabel ylabel)
+	   (type (or string pathname stream) ltxdat)
+	   (type string comment))
+  (typecase ltxdat
+    ((or string pathname)
+     (with-open-file (stream ltxdat
+			     :direction :output
+			     :if-exists :supersede
+			     :if-does-not-exist :create)
+       (format t "writing to ~A~%" stream)
+       (apply #'create-ltxdat-profile-scatter-plot hash stream options)))
+    (stream
+     (tikzpicture ltxdat
+		  (format nil "scatter plot of ~A ~A ~A" summary decompose comment)
+		  (lambda ()
+		    (format ltxdat "%% label = ~%")
+		    (axis ltxdat
+			  (remove nil (list (when title
+					      (list "title" (funcall title summary decompose)))
+					    (when xlabelp
+					      (list "xlabel" xlabel))
+					    (when ylabelp
+					      (list "ylabel" ylabel))))
+			  (lambda ()
+			    (format ltxdat "% x-axis: ~A~%" xlabel)
+			    (format ltxdat "% y-axis: ~A~%" ylabel)
+			    (dolist (function-name top-names)
+			      (addplot ltxdat
+				       (string-downcase function-name)
+				       ()
+				       "(~A, ~A)"
+				       (let ((xys (gethash function-name hash)))
+					 (mapcar (lambda (xy)
+						   (list (car xy) (* 100 (cadr xy))))
+						 (if smooth (smoothen xys) xys)))
+				       :thick t
+				       :color (get-function-color profile-function-legend function-name decompose summary)
+				       :logx t)))
+			  :logx t))))))
 
 (defun empty-file-p (fname)
   (with-open-file (stream fname :direction :input
@@ -1307,67 +1334,91 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
         (warn "gnuplot exited with code=~A produced empty output file ~A from input ~A"
               (sb-ext:process-exit-code process) gnu-file gnu-name)))))
 
+(defun create-profile-scatter-plot-summary-decompose (summary decompose &key smooth destination-dir (comment "") create-png-p profile-plists (threshold 0.15) (num-functions-per-plot 4) file-name prefix profile-function-legend)
+  (let ((hash (make-hash-table :test #'equal))
+	top-names)
+    (declare (notinline sort))
+    (dolist (profile-plist profile-plists)
+      (destructuring-bind (&key (dprofile-total 0.0) dprof &allow-other-keys) profile-plist
+	(when (plusp dprofile-total)
+	  (dolist (dprof-plist (subseq dprof 0 1))
+	    (destructuring-bind (&key (seconds 0.0) name &allow-other-keys) dprof-plist
+	      (when (plusp seconds)
+		(let ((y (/ seconds dprofile-total)))
+		  (when (> y threshold)
+		    (pushnew name top-names :test #'string=)))))))))
+
+    (dolist (profile-plist profile-plists)
+      (destructuring-bind (&key (n-dtimes 1) (dprofile-total 0.0) dprof &allow-other-keys) profile-plist
+	(when (plusp dprofile-total)
+	  (dolist (dprof-plist dprof)
+	    (destructuring-bind (&key (seconds 0.0) name &allow-other-keys) dprof-plist
+	      (when (and (plusp seconds)
+			 (member name top-names :test #'string=))
+		(let ((x (/ dprofile-total n-dtimes))
+		      (y (/ seconds dprofile-total)))
+		  (push (list x y) (gethash name hash nil)))))))))
+    (when (< num-functions-per-plot (length top-names))
+      (setf top-names (subseq (sort top-names #'> :key (lambda (name)
+							 (unless (gethash name hash nil)
+							   (format t "~A has no xy points~%" name))
+							 (integral (gethash name hash nil) :logx t)))
+			      0 num-functions-per-plot)))
+    (setf top-names (sort top-names #'string<))
+    (dolist (function-name top-names)
+      (setf (gethash function-name hash)
+	    (sort (gethash function-name hash) #'< :key #'car)))
+    (create-gnu-profile-scatter-plot hash
+				     (insert-suffix (make-output-file-name :gnuscatter-name destination-dir prefix file-name)
+						    (if smooth "-smooth" ""))
+				     :smooth smooth
+				     :comment comment
+				     :summary summary
+				     :decompose decompose
+				     :top-names top-names
+				     :create-png-p create-png-p)
+    (loop :for title-label :in '("by-pool" "by-function")
+	  :do (create-ltxdat-profile-scatter-plot hash
+						  (insert-suffix (make-output-file-name :ltxdatscatter-name destination-dir prefix file-name)
+								 (concatenate 'string "-" title-label (if smooth "-smooth" "")))
+						  :profile-function-legend profile-function-legend
+						  :title (lambda (pool-summary decompose-function-name)
+							   (if (string= title-label "by-pool")
+							       (format nil "~A" pool-summary)
+							       (string-downcase (format nil "~A" decompose-function-name))))
+						  :smooth smooth
+						  :comment comment
+						  :summary summary
+						  :decompose decompose
+						  :xlabelp nil
+						  :ylabelp nil
+						  :top-names top-names))))
+
 (defun create-profile-scatter-plot (sexp-name destination-dir prefix file-name create-png-p
-                                    &key smooth (threshold 0.15) (comment "") profile-function-legend)
+                                    &key smooth (threshold 0.15) (comment "") profile-function-legend (num-functions-per-plot 4))
+  (declare (type (and fixnum unsigned-byte) num-functions-per-plot))
   (let ((sexp (with-open-file (stream sexp-name :direction :input :if-does-not-exist nil)
                 (unless stream
                   (warn "no data read from ~A" sexp-name)
                   (return-from create-profile-scatter-plot))
                 (user-read stream nil nil))))
+    (format t "creating scatter plots from sexp-name=~A~%" sexp-name)
 
     (destructuring-bind (&key summary data &allow-other-keys) sexp
       (dolist (data-plist data)
         (destructuring-bind (&key decompose profile-plists &allow-other-keys) data-plist
-          
-          (let ((hash (make-hash-table :test #'equal))
-                top-names)
-            (declare (notinline sort))
-            (dolist (profile-plist profile-plists)
-              (destructuring-bind (&key dprofile-total dprof &allow-other-keys) profile-plist
-                (dolist (dprof-plist (subseq dprof 0 1))
-                  (destructuring-bind (&key (seconds 0.0) name &allow-other-keys) dprof-plist
-                    (when (plusp seconds)
-                      (let ((y (/ seconds dprofile-total)))
-                        (when (> y threshold)
-                          (pushnew name top-names :test #'string=))))))))
-
-            (dolist (profile-plist profile-plists)
-              (destructuring-bind (&key n-dtimes dprofile-total dprof &allow-other-keys) profile-plist
-                (dolist (dprof-plist dprof)
-                  (destructuring-bind (&key (seconds 0.0) name &allow-other-keys) dprof-plist
-                    (when (and (plusp seconds)
-                               (member name top-names :test #'string=))
-                      (let ((x (/ dprofile-total n-dtimes))
-                            (y (/ seconds dprofile-total)))
-                        (push (list x y) (gethash name hash nil))))))))
-            (when (< 5 (length top-names))
-              (setf top-names (subseq (sort top-names #'> :key (lambda (name)
-                                                                 (unless (gethash name hash nil)
-                                                                   (format t "~A has no xy points~%" name))
-                                                                 (integral (gethash name hash nil) :logx t)))
-                                      0 5)))
-            (setf top-names (sort top-names #'string<))
-            (dolist (function-name top-names)
-              (setf (gethash function-name hash)
-                    (sort (gethash function-name hash) #'< :key #'car)))
-            (create-gnu-profile-scatter-plot hash
-                                             (insert-suffix (make-output-file-name :gnuscatter-name destination-dir prefix file-name)
-                                                            (concatenate 'string "-" decompose (if smooth "-smooth" "")))
-                                             :smooth smooth
-                                             :comment comment
-                                             :summary summary
-                                             :decompose decompose
-                                             :top-names top-names
-                                             :create-png-p create-png-p)
-            (create-ltxdat-profile-scatter-plot hash
-                                             (insert-suffix (make-output-file-name :ltxdatscatter-name destination-dir prefix file-name)
-                                                            (concatenate 'string "-" decompose (if smooth "-smooth" "")))
-					     :profile-function-legend profile-function-legend
-                                             :smooth smooth
-                                             :comment comment
-                                             :summary summary
-                                             :decompose decompose
-                                             :top-names top-names)))))))
+          (create-profile-scatter-plot-summary-decompose summary decompose
+							 :destination-dir destination-dir
+							 :file-name file-name
+							 :prefix prefix
+							 :smooth smooth
+							 :comment comment
+							 :create-png-p create-png-p
+							 :num-functions-per-plot num-functions-per-plot
+							 :threshold threshold
+							 :profile-function-legend profile-function-legend
+							 :profile-plists profile-plists)
+	  )))))
 
 (defvar *destination-dir* "/Users/jnewton/newton.16.edtchs/src")
 (defun test-report (&key sample (prefix "") (re-run t) (suite-time-out (* 60 60 4))
@@ -1737,8 +1788,8 @@ sleeping before the code finishes evaluating."
 
 (defun mdtd-report-profile (&key (re-run t) (multiplier 0.2) (destination-dir *destination-dir*)
 			      (num-tries 4) (prefix "mdtd-profile-1-") (decomposition-functions *decomposition-functions*)
-                             (bucket-reporters *bucket-reporters*)
-                             (create-png-p t))
+			      (bucket-reporters *bucket-reporters*)
+			      (create-png-p t))
   (big-test-report :re-run re-run
                    :profile t
                    :prefix prefix
@@ -1780,7 +1831,7 @@ sleeping before the code finishes evaluating."
 					  (destructuring-bind (red green blue) (color-to-rgb color)
 					    (format stream "\\definecolor{color~A}{RGB}{~A,~A,~A}~%"
 						    color red green blue))
-					  (format stream "\\addlegendimage{color~A,line width=0.8pt}~%"
+					  (format stream "\\addlegendimage{color~A,line width=1.0pt}~%"
 						  color)
 					  (format stream "\\addlegendentry{~A};~%" (string-downcase function-name))))))))))
 	   (filter (values-list key)
@@ -1839,8 +1890,8 @@ sleeping before the code finishes evaluating."
 			   :create-png-p t
 			   :profile-function-legend profile-function-legend
 			   :destination-dir destination-dir
-			   :prefix (format nil "mdtd-profile-~D-~D-"
-					   decompose-function-index bucket-index)))))
+			   :prefix (format nil "mdtd-profile-single-~A-"
+					   (nth decompose-function-index *decomposition-functions*))))))
     (make-stand-alone-legends destination-dir profile-function-legend)
     ))
 
