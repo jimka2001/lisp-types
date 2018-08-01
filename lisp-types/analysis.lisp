@@ -1858,7 +1858,7 @@ sleeping before the code finishes evaluating."
 									  (format str "\\addlegendimage{color~A,line width=1.4pt,font=\\ttfamily}~%" color)
 									  ;; ~va means v: take argument as width of field
 									  ;; e.g., if field-with=12, this is equivalent to "~12a"
-									  (format str "\\addlegendentry{\\texttt{~v,,,'~A} ~D seconds ~:D calls};~%"
+									  (format str "\\addlegendentry{\\texttt{~v,,,'~A} ~,2F seconds ~:D calls};~%"
 										  field-width
 										  (string-downcase function-name)
 										  seconds calls)))
