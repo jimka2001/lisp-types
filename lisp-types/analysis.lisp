@@ -1856,18 +1856,19 @@ sleeping before the code finishes evaluating."
 								  (string= summary (getf color-plist :summary)))))
 						  :sum      (* n-dtimes (getf dprof-plist :calls)) :into calls
 						  :and :sum (* n-dtimes (getf dprof-plist :seconds)) :into seconds
-						:finally 
-						   (push (list seconds (with-output-to-string (str)
-									 (destructuring-bind (red green blue) (color-to-rgb color)
-									   (format str "\\definecolor{color~A}{RGB}{~A,~A,~A}~%"
-										   color red green blue))
-									  (format str "\\addlegendimage{color~A,line width=1.4pt,font=\\ttfamily}~%" color)
-									  ;; ~va means v: take argument as width of field
-									  ;; e.g., if field-with=12, this is equivalent to "~12a"
-									  (format str "\\addlegendentry{\\texttt{~v,,,'~A} ~,2F seconds ~:D calls};~%"
-										  field-width
-										  (string-downcase function-name)
-										  seconds calls)))
+						:finally
+						   (push (list seconds
+                                                               (with-output-to-string (str)
+                                                                 (destructuring-bind (red green blue) (color-to-rgb color)
+                                                                   (format str "\\definecolor{color~A}{RGB}{~A,~A,~A}~%"
+                                                                           color red green blue))
+                                                                 (format str "\\addlegendimage{color~A,line width=1.4pt,font=\\ttfamily}~%" color)
+                                                                 ;; ~va means v: take argument as width of field
+                                                                 ;; e.g., if field-with=12, this is equivalent to "~12a"
+                                                                 (format str "\\addlegendentry{\\texttt{~v,,,'~A~~~9,2,,,'~F} seconds ~:D calls};~%"
+                                                                         field-width
+                                                                         (string-downcase function-name)
+                                                                         seconds calls)))
 							 data))))
 				      (dolist (datum (sort data #'> :key #'car))
 					(format stream "~A" datum))))))))
