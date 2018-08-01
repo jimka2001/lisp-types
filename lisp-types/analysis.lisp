@@ -1015,7 +1015,46 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
     (format stream "))~%"))
   nil)
 
-(defun print-ltxdat (ltxdat-name sorted-name include-decompose legendp tag smooth)
+(defun stand-alone-legend-axis (legend comment unary &key (key #'identity) (test #'>))
+  (declare (type (or string pathname stream) legend)
+           (type string comment)
+           (type (function (t) t) unary key)
+           (type (function (t t) t) test))
+  (typecase legend
+    ((or string pathname)
+     (with-open-file (stream legend :if-exists :supersede :if-does-not-exist :create :direction :output)
+       (format t "writing to ~A~%" stream)
+       (stand-alone-legend-axis stream comment unary :key key :test test)))
+    (stream
+     (let (items)
+       (labels ((legend-entry (priority color legend-entry)
+                  (push
+                   (list priority
+                         (with-output-to-string (str)
+                           (when color
+                             (destructuring-bind (red green blue) (color-to-rgb color)
+                               (format str "\\definecolor{color~A}{RGB}{~A,~A,~A}~%"
+                                       color red green blue))
+                             (format str "\\addlegendimage{color~A,line width=1.4pt,font=\\ttfamily}~%" color))
+                           (format str "\\addlegendentry{~A};~%" legend-entry)))
+                   items)))
+         (format legend "%% ~A~%" comment)
+         (axis legend
+               '("hide axis"
+                 ("xmin" "10")
+                 ("xmax" "50")
+                 ("ymin" "0")
+                 ("ymax" "0.4")
+                 ("legend style" (("draw" "white!15!black")
+                                  ("legend cell align" "left"))))
+               (lambda ()
+                 (funcall unary #'legend-entry)
+                 (dolist (datum (sort items test
+                                      :key (lambda (datum)
+                                             (funcall key (car datum)))))
+                   (format legend "~A" (cadr datum))))))))))
+
+(defun print-ltxdat (ltxdat-name sorted-name include-decompose tag smooth)
   (declare (type list include-decompose))
   (let ((content (with-open-file (stream sorted-name :direction :input :if-does-not-exist nil)
                    (unless stream
@@ -1035,7 +1074,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
                                    '("xlabel" "Product Size")
                                    '("ylabel" "Time")
                                    '("legend style" (("at" "{(0.5,-0.2)}")
-						     ("anchor" "north")))
+                                                     ("anchor" "north")))
                                    "xmajorgrids"
                                    "xminorgrids"
                                    "ymajorgrids"
@@ -1049,46 +1088,47 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
                                                           (if (< (getf curve1 :integral)
                                                                  (getf curve2 :integral))
                                                               curve1
-                                                              curve2)) (cdr sorted) :initial-value (car sorted)))
-                                     legend)
+                                                              curve2)) (cdr sorted) :initial-value (car sorted))))
                                  (setf min-curve (if (cdr (getf (find-decomposition-function-descriptor (getf min-curve :decompose)) :names))
                                                      ;; this is one of the 45 curves of the parameterized functions
                                                      `(:decompose "LOCAL-MINIMUM" ,@min-curve)
                                                      nil))
-                                 (flet ((plot (xys decompose descr)
-                                          (addplot stream
-						   (format nil "~A" decompose)
-						   nil ; plot-options
-						   "(~D, ~S)"
-						   (if smooth
-						       (smoothen xys)
-						       xys)
-						   :color (getf descr :gnu-color)
-						   :thick t
-						   :logx t
-						   :logy 0.00005)
-                                          (push (if (getf descr :legend)
-                                                    (format nil "~A" decompose)
-                                                    "") legend)))
-                                   (dolist (descr *decomposition-function-descriptors*)
-                                     (dolist (curve sorted)
-                                       (destructuring-bind (&key decompose xys &allow-other-keys
-                                                            &aux (name (find-if (lambda (name)
-                                                                                  (string= (symbol-name name) decompose))
-                                                                                include-decompose))
-                                                              (descr2 (find-decomposition-function-descriptor name)))
-                                           curve
-                                         ;; decompose is a string such as "DECOMPOSE-TYPES-BDD-GRAPH"
-                                         ;; include-decompose contains symbols such as DECOMPOSE-TYPES-BDD-GRAPH
-                                         (when (and (eq descr descr2) name)
-                                           (plot xys decompose descr)))))
-                                   (when min-curve
-                                     (let ((descr (find-decomposition-function-descriptor (getf min-curve :decompose))))
-                                       (plot (getf min-curve :xys)
-                                             (getf min-curve :decompose)
-                                             descr))))
-                                 (format stream "~A\\legend{~A};~%" (if legendp "" "%% ") (join-strings ", " (reverse legend)))
-                                 (format stream "~A\\legend{};~%" (if legendp "%% " ""))))
+                                 (stand-alone-legend-axis
+                                  "/tmp/legend.ltxdat"
+                                  (format nil "legend for ~A" ltxdat-name)
+                                  (lambda (entry)
+                                    (flet ((plot (xys decompose descr)
+                                             (addplot stream
+                                                      (format nil "~A" decompose)
+                                                      nil ; plot-options
+                                                      "(~D, ~S)"
+                                                      (if smooth
+                                                          (smoothen xys)
+                                                          xys)
+                                                      :color (getf descr :gnu-color)
+                                                      :thick t
+                                                      :logx t
+                                                      :logy 0.00005)
+                                             (when (getf descr :legend)
+                                               (funcall entry decompose (getf descr :gnu-color) (format nil "~A" decompose)))))
+                                      (dolist (descr *decomposition-function-descriptors*)
+                                        (dolist (curve sorted)
+                                          (destructuring-bind (&key decompose xys &allow-other-keys
+                                                               &aux (name (find-if (lambda (name)
+                                                                                     (string= (symbol-name name) decompose))
+                                                                                   include-decompose))
+                                                                 (descr2 (find-decomposition-function-descriptor name)))
+                                              curve
+                                            ;; decompose is a string such as "DECOMPOSE-TYPES-BDD-GRAPH"
+                                            ;; include-decompose contains symbols such as DECOMPOSE-TYPES-BDD-GRAPH
+                                            (when (and (eq descr descr2) name)
+                                              (plot xys decompose descr)))))
+                                      (when min-curve
+                                        (let ((descr (find-decomposition-function-descriptor (getf min-curve :decompose))))
+                                          (plot (getf min-curve :xys)
+                                                (getf min-curve :decompose)
+                                                descr)))))
+                                  :test #'string<)))
                              :logx t
                              :logy t)))))))
 
@@ -1196,11 +1236,7 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
     (print-ltxdat (if smooth
                       (insert-suffix ltxdat-name "-smooth")
                       ltxdat-name)
-                  sorted-name include-decompose t tag smooth)
-    (print-ltxdat (if smooth
-                      (insert-suffix ltxdat-no-legend-name "-smooth")
-                      ltxdat-no-legend-name)
-                  sorted-name include-decompose nil tag smooth))
+                  sorted-name include-decompose tag smooth))
   (print-dat dat-name include-decompose))
 
 (defun hash-color-p (color hash)
@@ -1820,34 +1856,6 @@ sleeping before the code finishes evaluating."
                    :create-png-p create-png-p
                    :decomposition-functions decomposition-functions))
 
-(defun stand-alone-legend-axis (stream unary &key (key #'identity) (test #'>))
-  (let (items)
-    (labels ((legend-entry (priority color legend-entry)
-               (push
-                (list priority
-                      (with-output-to-string (str)
-                        (when color
-                          (destructuring-bind (red green blue) (color-to-rgb color)
-                            (format str "\\definecolor{color~A}{RGB}{~A,~A,~A}~%"
-                                    color red green blue))
-                          (format str "\\addlegendimage{color~A,line width=1.4pt,font=\\ttfamily}~%" color))
-                        (format str "\\addlegendentry{~A};~%" legend-entry)))
-                items)))
-      (axis stream
-            '("hide axis"
-              ("xmin" "10")
-              ("xmax" "50")
-              ("ymin" "0")
-              ("ymax" "0.4")
-              ("legend style" (("draw" "white!15!black")
-                               ("legend cell align" "left"))))
-            (lambda ()
-              (funcall unary #'legend-entry)
-              (dolist (datum (sort items test
-                                   :key (lambda (datum)
-                                          (funcall key (car datum)))))
-                (format stream "~A" (cadr datum))))))))
-
 (defun make-stand-alone-legends (destination-dir profile-function-legend plist-hash)
   (labels ((print-color-legend (key value used-function-names)
 	     (declare (type keyword key)
@@ -1864,6 +1872,7 @@ sleeping before the code finishes evaluating."
 			    (lambda ()
                               (stand-alone-legend-axis
                                stream
+                               ""
                                (lambda (legend-entry &aux (field-width (reduce #'max used-function-names
                                                                                :key #'length :initial-value 0)))
                                  (declare (type (function (t t t) t) legend-entry))
