@@ -208,7 +208,7 @@ than as keywords."
                           (time-out nil)
                           tag
 			  profile-function-legend
-			  plist-hash
+			  (plist-hash (make-hash-table :test #'equal))
                           (decompose *decomposition-functions*)
                           normalize
                           hilite-min
@@ -218,6 +218,7 @@ than as keywords."
                           (prefix "")
                           file-name)
   (declare (type (or list (and symbol (satisfies symbol-function))) decompose)
+           (type hash-table plist-hash)
            (type string file-name prefix destination-dir))
   (let ((*package* (find-package "KEYWORD"))
         (start-time (get-universal-time))
@@ -1438,7 +1439,8 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
                     &allow-other-keys)
   "TIME-OUT is the number of seconds to allow for one call to a single decompose function.
 SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
-  (declare (type string file-name prefix))
+  (declare (type string file-name prefix)
+           (type hash-table plist-hash))
   (when re-run
     (setf *perf-results* nil))
   (let ((type-specifiers (shuffle-list types)))
@@ -1735,12 +1737,13 @@ sleeping before the code finishes evaluating."
                                         (suite-time-out (* 60 60 4)) (time-out 100) normalize hilite-min
                                         (decomposition-functions *decomposition-functions*)
                                         (bucket-reporters *bucket-reporters*)
-					profile-function-legend
-					plist-hash
+					(profile-function-legend (make-hash-table :test #'equal))
+					(plist-hash (make-hash-table :test #'equal))
                                         profile
                                         (create-png-p t)
                                         (destination-dir *destination-dir*))
-  (declare (ignore prefix re-run suite-time-out time-out num-tries hilite-min profile profile-function-legend plist-hash))
+  (declare (ignore prefix re-run suite-time-out time-out num-tries hilite-min profile))
+  (declare (type hash-table plist-hash profile-function-legend))
   (when normalize
     (assert (member normalize decomposition-functions) (normalize decomposition-functions)))
   (dolist (df decomposition-functions)
@@ -1753,7 +1756,10 @@ sleeping before the code finishes evaluating."
     (let ((*decomposition-functions*  decomposition-functions))
       (loop for (tag bucket-reporter) in bucket-reporters
             for sample = (/ 1 (length bucket-reporters)) then (+ sample (/ 1 (length bucket-reporters)))
-            do (funcall bucket-reporter multiplier sample options
+            do (funcall bucket-reporter multiplier sample (list* 
+                                                           :plist-hash plist-hash
+                                                           :profile-function-legend profile-function-legend
+                                                           options)
 			:create-png-p create-png-p
 			:destination-dir destination-dir)))))
 
