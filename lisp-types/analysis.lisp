@@ -1820,6 +1820,34 @@ sleeping before the code finishes evaluating."
                    :create-png-p create-png-p
                    :decomposition-functions decomposition-functions))
 
+(defun stand-alone-legend-axis (stream unary &key (key #'identity) (test #'>))
+  (let (items)
+    (labels ((legend-entry (priority color legend-entry)
+               (push
+                (list priority
+                      (with-output-to-string (str)
+                        (when color
+                          (destructuring-bind (red green blue) (color-to-rgb color)
+                            (format str "\\definecolor{color~A}{RGB}{~A,~A,~A}~%"
+                                    color red green blue))
+                          (format str "\\addlegendimage{color~A,line width=1.4pt,font=\\ttfamily}~%" color))
+                        (format str "\\addlegendentry{~A};~%" legend-entry)))
+                items)))
+      (axis stream
+            '("hide axis"
+              ("xmin" "10")
+              ("xmax" "50")
+              ("ymin" "0")
+              ("ymax" "0.4")
+              ("legend style" (("draw" "white!15!black")
+                               ("legend cell align" "left"))))
+            (lambda ()
+              (funcall unary #'legend-entry)
+              (dolist (datum (sort items test
+                                   :key (lambda (datum)
+                                          (funcall key (car datum)))))
+                (format stream "~A" (cadr datum))))))))
+
 (defun make-stand-alone-legends (destination-dir profile-function-legend plist-hash)
   (labels ((print-color-legend (key value used-function-names)
 	     (declare (type keyword key)
@@ -1834,44 +1862,30 @@ sleeping before the code finishes evaluating."
 	       (tikzpicture stream
 			    (format nil "created by make-stand-alone-legends ~A ~A" key value)
 			    (lambda ()
-			      (axis stream
-				    '("hide axis"
-				      ("xmin" "10")
-				      ("xmax" "50")
-				      ("ymin" "0")
-				      ("ymax" "0.4")
-				      ("legend style" (("draw" "white!15!black")
-						       ("legend cell align" "left"))))
-				    (lambda (&aux data (field-width (reduce #'max used-function-names :key #'length :initial-value 0)))
-				      (dolist (function-name (sort used-function-names #'string<))
-					(let ((color (getf (car (gethash function-name profile-function-legend)) :color)))
-					  (loop :for dprof-plist :in (gethash function-name plist-hash)
-						:for decompose = (getf dprof-plist :decompose)
-						:for summary   = (getf dprof-plist :summary)
-						:for n-dtimes  = (getf dprof-plist :n-dtimes)
-						:when (and (string= value (getf dprof-plist key))
-							   (exists color-plist (gethash function-name profile-function-legend)
-							     (and (string= value (getf color-plist key))
-								  (string= decompose (getf color-plist :decompose))
-								  (string= summary (getf color-plist :summary)))))
-						  :sum      (* n-dtimes (getf dprof-plist :calls)) :into calls
-						  :and :sum (* n-dtimes (getf dprof-plist :seconds)) :into seconds
-						:finally
-						   (push (list seconds
-                                                               (with-output-to-string (str)
-                                                                 (destructuring-bind (red green blue) (color-to-rgb color)
-                                                                   (format str "\\definecolor{color~A}{RGB}{~A,~A,~A}~%"
-                                                                           color red green blue))
-                                                                 (format str "\\addlegendimage{color~A,line width=1.4pt,font=\\ttfamily}~%" color)
-                                                                 ;; ~va means v: take argument as width of field
-                                                                 ;; e.g., if field-with=12, this is equivalent to "~12a"
-                                                                 (format str "\\addlegendentry{\\texttt{~v,,,'~A~~~9,2,,,'~F} seconds ~:D calls};~%"
-                                                                         field-width
-                                                                         (string-downcase function-name)
-                                                                         seconds calls)))
-							 data))))
-				      (dolist (datum (sort data #'> :key #'car))
-					(format stream "~A" datum))))))))
+                              (stand-alone-legend-axis
+                               stream
+                               (lambda (legend-entry &aux (field-width (reduce #'max used-function-names
+                                                                               :key #'length :initial-value 0)))
+                                 (declare (type (function (t t t) t) legend-entry))
+                                 (dolist (function-name used-function-names)
+                                   (loop :for dprof-plist :in (gethash function-name plist-hash)
+                                         :for decompose = (getf dprof-plist :decompose)
+                                         :for summary   = (getf dprof-plist :summary)
+                                         :for n-dtimes  = (getf dprof-plist :n-dtimes)
+                                         :when (and (string= value (getf dprof-plist key))
+                                                    (exists color-plist (gethash function-name profile-function-legend)
+                                                      (and (string= value (getf color-plist key))
+                                                           (string= decompose (getf color-plist :decompose))
+                                                           (string= summary (getf color-plist :summary)))))
+                                           :sum      (* n-dtimes (getf dprof-plist :calls)) :into calls
+                                           :and :sum (* n-dtimes (getf dprof-plist :seconds)) :into seconds
+                                         :finally
+                                            (funcall legend-entry seconds
+                                                     (getf (car (gethash function-name profile-function-legend)) :color)
+                                                     (format nil "\\texttt{~v,,,'~A~~~9,2,,,'~F} seconds ~:D calls"
+                                                             field-width
+                                                             (string-downcase function-name)
+                                                             seconds calls))))))))))
 	   (filter (values-list key)
 	     (dolist (value values-list)
 	       (format t "~A=~A~%" key value)
