@@ -22,7 +22,7 @@
 (in-package :lisp-types-test)
 
 (shadow-all-symbols :package-from :lisp-types :package-into :lisp-types-test)
-
+(shadow-all-symbols :package-from :lisp-types-analysis :package-into :lisp-types-test)
 
 (define-test test/lisp-type-bdd
   (ltbdd-with-new-hash ()

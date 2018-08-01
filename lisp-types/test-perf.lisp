@@ -40,11 +40,12 @@
 #+sbcl
 (define-test disjoint-cmp-1
   (setf *perf-results* nil)
-  (types/cmp-perfs :file-name "disjoint-cmp-1"
-                   :destination-dir "/tmp"
-                   :types '(sb-pcl::SYSTEM-CLASS
-                            sb-pcl::SLOT-DEFINITION
-                            sb-pcl::EQL-SPECIALIZER) :time-out nil))
+  (ltbdd-with-new-hash ()
+    (types/cmp-perfs :file-name "disjoint-cmp-1"
+                     :destination-dir "/tmp"
+                     :types '(sb-pcl::SYSTEM-CLASS
+                              sb-pcl::SLOT-DEFINITION
+                              sb-pcl::EQL-SPECIALIZER) :time-out nil)))
 
 #+sbcl
 (define-test test/bdd-numbers-3
@@ -79,80 +80,87 @@
 #+sbcl
 (define-test disjoint-cmp-2
   (setf *perf-results* nil)
-  (types/cmp-perfs :file-name "disjoint-cmp-2"
-                   :destination-dir "/tmp"
-                   :types '(sb-pcl::SYSTEM-CLASS
-                            sb-pcl::STANDARD-SLOT-DEFINITION
-                            sb-pcl::EFFECTIVE-SLOT-DEFINITION
-                            sb-pcl::FUNCALLABLE-STANDARD-OBJECT
-                            sb-pcl::SPECIALIZER
-                            sb-pcl::EQL-SPECIALIZER
-                            sb-pcl::DIRECT-SLOT-DEFINITION
-                            sb-pcl::SLOT-DEFINITION)
-                   :time-out 5))
+  (ltbdd-with-new-hash ()
+    (types/cmp-perfs :file-name "disjoint-cmp-2"
+                     :destination-dir "/tmp"
+                     :types '(sb-pcl::SYSTEM-CLASS
+                              sb-pcl::STANDARD-SLOT-DEFINITION
+                              sb-pcl::EFFECTIVE-SLOT-DEFINITION
+                              sb-pcl::FUNCALLABLE-STANDARD-OBJECT
+                              sb-pcl::SPECIALIZER
+                              sb-pcl::EQL-SPECIALIZER
+                              sb-pcl::DIRECT-SLOT-DEFINITION
+                              sb-pcl::SLOT-DEFINITION)
+                     :time-out 5)))
 
 #+sbcl
 (define-test disjoint-cmp-3
   (setf *perf-results* nil)
-  (types/cmp-perfs :file-name "disjoint-cmp-3"
+  (ltbdd-with-new-hash ()
+    (types/cmp-perfs :file-name "disjoint-cmp-3"
                    :destination-dir "/tmp"
                    :types '(SB-PCL:SYSTEM-CLASS
                             SB-MOP:STANDARD-WRITER-METHOD
-                            SB-MOP:DIRECT-SLOT-DEFINITION)))
+                            SB-MOP:DIRECT-SLOT-DEFINITION))))
 
 
 #+sbcl
 (define-test disjoint-cmp-4
   (setf *perf-results* nil)
-  (types/cmp-perfs :file-name "disjoint-cmp-4"
-                   :destination-dir "/tmp"
-                   :types '(SB-PCL:SYSTEM-CLASS
-                            SB-MOP:DIRECT-SLOT-DEFINITION
-                            SB-MOP:FORWARD-REFERENCED-CLASS
-                            SB-MOP:EFFECTIVE-SLOT-DEFINITION
-                            SB-MOP:STANDARD-EFFECTIVE-SLOT-DEFINITION
-                            SB-MOP:STANDARD-ACCESSOR-METHOD
-                            SB-MOP:STANDARD-READER-METHOD
-                            SB-MOP:FUNCALLABLE-STANDARD-CLASS
-                            SB-MOP:FUNCALLABLE-STANDARD-OBJECT)
-                   :time-out 8))
+  (ltbdd-with-new-hash ()
+    (types/cmp-perfs :file-name "disjoint-cmp-4"
+                     :destination-dir "/tmp"
+                     :types '(SB-PCL:SYSTEM-CLASS
+                              SB-MOP:DIRECT-SLOT-DEFINITION
+                              SB-MOP:FORWARD-REFERENCED-CLASS
+                              SB-MOP:EFFECTIVE-SLOT-DEFINITION
+                              SB-MOP:STANDARD-EFFECTIVE-SLOT-DEFINITION
+                              SB-MOP:STANDARD-ACCESSOR-METHOD
+                              SB-MOP:STANDARD-READER-METHOD
+                              SB-MOP:FUNCALLABLE-STANDARD-CLASS
+                              SB-MOP:FUNCALLABLE-STANDARD-OBJECT)
+                     :time-out 8)))
 
 #+sbcl
 (define-test disjoint-cmp-5
   (setf *perf-results* nil)
-  ;; decompose-types-bdd-graph
+  (ltbdd-with-new-hash ()
+    ;; decompose-types-bdd-graph
   (types/cmp-perfs :file-name "disjoint-cmp-5"
                    :destination-dir "/tmp"
                    :types '(SB-PCL:SYSTEM-CLASS
                             SB-MOP:STANDARD-ACCESSOR-METHOD
-                            SB-MOP:STANDARD-EFFECTIVE-SLOT-DEFINITION)))
+                            SB-MOP:STANDARD-EFFECTIVE-SLOT-DEFINITION))))
 
 (define-test disjoint-cmp-6
   (setf *perf-results* nil)
+  (ltbdd-with-new-hash ()
   (types/cmp-perfs :file-name "disjoint-cmp-6"
                    :destination-dir "/tmp"
                    :types '((MEMBER 2 4 5 6 8)
                             (MEMBER 0 5 6 9 10)
                             (MEMBER 0 1 3 4 10)
-                            (MEMBER 0 3 5 8 9 10))))
+                            (MEMBER 0 3 5 8 9 10)))))
 
 (define-test disjoint-cmp-7
   (setf *perf-results* nil)
+    (ltbdd-with-new-hash ()
   (types/cmp-perfs :file-name "disjoint-cmp-7"
                    :destination-dir "/tmp"
                    :types '((MEMBER 1 3 4 5 6 9)
                             (MEMBER 1 5 7 8)
                             (MEMBER 4 7 8 9 10)
                             (MEMBER 3 4 5 7 9)
-                            (MEMBER 0 2 3 7 8 10)) ))
+                            (MEMBER 0 2 3 7 8 10)) )))
 
 (define-test disjoint-cmp-8
   (setf *perf-results* nil)
+    (ltbdd-with-new-hash ()
   (types/cmp-perfs :file-name "disjoint-cmp-8"
                    :destination-dir "/tmp"
                    :types '((MEMBER 0 2)
                             (MEMBER 0 1 2)
-                            (MEMBER 0 2 4))))
+                            (MEMBER 0 2 4)))))
 
 (define-test disjoint-cmp-9
   (ltbdd-with-new-hash ()
