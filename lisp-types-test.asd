@@ -33,7 +33,7 @@
     :components
     ((:file "test-setup")
      (:file "test-classes")
-     (:file "test-lisp-types" "test-classes")
+     (:file "test-lisp-types" :depends-on ("test-classes"))
      (:file "test-util")
      (:file "test-perf")
      (:file "test-typecase" :depends-on ("test-lisp-types"))
