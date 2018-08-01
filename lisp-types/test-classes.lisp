@@ -38,10 +38,10 @@
 
 (defvar *bdd-test-classes* '(ZC ZB ZA Z9 Z8 Z7 Z6 Z5 Z4 Z3 Z2 Z1))
 
+;; these are getting undefined somewhere,  not sure where
 (deftype test-float-radix () '(integer 0 (64)))
 (deftype test-float-digits () '(integer 0 64))
 (deftype test-array-rank () '(integer 0 (65529)))
 (deftype test-array-total-size () `(integer 0 (,(- most-positive-fixnum 2))))
 (deftype test-char-code () '(integer 0 (#x110000)))
 (deftype test-char-int () 'test-char-code)
-
