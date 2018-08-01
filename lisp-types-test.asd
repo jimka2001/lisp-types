@@ -37,10 +37,13 @@
      (:file "test-util")
      (:file "test-perf")
      (:file "test-typecase" :depends-on ("test-lisp-types"))
-     (:file "test-sat" :depends-on ("test-lisp-types" "test-perf"))
-     (:file "test-graph" :depends-on ("test-lisp-types" "test-perf"))
+     (:file "test-sat" :depends-on ("test-lisp-types"
+                                    "test-perf"))
+     (:file "test-graph" :depends-on ("test-lisp-types"
+                                      "test-perf"))
      (:file "test-bdd" :depends-on ("test-classes"
-                                    "test-lisp-types" "test-perf"))
+                                    "test-lisp-types"
+                                    "test-perf"))
      (:file "test-bdd-reduce-17")
      (:file "test-dnf")
      (:file "test-reduce-lisp-type-once")

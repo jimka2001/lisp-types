@@ -252,8 +252,3 @@
                                                             number
                                                             (and (not sequence) array)))) :test #'equal))))
 
-
-
-
-
-
