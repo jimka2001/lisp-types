@@ -955,7 +955,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
     (format stream "(")
     (when summary
       (format stream " :SUMMARY ~S~%" summary))
-    (format stream "  :DATE ~A~%" (encode-time (get-universal-time)))
+    (format stream "  :DATE ~S~%" (encode-time (get-universal-time)))
     (format stream "  :LIMIT ~D~%" limit)
     (format stream "  :TIME-OUT-COUNT ~D~%" (count-if (getter :time-out) *perf-results*))
     (format stream "  :RUN-COUNT ~D~%" (count-if (getter :calculated) *perf-results*))
