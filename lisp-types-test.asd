@@ -32,14 +32,14 @@
   ((:module "lisp-types"
     :components
     ((:file "test-setup")
-     (:file "test-bdd-test-classes")
-     (:file "test-lisp-types")
+     (:file "test-classes")
+     (:file "test-lisp-types" "test-classes")
      (:file "test-util")
      (:file "test-perf")
      (:file "test-typecase" :depends-on ("test-lisp-types"))
      (:file "test-sat" :depends-on ("test-lisp-types" "test-perf"))
      (:file "test-graph" :depends-on ("test-lisp-types" "test-perf"))
-     (:file "test-bdd" :depends-on ("test-bdd-test-classes"
+     (:file "test-bdd" :depends-on ("test-classes"
                                     "test-lisp-types" "test-perf"))
      (:file "test-bdd-reduce-17")
      (:file "test-dnf")

@@ -25,13 +25,6 @@
 (in-package :lisp-types-test)
 (shadow-all-symbols :package-from :lisp-types :package-into :lisp-types-test)
 
-(deftype test-float-radix () '(integer 0 (64)))
-(deftype test-float-digits () '(integer 0 64))
-(deftype test-array-rank () '(integer 0 (65529)))
-(deftype test-array-total-size () `(integer 0 (,(- most-positive-fixnum 2))))
-(deftype test-char-code () '(integer 0 (#x110000)))
-(deftype test-char-int () 'test-char-code)
-
 
 
 (defun test ()
