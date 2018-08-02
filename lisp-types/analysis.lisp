@@ -1026,33 +1026,35 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
        (format t "writing to ~A~%" stream)
        (stand-alone-legend-axis stream comment unary :key key :test test)))
     (stream
-     (let (items)
-       (labels ((legend-entry (priority color legend-entry)
-                  (push
-                   (list priority
-                         (with-output-to-string (str)
-                           (when color
-                             (destructuring-bind (red green blue) (color-to-rgb color)
-                               (format str "\\definecolor{color~A}{RGB}{~A,~A,~A}~%"
-                                       color red green blue))
-                             (format str "\\addlegendimage{color~A,line width=1.4pt,font=\\ttfamily}~%" color))
-                           (format str "\\addlegendentry{~A};~%" legend-entry)))
-                   items)))
-         (format legend "%% ~A~%" comment)
-         (axis legend
-               '("hide axis"
-                 ("xmin" "10")
-                 ("xmax" "50")
-                 ("ymin" "0")
-                 ("ymax" "0.4")
-                 ("legend style" (("draw" "white!15!black")
-                                  ("legend cell align" "left"))))
-               (lambda ()
-                 (funcall unary #'legend-entry)
-                 (dolist (datum (sort items test
-                                      :key (lambda (datum)
-                                             (funcall key (car datum)))))
-                   (format legend "~A" (cadr datum))))))))))
+     (tikzpicture
+      legend
+      comment
+      (lambda (&aux items)
+	(flet ((legend-entry (priority color legend-entry)
+		 (push
+		  (list priority
+			(with-output-to-string (str)
+			  (when color
+			    (destructuring-bind (red green blue) (color-to-rgb color)
+			      (format str "\\definecolor{color~A}{RGB}{~A,~A,~A}~%"
+				      color red green blue))
+			    (format str "\\addlegendimage{color~A,line width=1.4pt,font=\\ttfamily}~%" color))
+			  (format str "\\addlegendentry{~A};~%" legend-entry)))
+		  items)))
+	  (axis legend
+		'("hide axis"
+		  ("xmin" "10")
+		  ("xmax" "50")
+		  ("ymin" "0")
+		  ("ymax" "0.4")
+		  ("legend style" (("draw" "white!15!black")
+				   ("legend cell align" "left"))))
+		(lambda ()
+		  (funcall unary #'legend-entry)
+		  (dolist (datum (sort items test
+				       :key (lambda (datum)
+					      (funcall key (car datum)))))
+		    (format legend "~A" (cadr datum)))))))))))
 
 (defun print-ltxdat (ltxdat-name sorted-name include-decompose tag smooth)
   (declare (type list include-decompose))
@@ -1071,14 +1073,14 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
                        (axis stream
                              (list (when tag
                                      (list "title" (format nil "~A" tag)))
-                                   '("xlabel" "Product Size")
-                                   '("ylabel" "Time")
-                                   '("legend style" (("at" "{(0.5,-0.2)}")
-                                                     ("anchor" "north")))
+                                   ;;'("xlabel" "Product Size")
+                                   ;;'("ylabel" "Time")
+                                   ;;'("legend style" (("at" "{(0.5,-0.2)}")
+				   ;;    ("anchor" "north")))
                                    "xmajorgrids"
                                    "xminorgrids"
                                    "ymajorgrids"
-                                   '("legend style" (("font" "\\tiny")))
+                                   ;;'("legend style" (("font" "\\tiny")))
                                    '("xticklabel style" (("font" "\\tiny")))
                                    '("yticklabel style" (("font" "\\tiny")))
                                    '("label style" (("font" "\\tiny"))))
@@ -1094,7 +1096,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
                                                      `(:decompose "LOCAL-MINIMUM" ,@min-curve)
                                                      nil))
                                  (stand-alone-legend-axis
-                                  "/tmp/legend.ltxdat"
+				  (insert-suffix ltxdat-name "-legend")
                                   (format nil "legend for ~A" ltxdat-name)
                                   (lambda (entry)
                                     (flet ((plot (xys decompose descr)
@@ -1199,8 +1201,6 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
                        (sorted-name (make-output-file-name :sorted-name destination-dir prefix file-name))
                        (gnuplot-name (make-output-file-name :gnuplot-name destination-dir prefix file-name))
                        (ltxdat-name  (make-output-file-name :ltxdat-name destination-dir prefix file-name))
-                       (ltxdat-no-legend-name (make-output-file-name :ltxdat-no-legend-name destination-dir prefix file-name))
-                       (dat-name (make-output-file-name :dat-name destination-dir prefix file-name))
                        (png-name (make-output-file-name :png-name destination-dir prefix file-name))
                        (gnuplot-normalized-name (make-output-file-name :gnuplot-normalized-name destination-dir prefix file-name))
                        (png-normalized-name (make-output-file-name :png-normalized-name destination-dir prefix file-name)))
@@ -1237,7 +1237,8 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
                       (insert-suffix ltxdat-name "-smooth")
                       ltxdat-name)
                   sorted-name include-decompose tag smooth))
-  (print-dat dat-name include-decompose))
+  ;;(print-dat dat-name include-decompose)
+  )
 
 (defun hash-color-p (color hash)
   (maphash (lambda (hash-key hash-value)
@@ -1413,6 +1414,7 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
     (dolist (function-name top-names)
       (setf (gethash function-name curve-hash)
 	    (sort (gethash function-name curve-hash) #'< :key #'car)))
+#+nil
     (create-gnu-profile-scatter-plot curve-hash
 				     (insert-suffix (make-output-file-name :gnuscatter-name destination-dir prefix file-name)
 						    (if smooth "-smooth" ""))
@@ -1508,10 +1510,6 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
    (format nil (ecase purpose
                  (:ltxdat-name
                   "~A/~A~A.ltxdat")
-                 (:ltxdat-no-legend-name
-                  "~A/no-legend-~A~A.ltxdat")
-                 (:dat-name
-                  "~A/~A~A.dat")
                  (:png-name
                   "~A/~A~A.png")
                  (:png-normalized-name
@@ -1771,7 +1769,13 @@ sleeping before the code finishes evaluating."
 
 (defun big-test-report (&rest options &key (num-tries 2) (multiplier 1) (prefix "") (re-run t)
                                         (suite-time-out (* 60 60 4)) (time-out 100) normalize hilite-min
-                                        (decomposition-functions *decomposition-functions*)
+                                        (decomposition-functions '(parameterized-decompose-types-bdd-graph
+								   decompose-types-bdd-graph
+								   bdd-decompose-types
+								   decompose-types-graph 
+								   decompose-types-sat
+								   decompose-types-rtev2 
+								   decompose-types))
                                         (bucket-reporters *bucket-reporters*)
 					(profile-function-legend (make-hash-table :test #'equal))
 					(plist-hash (make-hash-table :test #'equal))
@@ -1813,7 +1817,7 @@ sleeping before the code finishes evaluating."
                    :bucket-reporters bucket-reporters
                    :decomposition-functions '( ;; decompose-types-bdd-graph-strong
                                               ;; decompose-types-bdd-graph-weak
-					      slow-decompose-types-bdd-graph ;; tuned by params- simulation
+					      parameterized-decompose-types-bdd-graph ;; tuned by params- simulation
                                               decompose-types-bdd-graph ;; same as decompose-types-bdd-graph-weak-dynamic
                                               ;;bdd-decompose-types-strong
                                               ;;bdd-decompose-types-weak
@@ -1856,6 +1860,18 @@ sleeping before the code finishes evaluating."
                    :create-png-p create-png-p
                    :decomposition-functions decomposition-functions))
 
+(defun escape-for-latex (text)
+  "replace % and other problematic characters in string with \%"
+  (with-output-to-string (out)
+    (with-input-from-string (in text)
+      (let (c)
+	(while (setf c (read-char in nil nil))
+	  (case c
+	    ((#\% #\\ #\} #\~)
+	     (write-char #\\ out)))
+	  (write-char c out))))))
+      
+
 (defun make-stand-alone-legends (destination-dir profile-function-legend plist-hash)
   (labels ((print-color-legend (key value used-function-names)
 	     (declare (type keyword key)
@@ -1867,34 +1883,31 @@ sleeping before the code finishes evaluating."
 				     :if-does-not-exist :create
 				     :direction :output)
 	       (format t "writing to ~A~%" stream)
-	       (tikzpicture stream
-			    (format nil "created by make-stand-alone-legends ~A ~A" key value)
-			    (lambda ()
-                              (stand-alone-legend-axis
-                               stream
-                               ""
-                               (lambda (legend-entry &aux (field-width (reduce #'max used-function-names
-                                                                               :key #'length :initial-value 0)))
-                                 (declare (type (function (t t t) t) legend-entry))
-                                 (dolist (function-name used-function-names)
-                                   (loop :for dprof-plist :in (gethash function-name plist-hash)
-                                         :for decompose = (getf dprof-plist :decompose)
-                                         :for summary   = (getf dprof-plist :summary)
-                                         :for n-dtimes  = (getf dprof-plist :n-dtimes)
-                                         :when (and (string= value (getf dprof-plist key))
-                                                    (exists color-plist (gethash function-name profile-function-legend)
-                                                      (and (string= value (getf color-plist key))
-                                                           (string= decompose (getf color-plist :decompose))
-                                                           (string= summary (getf color-plist :summary)))))
-                                           :sum      (* n-dtimes (getf dprof-plist :calls)) :into calls
-                                           :and :sum (* n-dtimes (getf dprof-plist :seconds)) :into seconds
-                                         :finally
-                                            (funcall legend-entry seconds
-                                                     (getf (car (gethash function-name profile-function-legend)) :color)
-                                                     (format nil "\\texttt{~v,,,'~A~~~9,2,,,'~F} seconds ~:D calls"
-                                                             field-width
-                                                             (string-downcase function-name)
-                                                             seconds calls))))))))))
+	       (stand-alone-legend-axis
+		stream
+		(format nil "created by make-stand-alone-legends ~A ~A" key value)
+		(lambda (legend-entry &aux (field-width (reduce #'max used-function-names
+								:key #'length :initial-value 0)))
+		  (declare (type (function (t t t) t) legend-entry))
+		  (dolist (function-name used-function-names)
+		    (loop :for dprof-plist :in (gethash function-name plist-hash)
+			  :for decompose = (getf dprof-plist :decompose)
+			  :for summary   = (getf dprof-plist :summary)
+			  :for n-dtimes  = (getf dprof-plist :n-dtimes)
+			  :when (and (string= value (getf dprof-plist key))
+				     (exists color-plist (gethash function-name profile-function-legend)
+				       (and (string= value (getf color-plist key))
+					    (string= decompose (getf color-plist :decompose))
+					    (string= summary (getf color-plist :summary)))))
+			    :sum      (* n-dtimes (getf dprof-plist :calls)) :into calls
+			    :and :sum (* n-dtimes (getf dprof-plist :seconds)) :into seconds
+			  :finally
+			     (funcall legend-entry seconds
+				      (getf (car (gethash function-name profile-function-legend)) :color)
+				      (format nil "\\texttt{~v,,,'~A~~~9,2,,,'~F} seconds ~:D calls"
+					      field-width
+					      (escape-for-latex (string-downcase function-name))
+					      seconds calls))))))))
 	   (filter (values-list key)
 	     (dolist (value values-list)
 	       (format t "~A=~A~%" key value)
@@ -1917,26 +1930,26 @@ sleeping before the code finishes evaluating."
       (format t "summary-list~%")
       (filter summary-list :summary))))
 
-(defun rebuild-plots (&key (destination-dir "/Users/jnewton/analysis"))
+(defun rebuild-plots (&key (destination-dir "/Users/jnewton/analysis") (create-png-p t))
   (let ((plist-hash (make-hash-table :test #'equal))
 	(profile-function-legend (make-hash-table :test #'equal)))
     (dotimes (bucket-index (length *bucket-reporters*))
       (let ((*bucket-reporters* (list (nth bucket-index *bucket-reporters*))))
 	(big-test-report :re-run nil
-			 :create-png-p t
+			 :create-png-p create-png-p
 			 :bucket-reporters *bucket-reporters*
 			 :prefix "big-"
 			 :destination-dir destination-dir)
 	(best-2-report :re-run nil
-		       :create-png-p t
+		       :create-png-p create-png-p
 		       :bucket-reporters *bucket-reporters*
 		       :destination-dir  destination-dir)
 	(parameterization-report :re-run nil
-				 :create-png-p t
+				 :create-png-p create-png-p
 				 :bucket-reporters *bucket-reporters*
 				 :destination-dir  destination-dir)
 	(mdtd-report :re-run nil
-		     :create-png-p nil
+		     :create-png-p create-png-p
 		     :bucket-reporters *bucket-reporters*
 		     :destination-dir  destination-dir)
 	(dotimes (decompose-function-index (length *decomposition-functions*))
@@ -1949,7 +1962,7 @@ sleeping before the code finishes evaluating."
 			   :decomposition-functions (list (nth decompose-function-index
 							       *decomposition-functions*))
 			   :bucket-reporters *bucket-reporters*
-			   :create-png-p t
+			   :create-png-p create-png-p
 			   :profile-function-legend profile-function-legend
 			   :plist-hash plist-hash
 			   :destination-dir destination-dir
@@ -1958,17 +1971,79 @@ sleeping before the code finishes evaluating."
     (make-stand-alone-legends destination-dir profile-function-legend plist-hash)
     ))
 
+(defun gen-mdtd-profile-single-figures (&key destination-dir autogen-dir)
+  (labels ((make-figures (output matching key value caption)
+	     (when matching
+	       (let ((columns 3))
+		 (format output "\\figurehere{fig.performance.profile.~A.~A}~%" key value)
+		 (format output "{~%")
+		 (format output "~A~%" caption)
+		 (format output "Each plot is displayed with y='Profile Percentage' \\vs x='Computation Time (seconds).'~%")
+		 (format output "}~%")	     
+		 (format output "{~%")
+		 (format output "\\setlength\\tabcolsep{1.5pt}~%")
+		 (format output "\\begin{tabular}{")
+		 (dotimes (_ columns)
+		   (format output "l"))
+		 (format output "}~%")
+		 (loop :for pathname :in matching
+		       :for column := 0 :then (mod (1+ column) columns)
+		       :for remaining := (length matching) :then (1- remaining)
+		       :for line-break := (= column (1- columns))
+		       :for tab := (/= 0 column)
+		       :when tab
+			 :do (format output "& ")
+		       :do  (format output "\\scalebox{0.7}{\\input{~A.ltxdat}}" pathname)
+		       :when (and line-break
+				  (not (= 1 remaining)))
+			 :do (format output "\\\\")
+		       :do (format output "~%"))
+		 (format output "\\end{tabular}~%")
+		 (format output "\\scalebox{0.9}{\\input{legend-~A-~A.ltxdat}}~%" key value)
+		 (format output "}~%~%"))))
+	   (make-section (key key2 values caption-format forbidden)
+	     (with-open-file (output (format nil "~A/mdtd-profile-by-~A.ltxdat" destination-dir key)
+				     :direction :output
+				     :if-exists :supersede
+				     :if-does-not-exist :create)
+	       (format t "writing to ~A~%" output)
+	       (let ((ltxdat-files (sort (mapcar #'pathname-name (directory (format nil "~A/mdtd-profile-single*-scatter-by-~A-smooth.ltxdat"
+										    autogen-dir key)))
+					 #'string<)))
+		 (dolist (value (sort values #'> :key #'length))
+		   (let ((matching (setof ltxdat ltxdat-files
+				     (search value ltxdat))))
+		     (setf matching (remove-if (lambda (mat)
+						 (exists str forbidden
+						   (search str mat)))
+					       matching))
+		     (setf ltxdat-files (set-difference ltxdat-files matching))
+		     (make-figures output matching key2 value
+				   (format nil caption-format (string-downcase value)))))))))
+       
+    (make-section "pool" "decompose"
+		  (mapcar #'symbol-name *decomposition-functions*)
+		  "Performance Profile of various pools on algorithm \\lisp{~A}."
+		  '("subtypes-of-t"))
+    (make-section "function" "summary"
+		  (mapcar (getter :file-name) *bucket-reporter-properites*)
+		  "Performance Profile of various MDTD functions for pool \\lisp{~A}."
+		  '("STRONG" "WEAK")
+		  )))
+
 (defun rebuild-analysis (&key (destination-dir "/Users/jnewton/analysis") (autogen-dir "/Users/jnewton/research/autogen"))
-  (rebuild-plots :destination-dir destination-dir)
+  (rebuild-plots :destination-dir destination-dir :create-png-p t)
   (generate-latex-plots :analysis-dir destination-dir
 			:gen-samples nil
 		 	:autogen-dir autogen-dir)
-  (gen-parameters-summary-tabular :destination-dir destination-dir :autogen-dir autogen-dir))
+  (gen-parameters-summary-tabular :destination-dir destination-dir :autogen-dir autogen-dir)
+  (gen-mdtd-profile-single-figures :destination-dir destination-dir :autogen-dir autogen-dir)
+)
 
 
 (defun convert-name-once (destination-dir fname)
   ;; fname = "mdtd-profile-0-6-member.sexp"
-  ;; converts name to "mdtd-profile-single-SLOW-DECOMPOSE-TYPES-BDD-GRAPH-member.sexp"
+  ;; converts name to "mdtd-profile-single-PARAMETERIZED-DECOMPOSE-TYPES-BDD-GRAPH-member.sexp"
   (with-open-file (istream (format nil "~A/~A" destination-dir fname)
 			   :direction :input
 			   :if-does-not-exist :error)
