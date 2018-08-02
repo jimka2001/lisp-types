@@ -88,7 +88,7 @@
                 (push `(defun ,fun-name (type-specifiers)
                          (ltbdd-with-new-hash ()
                            (let ((*bdd-hash-strength* :weak))
-                             (slow-decompose-types-bdd-graph type-specifiers ,@props))))
+                             (parameterized-decompose-types-bdd-graph type-specifiers ,@props))))
                       fun-defs)))))))
     (setf fun-names (mapcar #'cadr fun-defs))
     `(progn
@@ -114,8 +114,7 @@
       (:names (decompose-types-bdd-graph-weak-dynamic)  :gnu-color ,(nth (incf color) *colors*) :color "rust" :linewidth 1  :legend t)
       (:names (decompose-types-bdd-graph)  :gnu-color ,(nth (incf color) *colors*) :color "rust" :linewidth 1  :legend t)
       (:names (decompose-types-bdd-graph-weak)  :gnu-color ,(nth (incf color) *colors*) :color "rust" :linewidth 1  :legend t)
-      (:names (decompose-types-bdd-graph)  :gnu-color "991818" :color "rust" :linewidth 2  :legend t)
-      (:names (slow-decompose-types-bdd-graph) :gnu-color ,(nth (incf color) *colors*) :linewidth 1 :legend t)
+      (:names (parameterized-decompose-types-bdd-graph) :gnu-color ,(nth (incf color) *colors*) :linewidth 1 :legend t)
       (:names (local-minimum) :gnu-color "000000" :color "black" :linewidth 2 :legend t))))
 
 (setf *decomposition-functions*
@@ -134,7 +133,7 @@
                    :create-png-p create-png-p
                    :bucket-reporters bucket-reporters
                    :decomposition-functions (list* 'decompose-types-bdd-graph
-						   'slow-decompose-types-bdd-graph
+						   'parameterized-decompose-types-bdd-graph
 						   *decompose-fun-parameterized-names*)))
 
 (defun find-decomposition-function-descriptor (name)

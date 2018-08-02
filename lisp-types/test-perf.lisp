@@ -297,7 +297,7 @@
             (and (not arithmetic-error) reader-error (not structure-class) (not style-warning))
             (and (not arithmetic-error) (not reader-error) (not structure-class) style-warning))))
     (ltbdd-with-new-hash ()
-      (slow-decompose-types-bdd-graph type-specifiers 
+      (parameterized-decompose-types-bdd-graph type-specifiers 
                                       :sort-nodes #'(lambda (graph)
                                                       (declare (notinline sort))
                                                       (sort graph #'< :key #'count-parents-per-node))
@@ -312,7 +312,7 @@
             SYNONYM-STREAM ARITHMETIC-ERROR TEST-CHAR-CODE WARNING FLOAT-RADIX
             SIMPLE-BIT-VECTOR STREAM-ERROR ARRAY STYLE-WARNING)))
     (ltbdd-with-new-hash ()
-      (slow-decompose-types-bdd-graph type-specifiers 
+      (parameterized-decompose-types-bdd-graph type-specifiers 
                                       :sort-nodes #'(lambda (graph)
                                                       (declare (notinline sort))
                                                       (sort graph #'< :key #'count-parents-per-node))
@@ -327,7 +327,7 @@
   (ltbdd-with-new-hash (&aux (type-specifiers (lisp-types::choose-randomly (loop :for name being the external-symbols in "SB-PCL"
                                                                                :when (find-class name nil)
                                                                                  :collect name) size)))
-    (slow-decompose-types-bdd-graph type-specifiers
+    (parameterized-decompose-types-bdd-graph type-specifiers
                                     :sort-nodes (lambda (graph)
                                                   (declare (notinline sort))
                                                   (sort graph #'< :key
@@ -413,9 +413,9 @@ if the function returned the same as it was passed as input (according to EQUAL)
                              :bucket-reporters (list bucket)
                              :destination-dir "/tmp/jnewton/analysis/.")))
 
-(define-test test/slow-decompose-types-bdd-graph
+(define-test test/parameterized-decompose-types-bdd-graph
   (ltbdd-with-new-hash ()
-    (slow-decompose-types-bdd-graph '((and function program-error) concatenated-stream
+    (parameterized-decompose-types-bdd-graph '((and function program-error) concatenated-stream
                                       (or package floating-point-overflow)
                                       (and simple-string program-error) (or method vector)
                                       (or concatenated-stream synonym-stream) simple-warning
