@@ -24,6 +24,7 @@
   :depends-on (:lisp-types
                :cl-robdd
                :cl-robdd-analysis
+               :fr.epita.lrde.subtypep
 	       (:version :lisp-unit "0.9.0"))
   :components
   ((:module "lisp-types"

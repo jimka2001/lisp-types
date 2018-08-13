@@ -94,8 +94,8 @@
   (let ((decomp (bdd-decompose-types '(TEST-CHAR-CODE DOUBLE-FLOAT UNSIGNED-BYTE))))
     (dolist (t1 decomp)
       (dolist (t2 (remove t1 decomp))
-        (assert-false (subtypep t1 t2))
-        (assert-false (subtypep t2 t1))
+        (assert-false (subtypep-wrapper t1 t2))
+        (assert-false (subtypep-wrapper t2 t1))
         (assert-false (smarter-subtypep t1 t2))
         (assert-false (smarter-subtypep t2 t1))))))
 

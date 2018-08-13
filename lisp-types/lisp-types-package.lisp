@@ -19,40 +19,47 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(in-package   :lisp-types)
-
-(defmacro exists (obj data &body body)
-  (typecase obj
-    (list
-     (let ((var (gensym "exists")))
-       `(member-if (lambda (,var)
-                     (destructuring-bind ,obj ,var
-                       ,@body)) ,data)))
-    (t
-     `(member-if (lambda (,obj) ,@body) ,data))))
-
-
-(defmacro while (test &body body)
-  `(loop :while ,test
-	 :do (progn ,@body)))
-
-(defmacro forall (var data &body body)
-  `(every #'(lambda (,var) ,@body) ,data))
-
-(defmacro setof (var data &body body)
-  `(remove-if-not (lambda (,var) ,@body) ,data))
-
-(defmacro prog1-let ((var expr) &body body)
-  `(let ((,var ,expr))
-     ,@body
-     ,var))
-
-(defmacro exists-tail (var list &body body)
-  (let ((name (gensym)))
-    `(block ,name
-       (mapl #'(lambda (,var)
-		 (when (progn ,@body)
-		   (return-from ,name ,var)))
-	     ,list)
-       nil)))
-
+(defpackage :lisp-types
+  (:use :cl :cl-robdd)
+  (:export
+   "AMBIGUOUS-SUBTYPE"
+   "AUTO-PERMUTE-TYPECASE"
+   "BDD-DECOMPOSE-TYPES"
+   "BDD-DECOMPOSE-TYPES-STRONG"
+   "BDD-DECOMPOSE-TYPES-WEAK"
+   "BDD-DECOMPOSE-TYPES-WEAK-DYNAMIC"
+   "BDD-DISJOINT-TYPES-P"
+   "BDD-EMPTY-TYPE"
+   "BDD-GRAPH-TO-DOT"
+   "BDD-SUBTYPEP"
+   "BDD-TYPE-EQUAL"
+   "CACHING-TYPES"
+   "CHOOSE-RANDOMLY"
+   "COUNT-CONNECTIONS-PER-NODE"
+   "COUNT-PARENTS-PER-NODE"
+   "DECOMPOSE-TYPES"
+   "DECOMPOSE-TYPES"
+   "DECOMPOSE-TYPES-BDD-GRAPH"
+   "DECOMPOSE-TYPES-BDD-GRAPH-BAKER"
+   "PARAMETERIZED-DECOMPOSE-TYPES-BDD-GRAPH"
+   "DECOMPOSE-TYPES-BDD-GRAPH-STRONG"
+   "DECOMPOSE-TYPES-BDD-GRAPH-WEAK"
+   "DECOMPOSE-TYPES-BDD-GRAPH-WEAK-DYNAMIC"
+   "DECOMPOSE-TYPES-GRAPH"
+   "DECOMPOSE-TYPES-GRAPH-BAKER"
+   "DECOMPOSE-TYPES-RTEV2"
+   "DECOMPOSE-TYPES-SAT"
+   "DISJOINT-TYPES-P"
+   "EQUIVALENT-TYPES-P"
+   "LISP-TYPE-BDD-NODE"
+   "LTBDD"
+   "LTBDD-NODE"
+   "LTBDD-WITH-NEW-HASH"
+   "REDUCE-LISP-TYPE"
+   "REDUCED-TYPECASE"
+   "SHUFFLE-LIST"
+   "SMARTER-SUBTYPEP"
+   "VALID-TYPE-P"
+   "*SUBTYPEP*"
+   "SUBTYPEP-WRAPPER"
+   ))

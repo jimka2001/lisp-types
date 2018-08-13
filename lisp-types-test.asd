@@ -45,6 +45,7 @@
                                     "test-lisp-types"
                                     "test-perf"))
      (:file "test-bdd-reduce-17")
+     (:file "test-baker")
      (:file "test-dnf")
      (:file "test-reduce-lisp-type-once")
      (:file "test-bdd-typecase")

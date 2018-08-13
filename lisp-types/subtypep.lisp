@@ -1,4 +1,4 @@
-;; Copyright (c) 2016 EPITA Research and Development Laboratory
+;; Copyright (c) 2018 EPITA Research and Development Laboratory
 ;;
 ;; Permission is hereby granted, free of charge, to any person obtaining
 ;; a copy of this software and associated documentation
@@ -19,30 +19,11 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(asdf:defsystem :lisp-types
-  :depends-on (:dispatch
-               :cl-robdd
-               ;; :sb-profile
-               :sb-sprof
-               :fr.epita.lrde.subtypep)
-  :components
-  ((:module "lisp-types"
-    :components
-    ((:file "lisp-types-package")
-     (:file "macros")
-     (:file "subtypep")
-     (:file "util")
-     (:file "ltbdd")
-     (:file "lisp-types" :depends-on ("macros"))
-     (:file "reduce" :depends-on ("macros" "lisp-types"))
-     (:file "decompose" :depends-on ("reduce"))
-     (:file "sat" :depends-on ("macros" "lisp-types"))
-     (:file "typecase" :depends-on ("lisp-types"))
-     (:file "graph" :depends-on ("macros" "lisp-types" "util"))
-     (:file "bdd-reduce-generic")
-     (:file "bdd-reduce" :depends-on ("bdd-reduce-generic"))
-     (:file "bdd-graph" :depends-on ("macros" "bdd-reduce"))
-     (:file "bdd-reduce-17")
-     (:file "decompose-rtev2")
-     (:file "bdd-typecase" :depends-on ("bdd-reduce-generic"))
-     ))))
+
+(in-package :lisp-types)
+
+(defvar *subtypep* #'cl:subtypep
+  "Either #'cl:subtypep or #'baker:subtypep")
+
+(defun subtypep-wrapper (super sub)
+  (funcall *subtypep* super sub))

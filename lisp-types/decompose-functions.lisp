@@ -115,7 +115,9 @@
       (:names (decompose-types-bdd-graph)  :gnu-color ,(nth (incf color) *colors*) :color "rust" :linewidth 1  :legend t)
       (:names (decompose-types-bdd-graph-weak)  :gnu-color ,(nth (incf color) *colors*) :color "rust" :linewidth 1  :legend t)
       (:names (parameterized-decompose-types-bdd-graph) :gnu-color ,(nth (incf color) *colors*) :linewidth 1 :legend t)
-      (:names (local-minimum) :gnu-color "000000" :color "black" :linewidth 2 :legend t))))
+      (:names (local-minimum) :gnu-color "000000" :color "black" :linewidth 2 :legend t)
+      (:names (decompose-types-bdd-graph-baker) :gnu-color ,(nth (incf color) *colors*) :linewidth 1  :legend t)
+      (:names (decompose-types-graph-baker)  :gnu-color ,(nth (incf color) *colors*) :legend t))))
 
 (setf *decomposition-functions*
       (set-difference (mapcan (lambda (plist)

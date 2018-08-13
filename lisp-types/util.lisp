@@ -137,7 +137,7 @@
 (def-cache-fun (cached-subtypep call-with-subtypep-cache :hash *subtypep-hash*) (sub super)
                "Wrapper around CL:SUBTYPEP.  Manages the caching of return values of SUBTYPEP within the
 dynamic extend of WITH-SUBTYPEP-CACHE"
-  (subtypep sub super))
+  (subtypep-wrapper sub super))
 
 ;;; the following are functions used to re-produce the allegro bug/issue spr43795.
 
@@ -190,7 +190,7 @@ dynamic extend of WITH-SUBTYPEP-CACHE"
     (format t "starting timing~%")
     (let ((start-time (get-internal-real-time)))
       (dolist (pair pairs)
-        (apply #'subtypep pair))
+        (apply #'subtypep-wrapper pair))
       (let ((stop-time (get-internal-real-time)))
         (float (/ (- stop-time start-time)
                   internal-time-units-per-second))))))

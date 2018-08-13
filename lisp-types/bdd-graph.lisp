@@ -107,7 +107,10 @@
 (defun decompose-types-bdd-graph-weak-dynamic (type-specifiers)
   (decompose-types-bdd-graph type-specifiers :bdd-hash-strength :weak-dynamic))
 
-(defun decompose-types-bdd-graph (type-specifiers &key ((:bdd-hash-strength *bdd-hash-strength*) :weak-dynamic))
+(defun decompose-types-bdd-graph (type-specifiers &key ((:bdd-hash-strength *bdd-hash-strength*) :weak-dynamic)
+                                                    ((:subtypep *subtypep*) *subtypep*))
   (decompose-by-graph-1 type-specifiers :graph-class 'bdd-graph))
 
+(defun decompose-types-bdd-graph-baker (type-specifiers)
+  (decompose-types-bdd-graph type-specifiers :subtypep #'baker:subtypep))
 

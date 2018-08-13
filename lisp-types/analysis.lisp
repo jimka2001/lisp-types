@@ -78,11 +78,11 @@ than as keywords."
   (let (all-types)
     (do-external-symbols (sym :cl)
       (when (and (valid-type-p sym)
-                 (subtypep sym super))
+                 (subtypep-wrapper sym super))
 	(push sym all-types)))
     (remove-duplicates all-types :test (lambda (t1 t2)
-                                         (and (subtypep t1 t2)
-                                              (subtypep t2 t1))))))
+                                         (and (subtypep-wrapper t1 t2)
+                                              (subtypep-wrapper t2 t1))))))
 
 
 
@@ -164,7 +164,7 @@ than as keywords."
                    for t2 in l2
                    nconc (list t1 `(and ,t1 (not ,t2)) `(or ,t1 ,t2)))))
     (setof e l3
-      (not (subtypep e nil)))))
+      (not (subtypep-wrapper e nil)))))
 
 
 
@@ -337,7 +337,7 @@ than as keywords."
          (dolist (t2 types)
            (dolist (t3 (list t1 `(not ,t1)))
              (dolist (t4 (list t2 `(not ,t2)))
-               (if (nth-value 1 (subtypep t3 t4))
+               (if (nth-value 1 (subtypep-wrapper t3 t4))
                    (incf num-unknown)
                    (incf num-known))))))
        (assert (or (typep (getf result :run-time) 'number )
@@ -437,9 +437,9 @@ to a set of types returned from %bdd-decompose-types."
                  (dolist (com common)
                    (dolist (types (list bdd-left-over def-left-over))
                      (dolist (spec types)
-                       (when (subtypep spec com)
+                       (when (subtypep-wrapper spec com)
                          (format t " ~A <: ~A~%" spec com))
-                       (when (subtypep com spec)
+                       (when (subtypep-wrapper com spec)
                          (format t " ~A <: ~A~%" com spec)))))
                  (format t "checking calculated bdd types~%")
                  (check-decomposition type-specs bdd-types)
@@ -482,7 +482,7 @@ to a set of types returned from %bdd-decompose-types."
              (loop for tail on types
                    nconc (loop for type2 in (cdr types)
                                with type1 = (car types)
-                               if (not (subtypep `(and ,type1 ,type2) nil))
+                               if (not (subtypep-wrapper `(and ,type1 ,type2) nil))
                                  collect (list type1 type2))))
            (find-small-difference (res1 res2)
              (let ((*package* (find-package "KEYWORD")))
@@ -1756,7 +1756,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                                                               nconc (list t1 `(or ,t1 ,t2)
                                                                           `(and ,t1 (not ,t2))))
                                                         :test #'equal)
-                              (null (subtypep e nil)))
+                              (null (subtypep-wrapper e nil)))
                      :file-name "subtypes-of-number-or-condition")
 
 (add-bucket-reporter :scale 25
@@ -1790,8 +1790,10 @@ sleeping before the code finishes evaluating."
                                         (suite-time-out (* 60 60 4)) (time-out 100) normalize hilite-min
                                         (decomposition-functions '(parameterized-decompose-types-bdd-graph
 								   decompose-types-bdd-graph
+                                                                   decompose-types-bdd-graph-baker
 								   bdd-decompose-types
-								   decompose-types-graph 
+								   decompose-types-graph
+                                                                   decompose-types-graph-baker
 								   decompose-types-sat
 								   decompose-types-rtev2 
 								   decompose-types))
@@ -1843,6 +1845,24 @@ sleeping before the code finishes evaluating."
                                               bdd-decompose-types ;; same as bdd-decompose-types-weak-dynamic
                                               decompose-types-rtev2
                                               decompose-types-graph)))
+
+(defun baker-report (&key (re-run t) (multiplier 1.8) (create-png-p t) (destination-dir *destination-dir*)
+                        (bucket-reporters *bucket-reporters*))
+  (big-test-report :re-run re-run
+                   :prefix "baker-"
+                   :multiplier multiplier
+                   :normalize nil
+                   :time-out 20
+                   :num-tries 4
+                   :hilite-min nil
+                   :destination-dir destination-dir
+                   :create-png-p create-png-p
+                   :bucket-reporters bucket-reporters
+                   :decomposition-functions '( 
+                                              decompose-types-bdd-graph
+                                              decompose-types-bdd-graph-baker
+                                              decompose-types-graph
+                                              decompose-types-graph-baker)))
 
 (defun mdtd-report (&key (re-run t) (multiplier 2.5) (create-png-p t) (bucket-reporters *bucket-reporters*) (destination-dir *destination-dir*))
   (big-test-report :re-run re-run
@@ -1963,6 +1983,10 @@ sleeping before the code finishes evaluating."
 		       :create-png-p create-png-p
 		       :bucket-reporters *bucket-reporters*
 		       :destination-dir  destination-dir)
+        (baker-report :re-run nil
+                      :create-png-p create-png-p
+                      :bucket-reporters *bucket-reporters*
+                      :destination-dir  destination-dir)
 	(parameterization-report :re-run nil
 				 :create-png-p create-png-p
 				 :bucket-reporters *bucket-reporters*
