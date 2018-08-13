@@ -1097,7 +1097,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
                                                      nil))
                                  (stand-alone-legend-axis
 				  (insert-suffix ltxdat-name "-legend")
-                                  (format nil "legend for ~A" ltxdat-name)
+                                  (format nil "legend for ~A" (chop-pathname ltxdat-name))
                                   (lambda (entry)
                                     (flet ((plot (xys decompose descr)
                                              (addplot stream
@@ -1189,6 +1189,15 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
       (let ((tail (subseq filename index))
             (head (subseq filename 0 index)))
         (concatenate 'string head suffix tail)))))
+
+(defun chop-pathname (filename)
+  "\"/full/path/name/to/file.extension\" --> \"file.extension\""
+  (let ((slash (search "/" filename :from-end t)))
+    (cond
+      ((null slash)
+       filename)
+      (t
+       (subseq filename (1+ slash))))))
 
 (defun print-report (&key (re-run t) (profile nil)
                        limit (summary nil) normalize destination-dir
