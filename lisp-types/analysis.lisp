@@ -596,9 +596,11 @@ to a set of types returned from %bdd-decompose-types."
         (include-decompose (if (symbolp include-decompose)
                                (list include-decompose)
                                include-decompose))
-        (content (with-open-file (stream sorted-file :direction :input)
-                   (format t "reading    ~A~%" sorted-file)
-                   (user-read stream nil nil))))
+        (content (or (with-open-file (stream sorted-file :direction :input :if-does-not-exist nil)
+                       (when stream
+                         (format t "reading    ~A~%" sorted-file)
+                         (user-read stream nil nil)))
+                     (return-from create-gnuplot nil))))
     (with-open-file (stream gnuplot-file :direction :output :if-exists :supersede :if-does-not-exist :create)
       (format t "[writing to ~A~%" gnuplot-file)
       (destructuring-bind (&key (summary "missing summary") sorted &allow-other-keys &aux min-curve min-curve-line-style) content
