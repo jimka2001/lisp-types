@@ -126,11 +126,11 @@
   (setf *perf-results* nil)
   (ltbdd-with-new-hash ()
     ;; decompose-types-bdd-graph
-  (types/cmp-perfs :file-name "disjoint-cmp-5"
-                   :destination-dir "/tmp"
-                   :types '(SB-PCL:SYSTEM-CLASS
-                            SB-MOP:STANDARD-ACCESSOR-METHOD
-                            SB-MOP:STANDARD-EFFECTIVE-SLOT-DEFINITION))))
+    (types/cmp-perfs :file-name "disjoint-cmp-5"
+                     :destination-dir "/tmp"
+                     :types '(SB-PCL:SYSTEM-CLASS
+                              SB-MOP:STANDARD-ACCESSOR-METHOD
+                              SB-MOP:STANDARD-EFFECTIVE-SLOT-DEFINITION))))
 
 (define-test disjoint-cmp-6
   (setf *perf-results* nil)
@@ -313,29 +313,29 @@
             SIMPLE-BIT-VECTOR STREAM-ERROR ARRAY STYLE-WARNING)))
     (ltbdd-with-new-hash ()
       (parameterized-decompose-types-bdd-graph type-specifiers 
-                                      :sort-nodes #'(lambda (graph)
-                                                      (declare (notinline sort))
-                                                      (sort graph #'< :key #'count-parents-per-node))
-                                      :sort-strategy "TOP-TO-BOTTOM"
-                                      :inner-loop :operation
-                                      :do-break-sub :strict
-                                      :do-break-loop t))))
+                                               :sort-nodes #'(lambda (graph)
+                                                               (declare (notinline sort))
+                                                               (sort graph #'< :key #'count-parents-per-node))
+                                               :sort-strategy "TOP-TO-BOTTOM"
+                                               :inner-loop :operation
+                                               :do-break-sub :strict
+                                               :do-break-loop t))))
 
 ;; (lisp-types-test::sort-results "/Users/jnewton/newton.16.edtchs/src/member.sexp" nil)
 
 (defun perf-test-1 (&key (size 11))
   (ltbdd-with-new-hash (&aux (type-specifiers (lisp-types::choose-randomly (loop :for name being the external-symbols in "SB-PCL"
-                                                                               :when (find-class name nil)
-                                                                                 :collect name) size)))
+                                                                                 :when (find-class name nil)
+                                                                                   :collect name) size)))
     (parameterized-decompose-types-bdd-graph type-specifiers
-                                    :sort-nodes (lambda (graph)
-                                                  (declare (notinline sort))
-                                                  (sort graph #'< :key
-                                                        #'count-connections-per-node))
-                                    :sort-strategy  "INCREASING-CONNECTIONS"
-                                    :inner-loop :node
-                                    :do-break-sub :relaxed
-                                    :do-break-loop nil)))
+                                             :sort-nodes (lambda (graph)
+                                                           (declare (notinline sort))
+                                                           (sort graph #'< :key
+                                                                 #'count-connections-per-node))
+                                             :sort-strategy  "INCREASING-CONNECTIONS"
+                                             :inner-loop :node
+                                             :do-break-sub :relaxed
+                                             :do-break-loop nil)))
 
 (defun read-trace (stream)
   (let (pending)
@@ -416,23 +416,23 @@ if the function returned the same as it was passed as input (according to EQUAL)
 (define-test test/parameterized-decompose-types-bdd-graph
   (ltbdd-with-new-hash ()
     (parameterized-decompose-types-bdd-graph '((and function program-error) concatenated-stream
-                                      (or package floating-point-overflow)
-                                      (and simple-string program-error) (or method vector)
-                                      (or concatenated-stream synonym-stream) simple-warning
-                                      control-error (or package-error parse-error)
-                                      (and string control-error) (and function unbound-variable)
-                                      (or integer undefined-function) (and simple-error base-char)
-                                      (or logical-pathname built-in-class)
-                                      (or built-in-class division-by-zero)
-                                      (and unsigned-byte signed-byte) floating-point-inexact
-                                      (and integer undefined-function) (or complex two-way-stream)
-                                      (and package-error fixnum))
-                                    :sort-strategy "BOTTOM-TO-TOP"
-                                    :recursive t
-                                    :inner-loop :operation
-                                    :do-break-sub :relaxed
-                                    :do-break-loop nil
-                                    :do-disjoint t
-                                    :do-break-touch t
-                                    )))
+                                               (or package floating-point-overflow)
+                                               (and simple-string program-error) (or method vector)
+                                               (or concatenated-stream synonym-stream) simple-warning
+                                               control-error (or package-error parse-error)
+                                               (and string control-error) (and function unbound-variable)
+                                               (or integer undefined-function) (and simple-error base-char)
+                                               (or logical-pathname built-in-class)
+                                               (or built-in-class division-by-zero)
+                                               (and unsigned-byte signed-byte) floating-point-inexact
+                                               (and integer undefined-function) (or complex two-way-stream)
+                                               (and package-error fixnum))
+                                             :sort-strategy "BOTTOM-TO-TOP"
+                                             :recursive t
+                                             :inner-loop :operation
+                                             :do-break-sub :relaxed
+                                             :do-break-loop nil
+                                             :do-disjoint t
+                                             :do-break-touch t
+                                             )))
 

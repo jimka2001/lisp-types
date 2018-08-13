@@ -29,7 +29,7 @@
     (assert-false (decompose-by-graph-1 (list nil) :graph-class class-name))
     (assert-false (decompose-by-graph-2 (list nil):graph-class class-name))
     (assert-true  (decompose-by-graph-1 (list t) :graph-class class-name))
-    (assert-true  (decompose-by-graph-2 (list t):graph-class class-name))))
+    (assert-true  (decompose-by-graph-2 (list t) :graph-class class-name))))
 
 (define-test bdd-17/decompose-simple-2
   (dolist (class-name '(sexp-graph bdd-graph))

@@ -596,9 +596,11 @@ to a set of types returned from %bdd-decompose-types."
         (include-decompose (if (symbolp include-decompose)
                                (list include-decompose)
                                include-decompose))
-        (content (with-open-file (stream sorted-file :direction :input)
-                   (format t "reading    ~A~%" sorted-file)
-                   (user-read stream nil nil))))
+        (content (or (with-open-file (stream sorted-file :direction :input :if-does-not-exist nil)
+                       (when stream
+                         (format t "reading    ~A~%" sorted-file)
+                         (user-read stream nil nil)))
+                     (return-from create-gnuplot nil))))
     (with-open-file (stream gnuplot-file :direction :output :if-exists :supersede :if-does-not-exist :create)
       (format t "[writing to ~A~%" gnuplot-file)
       (destructuring-bind (&key (summary "missing summary") sorted &allow-other-keys &aux min-curve min-curve-line-style) content
@@ -1098,7 +1100,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
                                                      nil))
                                  (stand-alone-legend-axis
 				  (insert-suffix ltxdat-name "-legend")
-                                  (format nil "legend for ~A" ltxdat-name)
+                                  (format nil "legend for ~A" (chop-pathname ltxdat-name))
                                   (lambda (entry)
                                     (flet ((plot (xys decompose descr)
                                              (addplot stream
@@ -1191,6 +1193,15 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
             (head (subseq filename 0 index)))
         (concatenate 'string head suffix tail)))))
 
+(defun chop-pathname (filename)
+  "\"/full/path/name/to/file.extension\" --> \"file.extension\""
+  (let ((slash (search "/" filename :from-end t)))
+    (cond
+      ((null slash)
+       filename)
+      (t
+       (subseq filename (1+ slash))))))
+
 (defun print-report (&key (re-run t) (profile nil)
                        limit (summary nil) normalize destination-dir
 		       profile-function-legend
@@ -1214,16 +1225,16 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
       (print-sexp stream summary limit)))
   (sort-results sexp-name sorted-name)
 
-  (unless profile
-    (create-gnuplot sorted-name gnuplot-name png-name
-                    nil hilite-min include-decompose :xys create-png-p "1314")
-    (create-gnuplot sorted-name (insert-suffix gnuplot-name "-smooth") (insert-suffix png-name "-smooth")
-                    nil hilite-min include-decompose :smooth create-png-p "1316")
-    (when normalize
-      (create-gnuplot sorted-name gnuplot-normalized-name png-normalized-name
-                      normalize hilite-min include-decompose :xys create-png-p "1319")
-      (create-gnuplot sorted-name (insert-suffix gnuplot-normalized-name "-smooth") (insert-suffix png-normalized-name "-smooth")
-                      normalize hilite-min include-decompose :smooth create-png-p "1321")))
+  ;; (unless profile
+  ;;   (create-gnuplot sorted-name gnuplot-name png-name
+  ;;                   nil hilite-min include-decompose :xys create-png-p "1314")
+  ;;   (create-gnuplot sorted-name (insert-suffix gnuplot-name "-smooth") (insert-suffix png-name "-smooth")
+  ;;                   nil hilite-min include-decompose :smooth create-png-p "1316")
+  ;;   (when normalize
+  ;;     (create-gnuplot sorted-name gnuplot-normalized-name png-normalized-name
+  ;;                     normalize hilite-min include-decompose :xys create-png-p "1319")
+  ;;     (create-gnuplot sorted-name (insert-suffix gnuplot-normalized-name "-smooth") (insert-suffix png-normalized-name "-smooth")
+  ;;                     normalize hilite-min include-decompose :smooth create-png-p "1321")))
 
   (when profile
     (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p
