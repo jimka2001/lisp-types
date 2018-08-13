@@ -1664,7 +1664,11 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
 	  (let ((same-key (setof triple attributes
 			     (eq (car triple) key))))
 	    (format stream "\\multirow{~D}{*}{~A}~%" (length same-key) key)
-	    (dolist (triple same-key)
+	    (dolist (triple (cond
+                              ((find t same-key :key #'cadr)
+                               same-key)
+                              (t
+                               (remove nil same-key :key #'cadr))))
 	      (format stream " & ~A  & ~A \\\\~%" (cadr triple) (caddr triple)))
 	    (format stream "\\hline~%"))))
       (format stream "\\end{tabular}~%"))))
