@@ -1224,16 +1224,16 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
       (print-sexp stream summary limit)))
   (sort-results sexp-name sorted-name)
 
-  (unless profile
-    (create-gnuplot sorted-name gnuplot-name png-name
-                    nil hilite-min include-decompose :xys create-png-p "1314")
-    (create-gnuplot sorted-name (insert-suffix gnuplot-name "-smooth") (insert-suffix png-name "-smooth")
-                    nil hilite-min include-decompose :smooth create-png-p "1316")
-    (when normalize
-      (create-gnuplot sorted-name gnuplot-normalized-name png-normalized-name
-                      normalize hilite-min include-decompose :xys create-png-p "1319")
-      (create-gnuplot sorted-name (insert-suffix gnuplot-normalized-name "-smooth") (insert-suffix png-normalized-name "-smooth")
-                      normalize hilite-min include-decompose :smooth create-png-p "1321")))
+  ;; (unless profile
+  ;;   (create-gnuplot sorted-name gnuplot-name png-name
+  ;;                   nil hilite-min include-decompose :xys create-png-p "1314")
+  ;;   (create-gnuplot sorted-name (insert-suffix gnuplot-name "-smooth") (insert-suffix png-name "-smooth")
+  ;;                   nil hilite-min include-decompose :smooth create-png-p "1316")
+  ;;   (when normalize
+  ;;     (create-gnuplot sorted-name gnuplot-normalized-name png-normalized-name
+  ;;                     normalize hilite-min include-decompose :xys create-png-p "1319")
+  ;;     (create-gnuplot sorted-name (insert-suffix gnuplot-normalized-name "-smooth") (insert-suffix png-normalized-name "-smooth")
+  ;;                     normalize hilite-min include-decompose :smooth create-png-p "1321")))
 
   (when profile
     (create-profile-scatter-plot sexp-name destination-dir prefix file-name create-png-p
