@@ -44,7 +44,7 @@
        (forall a args
          (equal a (car args)))))
 
-(define-test baker/decompose-2
+(defun test-baker (verbose)
   (flet ((equiv-control (a b)
            (equivalent-types-p a b))
          (equiv-cl (a b)
@@ -53,22 +53,65 @@
          (equiv-baker (a b)
            (let ((*subtypep* #'baker:subtypep))
              (equivalent-types-p a b))))
-    (let ((types '(string
+    (let ((c 0)
+          (types '(t
+                   nil
+                   null
+                   list
+                   cons
+                   string
                    number
+                   (and symbol (not keyword))
+                   (and number (not unsigned-byte))
+                   (and bignum unsigned-byte)
+                   (and number (not fixnum))
+                   (and number (not (integer 12 18)))
+                   (or (integer 12 18) (integer 21 56))
+                   (or (integer 12 18) ratio)
+                   (float 1.0 3.5)
+                   (eql 12)
+                   (eql :x)
+                   (eql 12.0)
+                   (eql 12d0)
+                   (eql -1)
+                   (member -1 0 1)
+                   (member 1 2 3)
+                   (member :x 12)
+                   (real 3/7)
+                   (real (3/7))
                    (or string number)
                    (and string number)
                    (member 1 2 3)
                    (member 1 2)
-                   (or (member 1 2) string))))
+                   (or (member 1 2) string)
+                   (or string (real 1.0 31/7))
+                   )))
       (dolist (t1 types)
         (dolist (t2 types)
-          (format t "~A ~A~%" t1 t2)
-          (format t "control ~A~%" (equiv-control t1 t2))
-          (format t "cl      ~A~%" (equiv-cl t1 t2))
-          (format t "baker   ~A~%" (equiv-baker t1 t2))
-          (assert-true (equal-n (equiv-control t1 t2)
-                                (equiv-cl t1 t2)
-                                (equiv-baker t1 t2))))))))
+          (labels ((check2 (t1 t2)
+                     (when verbose
+                       (format t "~d checking ~A vs ~A~%" (incf c) t1 t2)
+                       (format t "  control ~A~%" (equiv-control t1 t2))
+                       (format t "  cl      ~A~%" (equiv-cl t1 t2))
+                       (format t "  baker   ~A~%" (equiv-baker t1 t2)))
+                     (assert-true (equal-n (equiv-control t1 t2)
+                                           (equiv-cl t1 t2)
+                                           (equiv-baker t1 t2))))
+                   (check (a b)
+                     (check2 a b)
+                     (check2 `(not ,a) b)
+                     (check2 a `(not ,b))
+                     (check2 `(not ,a) `(not ,b))))
+            (check t1 t2)
+            (dolist (t3 types)
+              (check t1 `(and ,t2 ,t3))
+              (check t1 `(or ,t2 ,t3))
+              (check t1 `(or ,t2 (not ,t3)))
+              (check t1 `(and ,t2 (not ,t3)))
+              (check t1 `(or (and ,t1 (not ,t2)) (and (not ,t1) t2))))))))))
+
+(define-test baker/decompose-2
+  (test-baker nil))
 
 (define-test baker/decompose-3
   (ltbdd-with-new-hash ()
