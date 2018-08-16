@@ -83,27 +83,20 @@
   operands)
 
 (defun reduce-member-type (type-spec)
-  (declare ;;(optimize (speed 3) (compilation-speed 0) (debug 0))
-   )
-  (cond
-    ((and (consp type-spec)
-          (eq 'AND (car type-spec)))
-     ;; is it of the form (AND ... (MEMBER ...) ...)
-     ;; or (AND ... (EQL ...) ...)
-     (let ((hit (find-if (lambda (t2)
-                           (and (consp t2)
-                                (or (eq 'MEMBER (car t2))
-                                    (eq 'EQL (car t2)))))
-                         (cdr type-spec))))
-       ;; found the (MEMBER ...) or (EQL ...)
-       (if hit ;; now remove all the elements of the (MEMBER ...) or (EQL ...) which fail to match the type
-           (cons 'member (remove-if-not (lambda (obj)
-                                          (typep obj type-spec))
-                                        (cdr hit)))
-           type-spec)))
-    (t
-     type-spec)))
-
+  (declare (optimize (speed 3) (compilation-speed 0) (debug 0))
+	   (type (cons (eql AND) cons) type-spec))
+  "This function should only be called if it is a list whose first element is AND"
+  ;; is it of the form (AND ... (MEMBER ...) ...)
+  ;; or                (AND ... (EQL ...) ...)
+  (let ((hit (find-if (lambda (obj)
+			(typep obj '(cons (member MEMBER EQL))))
+		      (cdr type-spec))))
+    ;; found the (MEMBER ...) or (EQL ...)
+    (if hit ;; now remove all the elements of the (MEMBER ...) or (EQL ...) which fail to match the type
+	(cons (car hit) (remove-if-not (lambda (obj)
+					 (typep obj type-spec))
+				       (cdr hit)))
+	type-spec)))
 
 (defun type-to-dnf (type)
   (declare ;;(optimize (speed 3) (debug 0) (compilation-speed 0) (space 0))
@@ -133,7 +126,8 @@
                 type)))
            (to-dnf (type)
              (declare (type (or list symbol) type))
-             (when (and? type)
+             (when (and (and? type)
+			(cdr type))
                (when *reduce-member-type*
                  (setf type (reduce-member-type type))))
              (when (and? type)
