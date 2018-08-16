@@ -48,11 +48,11 @@
                           list
                           cons
                           string
-                          number
+			  real
                           (and symbol (not keyword))
-                          (and number (not unsigned-byte))
+                          (and real (not unsigned-byte))
                           (and bignum unsigned-byte)
-                          (and number (not fixnum))
+                          (and real (not fixnum))
                           (and number (not (integer 12 18)))
                           (and string (not (eql 0)))
                           (double-float 1d1 10d0)
@@ -118,14 +118,17 @@
       (dolist (t1 *testing-types*)
         (dolist (t2 *testing-types*)
           (labels ((check2 (t1 t2)
-                     (when verbose
+                     (assert-true (equal-n (equiv-control t1 t2)
+                                           (equiv-cl t1 t2)
+                                           (equiv-baker t1 t2)))
+                     (when (and verbose
+				(not (equal-n (equiv-control t1 t2)
+                                           (equiv-cl t1 t2)
+                                           (equiv-baker t1 t2))))
                        (format t "~d checking ~A vs ~A~%" (incf c) t1 t2)
                        (format t "  control ~A~%" (equiv-control t1 t2))
                        (format t "  cl      ~A~%" (equiv-cl t1 t2))
-                       (format t "  baker   ~A~%" (equiv-baker t1 t2)))
-                     (assert-true (equal-n (equiv-control t1 t2)
-                                           (equiv-cl t1 t2)
-                                           (equiv-baker t1 t2))))
+                       (format t "  baker   ~A~%" (equiv-baker t1 t2))))
                    (check (a b)
                      (check2 a b)
                      (check2 `(not ,a) b)
@@ -147,11 +150,61 @@
     (let ((types '((member 1 2) (member 2 3) (member 1 2 3 4))))
       (assert-false (set-exclusive-or (decompose-types-graph types)
                                       (decompose-types-graph-baker types)
-                                      :test #'equivalent-types-p)))
-    (assert-false (set-exclusive-or (decompose-types-graph '(UNSIGNED-BYTE FIXNUM RATIONAL))
-                                    (decompose-types-graph-baker     '(UNSIGNED-BYTE FIXNUM RATIONAL))
-                                    :test #'equivalent-types-p))
+                                      :test #'equivalent-types-p)))))
 
-    (assert-false (set-exclusive-or (decompose-types-graph '(unsigned-byte bit fixnum rational number float))
-                                    (decompose-types-graph-baker  '(unsigned-byte bit fixnum rational number float))
+(define-test baker/decompose-4
+  (ltbdd-with-new-hash ()
+ 
+    (assert-false (set-exclusive-or (decompose-types-graph '(UNSIGNED-BYTE FIXNUM RATIO))
+                                    (decompose-types-graph-baker     '(UNSIGNED-BYTE FIXNUM RATIO))
                                     :test #'equivalent-types-p))))
+
+(define-test baker/decompose-5
+  (ltbdd-with-new-hash ()
+    (assert-false (set-exclusive-or (decompose-types-graph '(unsigned-byte bit fixnum ratio number float))
+                                    (decompose-types-graph-baker  '(unsigned-byte bit fixnum ratio number float))
+                                    :test #'equivalent-types-p))))
+
+(define-test baker/decompose-6
+  (ltbdd-with-new-hash (&aux (types '(unsigned-byte
+				      fixnum
+				      ratio
+				      number
+				      float)))
+    (assert-false (set-exclusive-or (decompose-types-graph types)
+                                    (decompose-types-graph-baker types)
+                                    :test #'equivalent-types-p))))
+
+(define-test baker/decompose-7
+  (ltbdd-with-new-hash (&aux (types '(
+				      fixnum
+				      ratio
+				      number
+				      float)))
+    (assert-false (set-exclusive-or (decompose-types-graph types)
+                                    (decompose-types-graph-baker types)
+                                    :test #'equivalent-types-p))))
+
+(define-test baker/decompose-8
+  (ltbdd-with-new-hash (&aux (types '(
+				      ratio
+				      number
+				      float)))
+    (assert-false (set-exclusive-or (decompose-types-graph types)
+                                    (decompose-types-graph-baker types)
+                                    :test #'equivalent-types-p))))
+
+(define-test baker/reduce-lisp-type-1
+  (assert-true (equivalent-types-p
+		(let ((*subtypep* #'cl:subtypep))
+		  (reduce-lisp-type '(and (and number (not ratio)) (not float))))
+		(let ((*subtypep* #'baker:subtypep))
+		  (reduce-lisp-type '(and (and number (not ratio)) (not float)))))))
+
+(define-test baker/reduce-lisp-type-2a
+  (let ((*subtypep* #'cl:subtypep))
+    (assert-true (reduce-lisp-type-once '(AND (AND NUMBER (NOT RATIO)) (NOT FLOAT)) :full T))))
+
+(define-test baker/reduce-lisp-type-2b
+  (let ((*subtypep* #'baker:subtypep))
+    (assert-true (reduce-lisp-type-once '(AND (AND NUMBER (NOT RATIO)) (NOT FLOAT)) :full T))))
