@@ -30,8 +30,6 @@
   (assert-true  (decompose-types-graph (list t)))
   (assert-true  (decompose-types-graph-baker (list t))))
 
-
-
 (define-test test123
   (flet ((equal-n (&rest args)
            (and (cdr args)

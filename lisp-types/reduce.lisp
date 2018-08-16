@@ -725,10 +725,10 @@ a call to subtypep or friends."
 	      ((and full (cached-subtypep t (make-or operands)))	        ; (or number (not number)) --> t
 	       t)
               ((and full (exists t1 operands
-                 (exists t2 operands
-                   (and (setq remove-me t1)
-                        (not (eq t1 t2))
-                        (smarter-subtypep t1 t2)))))
+			   (exists t2 operands
+			     (and (setq remove-me t1)
+				  (not (eq t1 t2))
+				  (smarter-subtypep t1 t2)))))
                ;; we have already removed duplicates (EQUAL) so removing subtypes is safe
                (make-or (remove remove-me operands :test #'equal)))
 	      (t
