@@ -256,6 +256,14 @@
 (defmethod node-empty-type ((node sexp-node))
   (null (label node)))
 
+;; (defmethod node-subtypep :around ((x sexp-node) (y sexp-node))
+;;   (multiple-value-bind (s1 ok1) (call-next-method)
+;;     (let ((cl-s (multiple-value-list (cl:subtypep (label x) (label y))))
+;; 	  (bk-s (multiple-value-list (baker:subtypep (label x) (label y)))))
+;;       (warn "(1) ~A <: ~A --> baker=~A cl=~A"
+;; 	    (label x) (label y) bk-s cl-s))
+;;     (values s1 ok1)))
+
 (defmethod node-subtypep ((x sexp-node) (y sexp-node))
   (cached-subtypep (label x) (label y)))
 
