@@ -32,6 +32,7 @@
   ((:module "lisp-types"
     :components
     ((:file "test-setup")
+     (:file "debug")
      (:file "test-classes")
      (:file "test-lisp-types" :depends-on ("test-classes"))
      (:file "test-util")
