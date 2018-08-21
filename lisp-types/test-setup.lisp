@@ -42,3 +42,19 @@
       )
 
 (lisp-unit:use-debugger t)
+
+
+(defun run-1-test (test-name)
+  (let ((*print-summary* t)
+	(*print-failures* t)
+	(*summarize-results* t)
+	(*print-errors* t))
+    (run-tests (list test-name) (symbol-package test-name))))
+
+(defmacro defun-test (name lambda-list &body body)
+   "Define a test and a function of the same name. 
+ LAMBDA-LIST is a lambda list for the function, which may have &optional, &key, &aux arguments, but no manditory arguments."
+   `(progn (eval-when (:compile-toplevel :load-toplevel :execute)
+             (defun ,name ,lambda-list ,@body))
+           (eval-when (:compile-toplevel :load-toplevel :execute)
+             (define-test ,name (,name)))))
