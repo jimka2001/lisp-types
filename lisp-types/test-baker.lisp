@@ -121,6 +121,10 @@
                      (assert-true (equal-n (equiv-control t1 t2)
                                            (equiv-cl t1 t2)
                                            (equiv-baker t1 t2)))
+		     (assert (baker:SUBTYPEP
+				'(NOT (AND (AND SYMBOL (NOT KEYWORD)) (EQL 12.0d0))) T)
+			       ()
+			       "baker:subtypep is now broken after checking ~A vs ~A" t1 t2)
                      (when (and verbose
 				(not (equal-n (equiv-control t1 t2)
                                            (equiv-cl t1 t2)
@@ -208,3 +212,13 @@
 (define-test baker/reduce-lisp-type-2b
   (let ((*subtypep* #'baker:subtypep))
     (assert-true (reduce-lisp-type-once '(AND (AND NUMBER (NOT RATIO)) (NOT FLOAT)) :full T))))
+
+
+(DEFUN BAKER/EXAMPLE-1 ()
+  (ASSERT-TRUE
+   (baker:SUBTYPEP
+    '(NOT (AND (AND SYMBOL (NOT KEYWORD)) (EQL 12.0d0))) T)))
+
+(DEFINE-TEST BAKER/EXAMPLE-1
+  (BAKER/EXAMPLE-1))
+
