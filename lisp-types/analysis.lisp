@@ -1084,8 +1084,8 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
                                    "xminorgrids"
                                    "ymajorgrids"
                                    ;;'("legend style" (("font" "\\tiny")))
-                                   '("xticklabel style" (("font" "\\tiny")))
-                                   '("yticklabel style" (("font" "\\tiny")))
+                                   '("xticklabel style" (("font" "\\large")))
+                                   '("yticklabel style" (("font" "\\large")))
                                    '("label style" (("font" "\\tiny"))))
                              (lambda ()
                                (let ((*print-case* :downcase)
