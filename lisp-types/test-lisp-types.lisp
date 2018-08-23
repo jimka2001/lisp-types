@@ -27,6 +27,14 @@
 
 
 
+(defun run-1-test (test-name)
+  (let ((*print-summary* t)
+	(*print-failures* t)
+	(*summarize-results* t)
+	(*print-errors* t))
+    (lisp-unit:run-tests (list test-name) (symbol-package test-name))))
+
+
 (defun test ()
   (let ((*print-summary* t)
 	(*print-failures* t)
