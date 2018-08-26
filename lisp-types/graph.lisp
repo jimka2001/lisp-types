@@ -299,7 +299,7 @@
 
 
 (defun decompose-types-graph-baker (type-specifiers &key &allow-other-keys)
-  (let ((*subtypep* #'baker:subtypep))
+  (let ((*subtypep* #'baker:baker-subtypep))
     (decompose-by-graph-1 type-specifiers :graph-class 'sexp-graph)))
 
 

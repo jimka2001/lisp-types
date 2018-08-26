@@ -112,5 +112,5 @@
   (decompose-by-graph-1 type-specifiers :graph-class 'bdd-graph))
 
 (defun decompose-types-bdd-graph-baker (type-specifiers)
-  (decompose-types-bdd-graph type-specifiers :subtypep #'baker:subtypep))
+  (decompose-types-bdd-graph type-specifiers :subtypep #'baker:baker-subtypep))
 

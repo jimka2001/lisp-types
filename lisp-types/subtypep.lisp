@@ -23,7 +23,7 @@
 (in-package :lisp-types)
 
 (defvar *subtypep* #'cl:subtypep
-  "Either #'cl:subtypep or #'baker:subtypep")
+  "Either #'cl:subtypep or #'baker:baker-subtypep")
 
 (defun subtypep-wrapper (super sub)
   (funcall *subtypep* super sub))
