@@ -2031,7 +2031,7 @@ sleeping before the code finishes evaluating."
 		 (dotimes (_ columns)
 		   (format output "l"))
 		 (format output "}~%")
-		 (loop :for pathname :in matching
+		 (loop :for pathname :in (sort (copy-list matching) #'string<)
 		       :for column := 0 :then (mod (1+ column) columns)
 		       :for remaining := (length matching) :then (1- remaining)
 		       :for line-break := (= column (1- columns))
@@ -2052,9 +2052,10 @@ sleeping before the code finishes evaluating."
 				     :if-exists :supersede
 				     :if-does-not-exist :create)
 	       (format t "writing to ~A~%" output)
-	       (let ((ltxdat-files (sort (mapcar #'pathname-name (directory (format nil "~A/mdtd-profile-single*-scatter-by-~A-smooth.ltxdat"
-										    autogen-dir key)))
-					 #'string<)))
+	       (let* ((dir (directory (format nil "~A/mdtd-profile-single*-scatter-by-~A-smooth.ltxdat"
+					      autogen-dir key)))
+		      
+		      (ltxdat-files (mapcar #'pathname-name dir)))
 		 (dolist (value (sort values #'> :key #'length))
 		   (let ((matching (setof ltxdat ltxdat-files
 				     (search value ltxdat))))
