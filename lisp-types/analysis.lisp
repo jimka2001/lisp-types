@@ -1889,7 +1889,7 @@ sleeping before the code finishes evaluating."
 			      (bucket-reporters *bucket-reporters*)
 			      (create-png-p t))
   (big-test-report :re-run re-run
-                   :profile t
+                   :profile '(:dprof)
                    :prefix prefix
                    :multiplier multiplier
                    :bucket-reporters bucket-reporters
