@@ -1043,7 +1043,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
 			    (destructuring-bind (red green blue) (color-to-rgb color)
 			      (format str "\\definecolor{color~A}{RGB}{~A,~A,~A}~%"
 				      color red green blue))
-			    (format str "\\addlegendimage{color~A,line width=1.4pt,font=\\ttfamily}~%" color))
+			    (format str "\\addlegendimage{color~A,line width=2.0pt,font=\\ttfamily}~%" color))
 			  (format str "\\addlegendentry{~A};~%" legend-entry)))
 		  items)))
 	  (axis legend
