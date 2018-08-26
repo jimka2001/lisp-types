@@ -1652,7 +1652,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
     ;;  (:DO-BREAK-SUB NIL 2.1529908))
     (with-open-file (stream (format nil "~A/params-summary.ltxdat" destination-dir)
 			    :direction :output :if-does-not-exist :create :if-exists :supersede)
-      (format t "writing to ~A" stream)
+      (format t "writing to ~A~%" stream)
       (format stream "\\begin{tabular}{ |l|l|l| }~%")
       (format stream "\\hline~%")
       (format stream "\\multicolumn{3}{ |c| }{Ranking Results} \\\\~%")
