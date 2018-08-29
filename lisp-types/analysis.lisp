@@ -1849,13 +1849,13 @@ sleeping before the code finishes evaluating."
                                               decompose-types-graph)))
 
 (defun baker-report (&key (re-run t) (multiplier 1.8) (create-png-p t) (destination-dir *destination-dir*)
-                        (bucket-reporters *bucket-reporters*))
+                       (bucket-reporters *bucket-reporters*))
   (big-test-report :re-run re-run
                    :prefix "baker-"
                    :multiplier multiplier
                    :normalize nil
                    :time-out 20
-                   :num-tries 4
+                   :num-tries 2
                    :hilite-min nil
                    :destination-dir destination-dir
                    :create-png-p create-png-p
