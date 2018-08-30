@@ -1309,7 +1309,7 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
 		    (format ltxdat "%% label = ~%")
 		    (axis ltxdat
 			  (remove nil (list (when title
-					      (list "title" (funcall title summary decompose)))
+					      (list "title" (funcall title comment decompose)))
 					    (when xlabelp
 					      (list "xlabel" xlabel))
 					    (when ylabelp
@@ -2068,15 +2068,21 @@ sleeping before the code finishes evaluating."
 					       matching))
 		     (setf ltxdat-files (set-difference ltxdat-files matching))
 		     (make-figures output matching key2 value
-				   (format nil caption-format (string-downcase value)))))))))
+				   (funcall caption-format value))))))))
        
     (make-section "pool" "decompose"
 		  (mapcar #'symbol-name *decomposition-functions*)
-		  "Performance Profile of various pools on algorithm \\lisp{~A}."
+		  (lambda (function-name)
+		    (format nil "Performance Profile of various pools on algorithm \\textbf{\\lisp{~A}}."
+			    (string-downcase function-name)))
 		  '("subtypes-of-t"))
     (make-section "function" "summary"
 		  (mapcar (getter :file-name) *bucket-reporter-properites*)
-		  "Performance Profile of various MDTD functions for pool \\lisp{~A}."
+		  (lambda (file-name &aux (plist (find file-name *bucket-reporter-properites*
+						       :key (getter :file-name)
+						       :test #'string=)))
+		    (format nil "Performance Profile of various MDTD functions for pool \\textbf{~A}."
+			    (getf plist :tag)))
 		  '("STRONG" "WEAK")
 		  )))
 
