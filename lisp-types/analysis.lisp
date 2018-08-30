@@ -1517,6 +1517,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                      :prefix prefix
                      :file-name file-name)))
 
+
 (defun make-output-file-name (purpose destination-dir prefix file-name)
   (declare (type keyword purpose)
            (type string destination-dir prefix file-name))
@@ -1850,6 +1851,8 @@ sleeping before the code finishes evaluating."
 
 (defun baker-report (&key (re-run t) (multiplier 1.8) (create-png-p t) (destination-dir *destination-dir*)
                        (bucket-reporters *bucket-reporters*))
+  (declare (type string destination-dir)
+	   (type number multiplier))
   (big-test-report :re-run re-run
                    :prefix "baker-"
                    :multiplier multiplier
