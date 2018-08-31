@@ -1791,15 +1791,23 @@ sleeping before the code finishes evaluating."
 
 (defun big-test-report (&rest options &key (num-tries 2) (multiplier 1) (prefix "") (re-run t)
                                         (suite-time-out (* 60 60 4)) (time-out 100) normalize hilite-min
-                                        (decomposition-functions '(parameterized-decompose-types-bdd-graph
-								   decompose-types-bdd-graph
-                                                                   decompose-types-bdd-graph-baker
-								   bdd-decompose-types
-								   decompose-types-graph
-                                                                   decompose-types-graph-baker
-								   decompose-types-sat
+                                        (decomposition-functions '(
+								   decompose-types
+								   bdd-decompose-types 
+
 								   decompose-types-rtev2 
-								   decompose-types))
+								   
+								   
+								   decompose-types-graph
+								   parameterized-decompose-types-bdd-graph
+								   decompose-types-bdd-graph
+								   
+								   decompose-types-sat
+
+                                                                   ;; decompose-types-bdd-graph-baker
+                                                                   ;; decompose-types-graph-baker
+								   
+								   ))
                                         (bucket-reporters *bucket-reporters*)
 					(profile-function-legend (make-hash-table :test #'equal))
 					(plist-hash (make-hash-table :test #'equal))
