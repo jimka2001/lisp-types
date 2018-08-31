@@ -1044,7 +1044,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
 			      (format str "\\definecolor{color~A}{RGB}{~A,~A,~A}~%"
 				      color red green blue))
 			    (format str "\\addlegendimage{color~A,line width=2.0pt,font=\\ttfamily}~%" color))
-			  (format str "\\addlegendentry{~A};~%" legend-entry)))
+			  (format str "\\addlegendentry{~A};~%" (string-downcase legend-entry))))
 		  items)))
 	  (axis legend
 		'("hide axis"
