@@ -1898,6 +1898,8 @@ sleeping before the code finishes evaluating."
 (defun mdtd-report-profile (&key (re-run t) (multiplier 0.2) (destination-dir *destination-dir*)
 			      (num-tries 4) (prefix "mdtd-profile-1-") (decomposition-functions *decomposition-functions*)
 			      (bucket-reporters *bucket-reporters*)
+			      (time-out 200)
+			      (suite-time-out (* 10 60 60))
 			      (create-png-p t))
   (big-test-report :re-run re-run
                    :profile '(:dprof)
@@ -1905,7 +1907,8 @@ sleeping before the code finishes evaluating."
                    :multiplier multiplier
                    :bucket-reporters bucket-reporters
                    :normalize nil
-                   :time-out 200
+                   :time-out time-out
+		   :suite-time-out suite-time-out
                    :num-tries num-tries
                    :hilite-min nil
                    :destination-dir destination-dir
