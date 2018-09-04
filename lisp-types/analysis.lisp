@@ -259,9 +259,9 @@ than as keywords."
                    (format t "    date:  ~A" (encode-time now))
                    (when (plusp fraction-completion)
                      (format t "  estim finish:  ~A~%" (encode-time
-                                                      (truncate (+ start-time
-                                                                   (/ (- now start-time)
-                                                                      fraction-completion))))))
+							(truncate (+ start-time
+								     (/ (- now start-time)
+									fraction-completion))))))
                    (terpri t))
                  (format t "function:  ~A~%" f)
                  (format t "   tag:    ~A~%" tag)
@@ -286,7 +286,8 @@ than as keywords."
                  (let ((descr (find-decomposition-function-descriptor f)))
                    (loop :for len :from 2 :to limit
                          :do (let ((g (make-gausian len)))
-                               (handle descr g (run1 f g types))
+                               (when (> g 1)
+				 (handle descr g   (run1 f g types)))
                                (handle descr len (run1 f len types))))))))
       (when re-run
         (run (choose-randomly types limit))
@@ -356,14 +357,16 @@ than as keywords."
                (format t "given: ~S~%" types))
              ;; :known = number of elements of types X types for which A<B is known
              ;; :unknown = number of elements of types X types for which A<B is unknown
-             (list :given (length types)
-                   :types types
-                   :decompose decompose
-                   :known num-known
-                   :unknown num-unknown
-                   :wall-time (/ wall-time 1.0)
-                   :run-time (/ run-time 1.0)
-                   :time-out time-out))
+             `(:given ,(length types)
+	       :types ,types
+	       :decompose ,decompose
+	       :known ,num-known
+	       :unknown ,num-unknown
+	       :wall-time ,(/ wall-time 1.0)
+	       :run-time ,(/ run-time 1.0)
+	       ,@(when profile
+		   (list :profile-plists profile-plists))
+	       :time-out ,time-out))
             (t
              (unless value
                (format t "   types: ~A~%" types)
