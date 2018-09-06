@@ -22,7 +22,7 @@
 
 (in-package   :lisp-types)
 
-(defun slow-decompose-types (type-specifiers)
+(defun slow-mdtd-baseline (type-specifiers)
   (declare ;;(optimize (speed 3) (compilation-speed 0) (debug 0))
            #+sbcl (notinline union))
   ;;  (declare (optimize (debug 3))  #+sbcl (notinline union))
@@ -64,20 +64,20 @@
             (remember `(and (not ,T1) ,T2)))))
       decomposition)))
 
-;; (compile 'slow-decompose-types)
-;; (trace ((labels slow-decompose-types find-intersecting)))
-;; (trace ((labels slow-decompose-types forget)))
-;; (trace ((labels slow-decompose-types remember)))
-;; (trace ((labels slow-decompose-types remove-disjoint)))
+;; (compile 'slow-mdtd-baseline)
+;; (trace ((labels slow-mdtd-baseline find-intersecting)))
+;; (trace ((labels slow-mdtd-baseline forget)))
+;; (trace ((labels slow-mdtd-baseline remember)))
+;; (trace ((labels slow-mdtd-baseline remove-disjoint)))
 ;; (load "/Users/jnewton/sw/regular-type-expression/lisp-types/decompose.lisp")
 ;; (load "/Users/jnewton/sw/regular-type-expression/lisp-types/lisp-types.lisp")
 
 
-(defun decompose-types (type-specifiers)
+(defun mdtd-baseline (type-specifiers)
   (declare (type list type-specifiers))
   "Given a list TYPE-SPECIFIERS of lisp type names, return a list of disjoint, 
 non-nil type-specifiers comprising the same union, with each of the resulting
 type-specifiers being a sub-type of one of the given type-specifiers."
   (caching-types
-    (slow-decompose-types type-specifiers)))
+    (slow-mdtd-baseline type-specifiers)))
 

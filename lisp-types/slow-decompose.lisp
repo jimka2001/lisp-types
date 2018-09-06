@@ -39,7 +39,7 @@
 (defmacro remfq (obj place)
   `(setf ,place (remove ,obj ,place :test #'eq)))
 
-(defun parameterized-decompose-types-bdd-graph (type-specifiers
+(defun parameterized-mdtd-bdd-graph (type-specifiers
                                        &key
                                          (sort-strategy "BOTTOM-TO-TOP") ;; "BOTTOM-TO-TOP" or "DECREASING-CONNECTIONS"
                                          (recursive t)

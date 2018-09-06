@@ -294,11 +294,11 @@
                 (length graph) (count-touches) (count-supers)))
     (setf *previous-dot* dot-file)))
 
-(defun decompose-types-graph (type-specifiers &key &allow-other-keys)
+(defun mdtd-graph (type-specifiers &key &allow-other-keys)
   (decompose-by-graph-1 type-specifiers :graph-class 'sexp-graph))
 
 
-(defun decompose-types-graph-baker (type-specifiers &key &allow-other-keys)
+(defun mdtd-graph-baker (type-specifiers &key &allow-other-keys)
   (let ((*subtypep* #'baker:baker-subtypep))
     (decompose-by-graph-1 type-specifiers :graph-class 'sexp-graph)))
 

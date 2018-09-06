@@ -427,7 +427,7 @@ Returns NIL otherwise."
 convert it to DNF (disjunctive-normal-form)"
   (bdd-to-dnf (ltbdd type)))
 
-(defun %bdd-decompose-types (type-specifiers)
+(defun %mdtd-bdd (type-specifiers)
   ;;(declare (optimize (debug 0) (speed 3))) ;; optimize tail call 
   (ltbdd-with-new-hash (&aux (bdds (remove-if #'bdd-empty-type (mapcar #'ltbdd type-specifiers))))
     (declare (type list bdds))
@@ -493,20 +493,20 @@ of min-terms, this function returns a list of the min-terms."
                                (recure (bdd-negative term))))))))
     (recure bdd)))
 
-(defun bdd-decompose-types-strong (type-specifiers)
-  (bdd-decompose-types type-specifiers :bdd-hash-strength :strong))
+(defun mdtd-bdd-strong (type-specifiers)
+  (mdtd-bdd type-specifiers :bdd-hash-strength :strong))
 
-(defun bdd-decompose-types-weak (type-specifiers)
-  (bdd-decompose-types type-specifiers :bdd-hash-strength :weak))
+(defun mdtd-bdd-weak (type-specifiers)
+  (mdtd-bdd type-specifiers :bdd-hash-strength :weak))
 
-(defun bdd-decompose-types-weak-dynamic (type-specifiers)
-  (bdd-decompose-types type-specifiers :bdd-hash-strength :weak-dynamic))
+(defun mdtd-bdd-weak-dynamic (type-specifiers)
+  (mdtd-bdd type-specifiers :bdd-hash-strength :weak-dynamic))
 
-(defun bdd-decompose-types (type-specifiers &key ((:bdd-hash-strength *bdd-hash-strength*) :weak-dynamic))
+(defun mdtd-bdd (type-specifiers &key ((:bdd-hash-strength *bdd-hash-strength*) :weak-dynamic))
   (when type-specifiers
     (caching-types
       (mapcar #'bdd-to-dnf
-              (%bdd-decompose-types type-specifiers)))))
+              (%mdtd-bdd type-specifiers)))))
 
 (defun bdd-find-dup-bdds (bdds)
   "A debugging function.  It can be used to find whether two (or more) bdds

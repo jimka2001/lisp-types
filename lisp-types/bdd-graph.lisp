@@ -98,19 +98,19 @@
 (defun count-parents-per-node (node)
   (length (getf node :super-types)))
 
-(defun decompose-types-bdd-graph-strong (type-specifiers)
-  (decompose-types-bdd-graph type-specifiers :bdd-hash-strength :strong))
+(defun mdtd-bdd-graph-strong (type-specifiers)
+  (mdtd-bdd-graph type-specifiers :bdd-hash-strength :strong))
 
-(defun decompose-types-bdd-graph-weak (type-specifiers)
-  (decompose-types-bdd-graph type-specifiers :bdd-hash-strength :weak))
+(defun mdtd-bdd-graph-weak (type-specifiers)
+  (mdtd-bdd-graph type-specifiers :bdd-hash-strength :weak))
 
-(defun decompose-types-bdd-graph-weak-dynamic (type-specifiers)
-  (decompose-types-bdd-graph type-specifiers :bdd-hash-strength :weak-dynamic))
+(defun mdtd-bdd-graph-weak-dynamic (type-specifiers)
+  (mdtd-bdd-graph type-specifiers :bdd-hash-strength :weak-dynamic))
 
-(defun decompose-types-bdd-graph (type-specifiers &key ((:bdd-hash-strength *bdd-hash-strength*) :weak-dynamic)
+(defun mdtd-bdd-graph (type-specifiers &key ((:bdd-hash-strength *bdd-hash-strength*) :weak-dynamic)
                                                     ((:subtypep *subtypep*) *subtypep*))
   (decompose-by-graph-1 type-specifiers :graph-class 'bdd-graph))
 
-(defun decompose-types-bdd-graph-baker (type-specifiers)
-  (decompose-types-bdd-graph type-specifiers :subtypep #'baker:baker-subtypep))
+(defun mdtd-bdd-graph-baker (type-specifiers)
+  (mdtd-bdd-graph type-specifiers :subtypep #'baker:baker-subtypep))
 

@@ -79,19 +79,19 @@
 (define-test type/bdd-sample-a
   (ltbdd-with-new-hash ()
     (let ((types '((member 1 2) (member 2 3) (member 1 2 3 4))))
-      (assert-false (set-exclusive-or (bdd-decompose-types types)
-                                      (decompose-types types)
+      (assert-false (set-exclusive-or (mdtd-bdd types)
+                                      (mdtd-baseline types)
                                       :test #'equivalent-types-p)))
-    (assert-false (set-exclusive-or (bdd-decompose-types '(UNSIGNED-BYTE FIXNUM RATIONAL))
-                                    (decompose-types     '(UNSIGNED-BYTE FIXNUM RATIONAL))
+    (assert-false (set-exclusive-or (mdtd-bdd '(UNSIGNED-BYTE FIXNUM RATIONAL))
+                                    (mdtd-baseline     '(UNSIGNED-BYTE FIXNUM RATIONAL))
                                     :test #'equivalent-types-p))
 
-    (assert-false (set-exclusive-or (bdd-decompose-types '(unsigned-byte bit fixnum rational number float))
-                                    (decompose-types-graph  '(unsigned-byte bit fixnum rational number float))
+    (assert-false (set-exclusive-or (mdtd-bdd '(unsigned-byte bit fixnum rational number float))
+                                    (mdtd-graph  '(unsigned-byte bit fixnum rational number float))
                                     :test #'equivalent-types-p))))
 
 (define-test type/3-types
-  (let ((decomp (bdd-decompose-types '(TEST-CHAR-CODE DOUBLE-FLOAT UNSIGNED-BYTE))))
+  (let ((decomp (mdtd-bdd '(TEST-CHAR-CODE DOUBLE-FLOAT UNSIGNED-BYTE))))
     (dolist (t1 decomp)
       (dolist (t2 (remove t1 decomp))
         (assert-false (subtypep-wrapper t1 t2))
@@ -172,7 +172,7 @@
         (flet ((test1 (types &aux sorted)
                  (format t "~A~%" (car types))
                  (let ((t1 (get-internal-run-time))
-                       (t2 (progn (setf sorted (bdd-decompose-types types))
+                       (t2 (progn (setf sorted (mdtd-bdd types))
                                   (get-internal-run-time))))
                    (format t "   ~D ~D ~F~%"
                            n

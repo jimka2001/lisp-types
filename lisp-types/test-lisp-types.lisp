@@ -374,20 +374,20 @@
 		      '(not (member a b))))
   )
 
-(define-test type/decompose-types-t
-  (assert-false (member t (decompose-types '(KEYWORD (MEMBER :A :B) T          (NOT (EQL :A)) (EQL :A) (NOT (EQL :B)) (EQL :B)))))
-  (assert-false (member t (decompose-types '(        (MEMBER :A :B) T          (NOT (EQL :A)) (EQL :A) (NOT (EQL :B)) (EQL :B)))))
-  (assert-false (member t (decompose-types '(KEYWORD (MEMBER :A :B) T (EQL :A)                         (NOT (EQL :B)) (EQL :B)))))
-  (assert-false (member t (decompose-types '(KEYWORD (MEMBER :A :B) T                                  (NOT (EQL :B)) (EQL :B)))))
-  (assert-false (member t (decompose-types '(KEYWORD (MEMBER :A :B) T                                                 (EQL :B)))))
-  (assert-false (member t (decompose-types '(KEYWORD (MEMBER :A :B) T))))
+(define-test type/mdtd-t
+  (assert-false (member t (mdtd-baseline '(KEYWORD (MEMBER :A :B) T          (NOT (EQL :A)) (EQL :A) (NOT (EQL :B)) (EQL :B)))))
+  (assert-false (member t (mdtd-baseline '(        (MEMBER :A :B) T          (NOT (EQL :A)) (EQL :A) (NOT (EQL :B)) (EQL :B)))))
+  (assert-false (member t (mdtd-baseline '(KEYWORD (MEMBER :A :B) T (EQL :A)                         (NOT (EQL :B)) (EQL :B)))))
+  (assert-false (member t (mdtd-baseline '(KEYWORD (MEMBER :A :B) T                                  (NOT (EQL :B)) (EQL :B)))))
+  (assert-false (member t (mdtd-baseline '(KEYWORD (MEMBER :A :B) T                                                 (EQL :B)))))
+  (assert-false (member t (mdtd-baseline '(KEYWORD (MEMBER :A :B) T))))
   )
 
-(define-test type/decompose-types-member
-  (assert-true (equal '(t) (decompose-types '(nil t))))
-  (assert-true (equal '(t) (decompose-types '((member) t)))))
+(define-test type/mdtd-member
+  (assert-true (equal '(t) (mdtd-baseline '(nil t))))
+  (assert-true (equal '(t) (mdtd-baseline '((member) t)))))
 
-(define-test type/decompose-types
+(define-test type/mdtd-baseline
   (let ((A '(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15))
 	(B '(2 3 5 6))
 	(C '(3 4 5 7))
@@ -397,7 +397,7 @@
 	(G '(10 11 12))
 	(H '(15))
 	(I '(16)))
-    (let ((disjoint (decompose-types `((member ,@A)
+    (let ((disjoint (mdtd-baseline `((member ,@A)
 					 (member ,@B)
 					 (member ,@C)
 					 (member ,@D)
@@ -415,7 +415,7 @@
 					    (typep e s))
 					  disjoint))))))))
 
-(define-test type/decompose-types2 ()
+(define-test type/mdtd-baseline2 ()
   (let ((A '(1 2 3 4 5 6 7 8 9 10 11 12 13))
 	(B '(2 3 5 6))
 	(C '(3 4 5 7))
@@ -424,7 +424,7 @@
 	(F '(10))
 	(G '(11))
 	(H '(9 12 13)))
-    (let ((disjoint (decompose-types `((member ,@A)
+    (let ((disjoint (mdtd-baseline `((member ,@A)
 					 (member ,@B)
 					 (member ,@C)
 					 (member ,@D)

@@ -310,7 +310,7 @@ than as keywords."
 (defvar *perf-results* nil)
 (assert (find-symbol "*PERF-RESULTS*" :lisp-types-analysis))
 
-(defun types/cmp-perf (&key types (decompose 'bdd-decompose-types-weak) (time-out 15) (num-tries 2) profile
+(defun types/cmp-perf (&key types (decompose 'mdtd-bdd-weak) (time-out 15) (num-tries 2) profile
                        &aux (f (symbol-function decompose)))
   (declare (type list types)
            (type symbol decompose)
@@ -394,7 +394,7 @@ than as keywords."
 
 (defun check-decomposition (given calculated)
   "debugging function to assure that a given list of types GIVEN corresponds correctly
-to a set of types returned from %bdd-decompose-types."
+to a set of types returned from %mdtd-bdd."
   (ltbdd-with-new-hash ()
     (let ((bdd-given (bdd `(or ,@given)))
           (bdd-calculated (bdd `(or ,@calculated))))
@@ -425,8 +425,8 @@ to a set of types returned from %bdd-decompose-types."
              (when (cdr type-specs)
                (recure (cdr type-specs)))
              (format t "~%~%~%n = ~D~%~%~%~%" (length type-specs))
-             (let* ((bdd-types (bdd-decompose-types type-specs))
-                    (def-types (decompose-types type-specs))
+             (let* ((bdd-types (mdtd-bdd type-specs))
+                    (def-types (mdtd-baseline type-specs))
                     (common (intersection bdd-types def-types :test #'equivalent-types-p))
                     (bdd-left-over (set-difference bdd-types common :test #'equivalent-types-p))
                     (def-left-over (set-difference def-types common :test #'equivalent-types-p)))
@@ -1129,8 +1129,8 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
                                                                                    include-decompose))
                                                                  (descr2 (find-decomposition-function-descriptor name)))
                                               curve
-                                            ;; decompose is a string such as "DECOMPOSE-TYPES-BDD-GRAPH"
-                                            ;; include-decompose contains symbols such as DECOMPOSE-TYPES-BDD-GRAPH
+                                            ;; decompose is a string such as "MDTD-BDD-GRAPH"
+                                            ;; include-decompose contains symbols such as MDTD-BDD-GRAPH
                                             (when (and (eq descr descr2) name)
                                               (plot xys decompose descr)))))
                                       (when min-curve
@@ -1795,20 +1795,20 @@ sleeping before the code finishes evaluating."
 (defun big-test-report (&rest options &key (num-tries 2) (multiplier 1) (prefix "") (re-run t)
                                         (suite-time-out (* 60 60 4)) (time-out 100) normalize hilite-min
                                         (decomposition-functions '(
-								   decompose-types
-								   bdd-decompose-types 
+								   mdtd-baseline
+								   mdtd-bdd 
 
-								   decompose-types-rtev2 
+								   mdtd-rtev2 
 								   
 								   
-								   decompose-types-graph
-								   parameterized-decompose-types-bdd-graph
-								   decompose-types-bdd-graph
+								   mdtd-graph
+								   parameterized-mdtd-bdd-graph
+								   mdtd-bdd-graph
 								   
-								   decompose-types-sat
+								   mdtd-sat
 
-                                                                   ;; decompose-types-bdd-graph-baker
-                                                                   ;; decompose-types-graph-baker
+                                                                   ;; mdtd-bdd-graph-baker
+                                                                   ;; mdtd-graph-baker
 								   
 								   ))
                                         (bucket-reporters *bucket-reporters*)
@@ -1850,15 +1850,15 @@ sleeping before the code finishes evaluating."
                    :destination-dir destination-dir
                    :create-png-p create-png-p
                    :bucket-reporters bucket-reporters
-                   :decomposition-functions '( ;; decompose-types-bdd-graph-strong
-                                              ;; decompose-types-bdd-graph-weak
-					      parameterized-decompose-types-bdd-graph ;; tuned by params- simulation
-                                              decompose-types-bdd-graph ;; same as decompose-types-bdd-graph-weak-dynamic
-                                              ;;bdd-decompose-types-strong
-                                              ;;bdd-decompose-types-weak
-                                              bdd-decompose-types ;; same as bdd-decompose-types-weak-dynamic
-                                              decompose-types-rtev2
-                                              decompose-types-graph)))
+                   :decomposition-functions '( ;; mdtd-bdd-graph-strong
+                                              ;; mdtd-bdd-graph-weak
+					      parameterized-mdtd-bdd-graph ;; tuned by params- simulation
+                                              mdtd-bdd-graph ;; same as mdtd-bdd-graph-weak-dynamic
+                                              ;;mdtd-bdd-strong
+                                              ;;mdtd-bdd-weak
+                                              mdtd-bdd ;; same as mdtd-bdd-weak-dynamic
+                                              mdtd-rtev2
+                                              mdtd-graph)))
 
 (defun baker-report (&key (re-run t) (multiplier 1.8) (create-png-p t) (destination-dir *destination-dir*)
                        (bucket-reporters *bucket-reporters*))
@@ -1875,10 +1875,10 @@ sleeping before the code finishes evaluating."
                    :create-png-p create-png-p
                    :bucket-reporters bucket-reporters
                    :decomposition-functions '( 
-                                              decompose-types-bdd-graph
-                                              decompose-types-bdd-graph-baker
-                                              decompose-types-graph
-                                              decompose-types-graph-baker)))
+                                              mdtd-bdd-graph
+                                              mdtd-bdd-graph-baker
+                                              mdtd-graph
+                                              mdtd-graph-baker)))
 
 (defun mdtd-report (&key (re-run t) (multiplier 2.5) (create-png-p t) (bucket-reporters *bucket-reporters*) (destination-dir *destination-dir*))
   (big-test-report :re-run re-run
@@ -1891,12 +1891,12 @@ sleeping before the code finishes evaluating."
                    :destination-dir destination-dir
                    :create-png-p create-png-p
                    :bucket-reporters bucket-reporters
-                   :decomposition-functions '(decompose-types-bdd-graph-strong
-                                              decompose-types-bdd-graph-weak
-                                              decompose-types-bdd-graph-weak-dynamic
-                                              bdd-decompose-types-strong
-                                              bdd-decompose-types-weak
-                                              bdd-decompose-types-weak-dynamic)))
+                   :decomposition-functions '(mdtd-bdd-graph-strong
+                                              mdtd-bdd-graph-weak
+                                              mdtd-bdd-graph-weak-dynamic
+                                              mdtd-bdd-strong
+                                              mdtd-bdd-weak
+                                              mdtd-bdd-weak-dynamic)))
 
 (defun mdtd-report-profile (&key (re-run t) (multiplier 0.2) (destination-dir *destination-dir*)
 			      (num-tries 4) (prefix "mdtd-profile-1-") (decomposition-functions *decomposition-functions*)
@@ -2112,7 +2112,7 @@ sleeping before the code finishes evaluating."
 
 (defun convert-name-once (destination-dir fname)
   ;; fname = "mdtd-profile-0-6-member.sexp"
-  ;; converts name to "mdtd-profile-single-PARAMETERIZED-DECOMPOSE-TYPES-BDD-GRAPH-member.sexp"
+  ;; converts name to "mdtd-profile-single-PARAMETERIZED-MDTD-BDD-GRAPH-member.sexp"
   (with-open-file (istream (format nil "~A/~A" destination-dir fname)
 			   :direction :input
 			   :if-does-not-exist :error)

@@ -58,7 +58,7 @@
                                         (eql 11)
                                         (eql 12)
                                         (eql 13))
-                                      (decompose-types-sat types)
+                                      (mdtd-sat types)
                                       :test #'equivalent-types-p))))
 
   
@@ -70,9 +70,9 @@
   (let (all-numbers decom decom-sat excl)
      (setf all-numbers (valid-subtypes 'number))
      (length all-numbers)
-     (setf decom (decompose-types-graph all-numbers))
+     (setf decom (mdtd-graph all-numbers))
      (length decom)
-     (setf decom-sat (decompose-types-sat all-numbers))
+     (setf decom-sat (mdtd-sat all-numbers))
      (length decom-sat)
      (setf excl (set-exclusive-or decom decom-sat :test #'equivalent-types-p))
      (assert-true (null excl))
@@ -112,7 +112,7 @@
                                         (eql 11)
                                         (eql 12)
                                         (eql 13))
-                                      (decompose-types-sat types)
+                                      (mdtd-sat types)
                                       :test #'equivalent-types-p))))
 
   
@@ -122,8 +122,8 @@
 (define-test type/sat4
   (let ((types '(bignum unsigned-byte fixnum)))
     (caching-types
-      (assert-false (set-exclusive-or (decompose-types-sat types)
-                                      (decompose-types-graph types)
+      (assert-false (set-exclusive-or (mdtd-sat types)
+                                      (mdtd-graph types)
                                       :test #'equivalent-types-p))))  )
 
 
@@ -137,8 +137,8 @@
                  number
                  )))
     (caching-types
-      (assert-false (set-exclusive-or (decompose-types-sat types)
-                                      (decompose-types-graph types)
+      (assert-false (set-exclusive-or (mdtd-sat types)
+                                      (mdtd-graph types)
                                       :test #'equivalent-types-p))))
   )
 
@@ -148,15 +148,15 @@
                  double-float bignum signed-byte float unsigned-byte single-float number fixnum
                  test-char-int complex)))
     (caching-types
-      (assert-false (set-exclusive-or (decompose-types-sat types)
-                                      (decompose-types-graph types) :test #'equivalent-types-p)))
+      (assert-false (set-exclusive-or (mdtd-sat types)
+                                      (mdtd-graph types) :test #'equivalent-types-p)))
 
     (let ((types '(short-float ratio rational bit integer long-float real floating-point-inexact
                    double-float bignum signed-byte float unsigned-byte single-float number fixnum
                    test-char-int complex)))
       (caching-types
-        (assert-false (set-exclusive-or (decompose-types-sat types)
-                                        (decompose-types-graph types)
+        (assert-false (set-exclusive-or (mdtd-sat types)
+                                        (mdtd-graph types)
                                         :test #'equivalent-types-p))))
 
 
@@ -164,8 +164,8 @@
                    double-float bignum signed-byte float unsigned-byte single-float number fixnum
                    test-char-int complex)))
       (caching-types
-        (assert-false (set-exclusive-or (decompose-types-sat types)
-                                        (decompose-types-graph types)
+        (assert-false (set-exclusive-or (mdtd-sat types)
+                                        (mdtd-graph types)
                                         :test #'equivalent-types-p)))))
 
   

@@ -53,7 +53,7 @@
     (assert-true (types/cmp-perfs :limit 3
                                   :file-name "bdd-numbers"
                                   :destination-dir "/tmp"
-                                  :decompose '(lisp-types::bdd-decompose-types)
+                                  :decompose '(lisp-types::mdtd-bdd)
                                   :types (valid-subtypes 'number)))))
 
 #+sbcl
@@ -62,7 +62,7 @@
     (assert-true (types/cmp-perfs :limit 6
                                   :file-name "bdd-numbers"
                                   :destination-dir "/tmp"
-                                  :decompose '(lisp-types::bdd-decompose-types)
+                                  :decompose '(lisp-types::mdtd-bdd)
                                   :types (valid-subtypes 'number)))))
 
 #+sbcl
@@ -71,7 +71,7 @@
     (assert-true (types/cmp-perfs :limit 15
                                   :file-name "bdd-numbers"
                                   :destination-dir "/tmp"
-                                  :decompose '(lisp-types::bdd-decompose-types)
+                                  :decompose '(lisp-types::mdtd-bdd)
                                   :types (valid-subtypes 'number)))))
 
 
@@ -125,7 +125,7 @@
 (define-test disjoint-cmp-5
   (setf *perf-results* nil)
   (ltbdd-with-new-hash ()
-    ;; decompose-types-bdd-graph
+    ;; mdtd-bdd-graph
     (types/cmp-perfs :file-name "disjoint-cmp-5"
                      :destination-dir "/tmp"
                      :types '(SB-PCL:SYSTEM-CLASS
@@ -164,7 +164,7 @@
 
 (define-test disjoint-cmp-9
   (ltbdd-with-new-hash ()
-   (assert-true (= 3 (length (bdd-decompose-types '((MEMBER 0 2)
+   (assert-true (= 3 (length (mdtd-bdd '((MEMBER 0 2)
                                                       (MEMBER 0 1 2)
                                                       (MEMBER 0 2 4))))))))
 
@@ -185,7 +185,7 @@
         (assert-true (bdd-type-p 4 (bdd-and-not U t1)))))))
 
 (define-test disjoint-cmp-b
-  (assert-true (= 9 (length (decompose-types-graph
+  (assert-true (= 9 (length (mdtd-graph
                              '((MEMBER 1 3 4 5 6 9)
                                (MEMBER 1 5 7 8)
                                (MEMBER 4 7 8 9 10)
@@ -193,7 +193,7 @@
                                (MEMBER 0 2 3 7 8 10)))))))
     
 (define-test disjoint-cmp-c
-  (assert-true (decompose-types-graph '((MEMBER 0 3 4)
+  (assert-true (mdtd-graph '((MEMBER 0 3 4)
                                         (EQL 2)
                                         (MEMBER 2 3)
                                         (MEMBER 2 3 4)
@@ -206,7 +206,7 @@
 
 
 (define-test disjoint-cmp-d
-  (assert-true (decompose-types-graph '((EQL 2)
+  (assert-true (mdtd-graph '((EQL 2)
                                         (MEMBER 2 3 4)
                                         (MEMBER 1 2 4)
                                         (MEMBER 0 1 3)
@@ -216,7 +216,7 @@
 
 
 (define-test disjoing-cmp-e
-  (assert-true (decompose-types-graph '((MEMBER 1 4)
+  (assert-true (mdtd-graph '((MEMBER 1 4)
                                         (EQL 2)
                                         (MEMBER 0 3)
                                         (MEMBER 2 3 4)
@@ -226,7 +226,7 @@
                                         (MEMBER 0 1 3 4)))))
 
 (define-test disjoing-cmp-f
-  (assert-true (decompose-types-graph '((MEMBER 1 4)
+  (assert-true (mdtd-graph '((MEMBER 1 4)
                                         (MEMBER 1 2 4)
                                         (MEMBER 0 1 3 4)
                                         (MEMBER 0 3)
@@ -297,7 +297,7 @@
             (and (not arithmetic-error) reader-error (not structure-class) (not style-warning))
             (and (not arithmetic-error) (not reader-error) (not structure-class) style-warning))))
     (ltbdd-with-new-hash ()
-      (parameterized-decompose-types-bdd-graph type-specifiers 
+      (parameterized-mdtd-bdd-graph type-specifiers 
                                       :sort-nodes #'(lambda (graph)
                                                       (declare (notinline sort))
                                                       (sort graph #'< :key #'count-parents-per-node))
@@ -312,7 +312,7 @@
             SYNONYM-STREAM ARITHMETIC-ERROR TEST-CHAR-CODE WARNING FLOAT-RADIX
             SIMPLE-BIT-VECTOR STREAM-ERROR ARRAY STYLE-WARNING)))
     (ltbdd-with-new-hash ()
-      (parameterized-decompose-types-bdd-graph type-specifiers 
+      (parameterized-mdtd-bdd-graph type-specifiers 
                                                :sort-nodes #'(lambda (graph)
                                                                (declare (notinline sort))
                                                                (sort graph #'< :key #'count-parents-per-node))
@@ -327,7 +327,7 @@
   (ltbdd-with-new-hash (&aux (type-specifiers (lisp-types::choose-randomly (loop :for name being the external-symbols in "SB-PCL"
                                                                                  :when (find-class name nil)
                                                                                    :collect name) size)))
-    (parameterized-decompose-types-bdd-graph type-specifiers
+    (parameterized-mdtd-bdd-graph type-specifiers
                                              :sort-nodes (lambda (graph)
                                                            (declare (notinline sort))
                                                            (sort graph #'< :key
@@ -413,9 +413,9 @@ if the function returned the same as it was passed as input (according to EQUAL)
                              :bucket-reporters (list bucket)
                              :destination-dir "/tmp/jnewton/analysis/.")))
 
-(define-test test/parameterized-decompose-types-bdd-graph
+(define-test test/parameterized-mdtd-bdd-graph
   (ltbdd-with-new-hash ()
-    (parameterized-decompose-types-bdd-graph '((and function program-error) concatenated-stream
+    (parameterized-mdtd-bdd-graph '((and function program-error) concatenated-stream
                                                (or package floating-point-overflow)
                                                (and simple-string program-error) (or method vector)
                                                (or concatenated-stream synonym-stream) simple-warning

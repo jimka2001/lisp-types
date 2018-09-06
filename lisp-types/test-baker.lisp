@@ -25,10 +25,10 @@
 
 ;; i'm not sure why lisp-unit package is required here
 (define-test baker/decompose-simple
-  (assert-false (decompose-types-graph (list nil)))
-  (assert-false (decompose-types-graph-baker (list nil)))
-  (assert-true  (decompose-types-graph (list t)))
-  (assert-true  (decompose-types-graph-baker (list t))))
+  (assert-false (mdtd-graph (list nil)))
+  (assert-false (mdtd-graph-baker (list nil)))
+  (assert-true  (mdtd-graph (list t)))
+  (assert-true  (mdtd-graph-baker (list t))))
 
 (define-test test123
   (flet ((equal-n (&rest args)
@@ -152,21 +152,21 @@
 (define-test baker/decompose-3
   (ltbdd-with-new-hash ()
     (let ((types '((member 1 2) (member 2 3) (member 1 2 3 4))))
-      (assert-false (set-exclusive-or (decompose-types-graph types)
-                                      (decompose-types-graph-baker types)
+      (assert-false (set-exclusive-or (mdtd-graph types)
+                                      (mdtd-graph-baker types)
                                       :test #'equivalent-types-p)))))
 
 (define-test baker/decompose-4
   (ltbdd-with-new-hash ()
  
-    (assert-false (set-exclusive-or (decompose-types-graph '(UNSIGNED-BYTE FIXNUM RATIO))
-                                    (decompose-types-graph-baker     '(UNSIGNED-BYTE FIXNUM RATIO))
+    (assert-false (set-exclusive-or (mdtd-graph '(UNSIGNED-BYTE FIXNUM RATIO))
+                                    (mdtd-graph-baker     '(UNSIGNED-BYTE FIXNUM RATIO))
                                     :test #'equivalent-types-p))))
 
 (define-test baker/decompose-5
   (ltbdd-with-new-hash ()
-    (assert-false (set-exclusive-or (decompose-types-graph '(unsigned-byte bit fixnum ratio number float))
-                                    (decompose-types-graph-baker  '(unsigned-byte bit fixnum ratio number float))
+    (assert-false (set-exclusive-or (mdtd-graph '(unsigned-byte bit fixnum ratio number float))
+                                    (mdtd-graph-baker  '(unsigned-byte bit fixnum ratio number float))
                                     :test #'equivalent-types-p))))
 
 (define-test baker/decompose-6
@@ -175,8 +175,8 @@
 				      ratio
 				      number
 				      float)))
-    (assert-false (set-exclusive-or (decompose-types-graph types)
-                                    (decompose-types-graph-baker types)
+    (assert-false (set-exclusive-or (mdtd-graph types)
+                                    (mdtd-graph-baker types)
                                     :test #'equivalent-types-p))))
 
 (define-test baker/decompose-7
@@ -185,8 +185,8 @@
 				      ratio
 				      number
 				      float)))
-    (assert-false (set-exclusive-or (decompose-types-graph types)
-                                    (decompose-types-graph-baker types)
+    (assert-false (set-exclusive-or (mdtd-graph types)
+                                    (mdtd-graph-baker types)
                                     :test #'equivalent-types-p))))
 
 (define-test baker/decompose-8
@@ -194,8 +194,8 @@
 				      ratio
 				      number
 				      float)))
-    (assert-false (set-exclusive-or (decompose-types-graph types)
-                                    (decompose-types-graph-baker types)
+    (assert-false (set-exclusive-or (mdtd-graph types)
+                                    (mdtd-graph-baker types)
                                     :test #'equivalent-types-p))))
 
 (define-test baker/reduce-lisp-type-1

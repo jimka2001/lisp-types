@@ -67,7 +67,7 @@
           (dolist (operation-combo-args operation-combos)
             (destructuring-bind (&key do-break-sub do-break-loop) operation-combo-args
               (let* ((symbol (concatenate 'string
-                                          "DECOMPOSE-TYPES-BDD-GRAPH-"
+                                          "MDTD-BDD-GRAPH-"
                                           (symbol-name do-break-sub)
                                           "/"
                                           "BREAK-LOOP="
@@ -88,7 +88,7 @@
                 (push `(defun ,fun-name (type-specifiers)
                          (ltbdd-with-new-hash ()
                            (let ((*bdd-hash-strength* :weak))
-                             (parameterized-decompose-types-bdd-graph type-specifiers ,@props))))
+                             (parameterized-mdtd-bdd-graph type-specifiers ,@props))))
                       fun-defs)))))))
     (setf fun-names (mapcar #'cadr fun-defs))
     `(progn
@@ -101,23 +101,23 @@
 
 (setf *decomposition-function-descriptors*
   (let ((color 0))
-    `((:names (decompose-types) :max-num-types 15 :gnu-color ,(nth (incf color) *colors*) :legend t)
-      (:names (decompose-types-rtev2) :max-num-types nil  :gnu-color ,(nth (incf color) *colors*) :legend t)
-      (:names (decompose-types-sat)  :gnu-color ,(nth (incf color) *colors*)  :legend t)
-      (:names (decompose-types-graph)  :gnu-color ,(nth (incf color) *colors*) :legend t)
-      (:names (bdd-decompose-types-strong)  :gnu-color ,(nth (incf color) *colors*) :legend t)
-      (:names (bdd-decompose-types-weak) :gnu-color ,(nth (incf color) *colors*) :legend t)
-      (:names (bdd-decompose-types-weak-dynamic) :gnu-color ,(nth (incf color) *colors*) :legend t)
-      (:names (bdd-decompose-types) :gnu-color ,(nth (incf color) *colors*) :legend t)
+    `((:names (mdtd-baseline) :max-num-types 15 :gnu-color ,(nth (incf color) *colors*) :legend t)
+      (:names (mdtd-rtev2) :max-num-types nil  :gnu-color ,(nth (incf color) *colors*) :legend t)
+      (:names (mdtd-sat)  :gnu-color ,(nth (incf color) *colors*)  :legend t)
+      (:names (mdtd-graph)  :gnu-color ,(nth (incf color) *colors*) :legend t)
+      (:names (mdtd-bdd-strong)  :gnu-color ,(nth (incf color) *colors*) :legend t)
+      (:names (mdtd-bdd-weak) :gnu-color ,(nth (incf color) *colors*) :legend t)
+      (:names (mdtd-bdd-weak-dynamic) :gnu-color ,(nth (incf color) *colors*) :legend t)
+      (:names (mdtd-bdd) :gnu-color ,(nth (incf color) *colors*) :legend t)
       (:names ,*decompose-fun-parameterized-names*  :gnu-color "b2daff" :color "light-blue" :legend nil)
-      (:names (decompose-types-bdd-graph-strong)  :gnu-color ,(nth (incf color) *colors*) :linewidth 1  :legend t)
-      (:names (decompose-types-bdd-graph-weak-dynamic)  :gnu-color ,(nth (incf color) *colors*) :linewidth 1  :legend t)
-      (:names (decompose-types-bdd-graph)  :gnu-color ,(nth (incf color) *colors*) :linewidth 1  :legend t)
-      (:names (decompose-types-bdd-graph-weak)  :gnu-color ,(nth (incf color) *colors*) :linewidth 1  :legend t)
-      (:names (parameterized-decompose-types-bdd-graph) :gnu-color "ff4444" :linewidth 1 :legend t)
+      (:names (mdtd-bdd-graph-strong)  :gnu-color ,(nth (incf color) *colors*) :linewidth 1  :legend t)
+      (:names (mdtd-bdd-graph-weak-dynamic)  :gnu-color ,(nth (incf color) *colors*) :linewidth 1  :legend t)
+      (:names (mdtd-bdd-graph)  :gnu-color ,(nth (incf color) *colors*) :linewidth 1  :legend t)
+      (:names (mdtd-bdd-graph-weak)  :gnu-color ,(nth (incf color) *colors*) :linewidth 1  :legend t)
+      (:names (parameterized-mdtd-bdd-graph) :gnu-color "ff4444" :linewidth 1 :legend t)
       (:names (local-minimum) :gnu-color "000000" :color "black" :linewidth 2 :legend t)
-      (:names (decompose-types-bdd-graph-baker) :gnu-color ,(nth (incf color) *colors*) :linewidth 1  :legend t)
-      (:names (decompose-types-graph-baker)  :gnu-color ,(nth (incf color) *colors*) :legend t))))
+      (:names (mdtd-bdd-graph-baker) :gnu-color ,(nth (incf color) *colors*) :linewidth 1  :legend t)
+      (:names (mdtd-graph-baker)  :gnu-color ,(nth (incf color) *colors*) :legend t))))
 
 (setf *decomposition-functions*
       (set-difference (mapcan (lambda (plist)
@@ -128,14 +128,14 @@
                                   (bucket-reporters *bucket-reporters*))
   (big-test-report :re-run re-run
                    :prefix "param-"
-                   :normalize 'decompose-types-bdd-graph
+                   :normalize 'mdtd-bdd-graph
                    :hilite-min t
                    :destination-dir destination-dir
                    :multiplier multiplier
                    :create-png-p create-png-p
                    :bucket-reporters bucket-reporters
-                   :decomposition-functions (list* 'decompose-types-bdd-graph
-						   'parameterized-decompose-types-bdd-graph
+                   :decomposition-functions (list* 'mdtd-bdd-graph
+						   'parameterized-mdtd-bdd-graph
 						   *decompose-fun-parameterized-names*)))
 
 (defun find-decomposition-function-descriptor (name)

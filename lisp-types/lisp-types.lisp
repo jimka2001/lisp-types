@@ -132,7 +132,7 @@
     (t
      '(nil nil))))
 
-;; A performance analysis of decompose-types-bdd-graph shows that a HUGE portion of the time
+;; A performance analysis of mdtd-bdd-graph shows that a HUGE portion of the time
 ;; is being spent in subtypep, and a major source of calls to subtypep is smarter-subtypep.
 ;; It seems that runs containing lots of type specifiers for which subtypep returns nil,nil
 ;; is a source of bad performance.  So *subtype-hash* is introduced to cache some of these
