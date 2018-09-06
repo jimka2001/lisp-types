@@ -82,6 +82,14 @@
 			      operands)))
   operands)
 
+(defun make-member (args)
+  (cond ((null args)
+	 nil)
+	((null (cdr args))
+	 (cons 'eql args))
+	(t
+	 (cons 'member args))))
+
 (defun reduce-member-type (type-spec)
   (declare (optimize (speed 3) (compilation-speed 0) (debug 0))
 	   (type (cons (eql AND) cons) type-spec))
@@ -93,9 +101,9 @@
 		      (cdr type-spec))))
     ;; found the (MEMBER ...) or (EQL ...)
     (if hit ;; now remove all the elements of the (MEMBER ...) or (EQL ...) which fail to match the type
-	(cons (car hit) (remove-if-not (lambda (obj)
-					 (typep obj type-spec))
-				       (cdr hit)))
+	(make-member (remove-if-not (lambda (obj)
+				      (typep obj type-spec))
+				    (cdr hit)))
 	type-spec)))
 
 (defun type-to-dnf (type)
@@ -268,7 +276,6 @@ If a type is found in this list that it treated as a declaration of to things:
 Applications are free to push entries onto this list to notify REDUCE-LISP-TYPE of how
 to reduce a type defined by DEFTYPE.")
 
-
 (defun reduce-lisp-type-once (type &key (full t) &aux it)
   "Given a lisp type designator, make one pass at reducing it, removing redundant information such as
 repeated or contradictory type designators. 
@@ -289,13 +296,6 @@ a call to subtypep or friends."
              (build 'and t args))
            (make-or (args)
              (build 'or nil args))
-           (make-member (args)
-             (cond ((null args)
-                    nil)
-                   ((null (cdr args))
-                    (cons 'eql args))
-                   (t
-                    (cons 'member args))))
            (substitute-tail (list search replace)
 	     (cons (car list)
 		   (mapcar (lambda (e)
@@ -483,7 +483,7 @@ a call to subtypep or friends."
        (setf type (cons (car type)
 			(mapcar (lambda (ty) (reduce-lisp-type-once ty :full full)) (cdr type))))
        ;; we might now how duplicates, in particular we might have (and nil nil), if
-       ;;  so then removing supers would result in (and) which would make t.  That woudl
+       ;;  so then removing supers would result in (and) which would make t.  That would
        ;;  be very bad.  So let's remove duplicates again.
        (setf type (cons (car type)
 			(remove-duplicates (cdr type) :test #'equal)))
