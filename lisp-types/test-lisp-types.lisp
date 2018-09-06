@@ -321,18 +321,40 @@
                        '((OR (AND A-282 U-282 V-282) (AND V-282 W-282 (NOT A-282))))
                        :test #'equivalent-types-p)))
 
+(define-test test/side-effect-2
+  (let ((n 0))
+    (flet ((my-equal (a b)
+	     (= a b)))
+      (assert-true (my-equal 42
+			     (progn
+			       (format t "incrementing n~%")
+			       (incf n)
+			       42)))
+      (assert-true (equal n 1)))))
+
+(define-test test/side-effect
+  (let ((n 0))
+    (assert-true (equal 42
+			(progn
+			  (format t "incrementing n~%")
+			  (incf n)
+			  42)))
+    (assert-true (equal n 1))))
 
 (define-test type/rule-case
   (let ((n 0))
     (assert-true (equal (lisp-types::rule-case (+ 4 5)
 			  (t
 			   (incf n)
+			   (format t "1 n=~A~%" n)
 			   9)
 			  ((= 1 n)
 			   (incf n)
+			   (format t "2 n=~A~%" n)
 			   9)
 			  ((= 2 n)
 			   (incf n)
+			   (format t "3 n=~A~%" n)
 			   0))
 			0))
     (assert-true (equal 3 n))))

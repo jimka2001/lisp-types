@@ -417,26 +417,35 @@ E.g.  (rule-case 12 ;; OBJECT
 			      (return-from sub-super (values t t2 t1)))))))
   (values nil))
 
-(defun remove-subs (types)
-  (declare (type list types)
-	   (inline sub-super)
-	   (optimize (speed 3) (compilation-speed 0)))
-  (multiple-value-bind (match? sub super) (sub-super types)
-    (declare (ignore super))
-    (if match?
-	(remove-subs (remove sub types :test #'eq)) ; tail call
-	types)))
-
 (defun remove-supers (types)
-  (declare (type list types)
-	   (inline sub-super)
-	   (optimize (speed 3) (compilation-speed 0)))
-  (declare (type list types))
-  (multiple-value-bind (match? sub super) (sub-super types)
-    (declare (ignore sub))
-    (if match?
-	(remove-supers (remove super types :test #'eq)) ; tail call
-	types)))
+  (labels ((recure (types acc)
+	     (cond
+	       ((null types)
+		(nreverse acc))
+	       ((exists type acc
+		  (cached-subtypep type (car types)))
+		(recure (cdr types) acc))
+	       ((exists type (cdr types)
+		  (cached-subtypep type (car types)))
+		(recure (cdr types) acc))
+	       (t
+		(recure (cdr types) (cons (car types) acc))))))
+    (recure types nil)))
+
+(defun remove-subs (types)
+  (labels ((recure (types acc)
+	     (cond
+	       ((null types)
+		(nreverse acc))
+	       ((exists type acc
+		  (cached-subtypep (car types) type))
+		(recure (cdr types) acc))
+	       ((exists type (cdr types)
+		  (cached-subtypep (car types) type))
+		(recure (cdr types) acc))
+	       (t
+		(recure (cdr types) (cons (car types) acc))))))
+    (recure types nil)))
 
 (defun fixed-point (function arg &key (test #'equal))
   "Find the fixed point of a FUNCTION, starting with the given ARG."

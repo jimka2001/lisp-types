@@ -121,10 +121,11 @@
                      (assert-true (equal-n (equiv-control t1 t2)
                                            (equiv-cl t1 t2)
                                            (equiv-baker t1 t2)))
-		     (assert (baker:SUBTYPEP
-				'(NOT (AND (AND SYMBOL (NOT KEYWORD)) (EQL 12.0d0))) T)
-			       ()
-			       "baker:subtypep is now broken after checking ~A vs ~A" t1 t2)
+		     (assert-true (baker:SUBTYPEP
+				   '(NOT (AND (AND SYMBOL (NOT KEYWORD)) (EQL 12.0d0))) T))
+		     (unless (baker:SUBTYPEP
+			      '(NOT (AND (AND SYMBOL (NOT KEYWORD)) (EQL 12.0d0))) T)
+		       (return-from test-baker))
                      (when (and verbose
 				(not (equal-n (equiv-control t1 t2)
                                            (equiv-cl t1 t2)

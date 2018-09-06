@@ -155,10 +155,19 @@ according to the LABEL which is now the label of some parent in its lineage."
                            :bdd-node-class 'lisp-type-bdd-node)))))
     (recure bdd)))
 
+;; when converting a lisp-type-bdd to dnf, we need to remove subtypes
+;; from every (OR ...) clause
+(defmethod bdd-dnf-wrap ((bdd lisp-type-bdd) (op (eql 'or)) zero forms)
+  (call-next-method bdd 'or zero (remove-subs forms)))
+
+;; when converting a lisp-type-bdd to dnf, we need to remove supertypes
+;; from every (AND ...) clause
+(defmethod bdd-dnf-wrap ((bdd lisp-type-bdd) (op (eql 'and)) zero forms)
+  (call-next-method bdd 'and zero (remove-supers forms)))
+
 (defun check-table ()
   nil
   )
-
 
 (defun remove-super-types (type-specs)
   (cond
