@@ -23,35 +23,40 @@
 
 (defvar *tests* nil)
 (defvar *current-test* nil)
-
+(defvar *break-on-error* nil)
 
 (defmacro define-test (test-name &body body)
+  "Define a test.  A function of the same name with empty lambda list will be defined."
   (declare (type symbol test-name))
   `(progn
      (pushnew ',test-name *tests*)
      (defun ,test-name ()
        ,@body)))
 
-(define-condition test-condition () ((code :initarg :code
-					   :reader test-condition-code
-					   :initform nil)
-				     (test :initarg :test
-					   :reader test-condition-test
-					   :initform *current-test*
-					   :type (or null symbol))))
-(define-condition test-pass (test-condition) ())
-(define-condition test-fail (test-condition) ((expected :reader test-condition-expected
-							:initarg :expected)
-					      (received :reader test-condition-received
-							:initarg :received)
-					      (arguments :reader test-condition-arguments
-							 :initarg :arguments)))
-(define-condition test-error (test-condition) ((error :initarg :error
-						      :reader test-condition-error
-						      :type error)))
-(define-condition test-does-not-exist (test-condition) ())
+(define-condition test-condition ()
+  ((code :initarg :code
+	 :reader test-condition-code
+	 :initform nil)
+   (test :initarg :test
+	 :reader test-condition-test
+	 :initform *current-test*
+	 :type (or null symbol))))
+(define-condition test-pass (test-condition)
+  ())
+(define-condition test-fail (test-condition)
+  ((expected :reader test-condition-expected
+	     :initarg :expected)
+   (received :reader test-condition-received
+	     :initarg :received)
+   (arguments :reader test-condition-arguments
+	      :initarg :arguments)))
+(define-condition test-error (test-condition)
+  ((error :initarg :error
+	  :reader test-condition-error
+	  :type error)))
 
 (defun test-report (num-passed failed errors)
+  "Report the results of the tests--printed to stdout."
   (format t "------------------~%")
   (format t "Summary of tests:~%")
   (format t "TOTAL TESTS: ~D~%" (length *tests*))
@@ -61,27 +66,37 @@
     (dolist (f failed)
       (pushnew (test-condition-test f) tests-failed))
     (dolist (f tests-failed)
-      (format t "  ~D failed assertions in ~A~%"
-	      (count f failed :key #'test-condition-test ) f)))
+      (let ((*package* (find-package :keyword)))
+	(format t "  ~D failed assertions in ~S~%"
+		(count f failed :key #'test-condition-test ) f))))
   (format t "ERRORS: ~D~%" (length errors))
   (dolist (f errors)
     (format t "  ~A~%" (test-condition-test f))))
 
-(defun run-tests (&key (tests *tests*))
+(defun run-tests (&key ((:tests *tests*) *tests*) ((:break-on-error *break-on-error*) nil))
+  "Run all the defined tests, and print a report.  If :TESTS is provided, only the
+specified tests will be run."
   (let ((num-pass 0)
 	(failed nil)
 	(errors nil)
-	(num-tests (length tests))
+	(num-tests (length *tests*))
 	(test-num 0))
-    (dolist (*current-test* tests)
+    (dolist (*current-test* *tests*)
       (block break
-	(labels ((handle-error (e)
+	(labels ((handle-assertion-error (e)
 		   (declare (type test-error e))
 		   (format t "  Error:  ~A~%" (test-condition-code e))
 		   (format t "    Msg:  ~A~%" (test-condition-error e))
 		   (push e errors)
 		   ;; go to next test
 		   (return-from break))
+		 (handle-error (e)
+		   (declare (type error e))
+		   (unless *break-on-error*
+		     (handle-assertion-error
+		      (make-condition 'test-error
+				      :error e
+				      :code `(,*current-test*)))))
 		 (handle-fail (f)
 		   (declare (type test-fail f))
 		   (format t "  Failed: ~A~%" (test-condition-code f))
@@ -101,15 +116,20 @@
 	  (let ((*package* (find-package :keyword)))
 	    (format t "Running: ~D/~D ~S~%" (incf test-num) num-tests *current-test*))
 	  (handler-bind ((test-pass #'handle-pass)
-			 (test-error #'handle-error)
-			 (test-fail #'handle-fail))
+			 (test-error #'handle-assertion-error)
+			 (test-fail #'handle-fail)
+			 (error #'handle-error))
 	    (funcall *current-test*)))))
     (test-report num-pass failed errors)))
 
 (defun run-1-test (test-name)
+  "Run one test and print a report."
   (run-tests :tests (list test-name)))
 
 (defun run-package-tests (packages)
+  "Run all the tests whose name is in one of the spedified packages.
+PACAKGES is a package designator, compatible with CL:DO-SYMBOLS,
+or list of package designators."
   (let (package-tests)
     (dolist (package (if (listp packages)
 			 packages
@@ -120,19 +140,26 @@
     (run-tests :tests package-tests)))
 
 (defun test-for (expected test-function gen-arguments code)
+  "Internal function used by ASSERT-TRUE and ASSERT-FALSE.
+evaluates the arguments of the test expression, then applies
+the testing function to the arguments.  Raises a condition
+whose type a subtype TEST-CONDITION, depending on whether the
+assertion passes, fails, or errors."
   (declare (type (member t nil) expected)
 	   (type (function () list) gen-arguments)
 	   (type function test-function))
-  (let* ((arguments (handler-case (funcall gen-arguments)
-		      (error (e)
-			(signal 'test-error :error e :code code)
-			;; exit the test because of error
-			(return-from test-for))))
-	 (result (handler-case (apply test-function arguments)
-		   (error (e)
-		     (signal 'test-error :error e :code code)
-		     ;; exit the test because of error
-		     (return-from test-for)))))
+  (let* ((arguments (handler-bind ((error (lambda (e)
+					    (unless *break-on-error*
+					      (signal 'test-error :error e :code code)
+					      ;; exit the test because of error
+					      (return-from test-for)))))
+		      (funcall gen-arguments)))
+	 (result (handler-bind ((error (lambda (e)
+					 (unless *break-on-error*
+					   (signal 'test-error :error e :code code)
+					   ;; exit the test because of error
+					   (return-from test-for)))))
+		   (apply test-function arguments))))
     (cond
       ((and expected result)
        (signal 'test-pass :code code))
@@ -200,4 +227,6 @@
   (let ((a 2)
 	(b 1))
     (assert-true (< a b)))
-  (assert-true (string= "abc" "ABC")))
+  (assert-true (string= "abc" "ABC"))
+  (error "some error")
+)
