@@ -98,6 +98,12 @@ test."
 	(errors nil)
 	(num-tests (length *tests*))
 	(test-num 0))
+    (format t "Running tests from packages: ~A~%" (let (packages)
+						    (dolist (test *tests*)
+						      (when (symbol-package test)
+							(pushnew (package-name (symbol-package test)) packages
+								 :test #'string=)))
+						    packages))
     (dolist (*current-test* *tests*)
       (block break
 	(labels ((handle-assertion-error (e)
