@@ -1393,6 +1393,7 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
 (defun create-profile-scatter-plot-summary-decompose (summary decompose &key smooth destination-dir (comment "") create-png-p profile-plists
 									  (threshold 0.15) (num-functions-per-plot 4) file-name prefix
 									  profile-function-legend plist-hash)
+  (declare (ignore create-png-p))
   (let ((curve-hash (make-hash-table :test #'equal))
 	top-names)
     (declare (notinline sort))
@@ -1484,16 +1485,13 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
 							 :plist-hash plist-hash
 							 :profile-plists profile-plists))))))
 
-(defvar *autogen-dir* (find nil '("/Users/jnewton/research/autogen"
-				  "/Volumes/Disk2/jimka/research/autogen")
-			    :test-not #'equal
-			    :key #'probe-file))
+(defvar *autogen-dir* (find-if #'directory-exists-p '("/Users/jnewton/research/autogen"
+					      "/Volumes/Disk2/jimka/research/autogen")))
 
-(defvar *destination-dir* (find nil '("/Users/jnewton/newton.16.edtchs/src"
-				      "/Users/jnewton/analysis"
-				      "/Volumes/Disk2/jimka/research/autogen")
-				:test-not #'equal
-				:key #'probe-file))
+(defvar *destination-dir* (find-if #'directory-exists-p '("/Users/jnewton/newton.16.edtchs/src"
+						  "/Users/jnewton/analysis"
+						  "/Volumes/Disk2/jimka/research/autogen")))
+
 (defun test-report (&key sample (prefix "") (re-run t) (suite-time-out (* 60 60 4))
                       (time-out (* 3 60)) normalize (destination-dir *destination-dir*)
                       types file-name (limit 15) tag hilite-min (num-tries 2)
@@ -2021,6 +2019,7 @@ sleeping before the code finishes evaluating."
       (let ((*bucket-reporters* (list (nth bucket-index *bucket-reporters*))))
 	(dolist (report *reports*)
 	  (destructuring-bind (name report-function) report
+	    (declare (ignore name))
 	    (funcall report-function
 		     :re-run nil
 		     :create-png-p create-png-p
