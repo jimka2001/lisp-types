@@ -19,19 +19,13 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-
-(asdf:defsystem :lisp-types-baker-analysis
-  :depends-on (:lisp-types
-	       :cl-robdd
-	       :cl-robdd-test
-	       :lisp-types-analysis
-	       :lisp-types-test
-               :fr.epita.lrde.subtypep
+(asdf:defsystem :research
+  :depends-on (:2d-array-test
+	       :dispatch-test
+	       :lisp-types-baker-analysis
+	       :ndfa-test
+	       :rte-test
+	       :rte-regexp-test
 	       :jimka-test)
   :components
-  ((:module "lisp-types"
-    :components
-    ((:file "lisp-types-baker-analysis-package")
-     (:file "analysis-baker")
-     (:file "test-baker")
-     ))))
+  ())
