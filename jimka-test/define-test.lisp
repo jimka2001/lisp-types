@@ -21,12 +21,16 @@
 
 (in-package :jimka-test)
 
-(defvar *tests* nil)
-(defvar *current-test* nil)
-(defvar *break-on-error* nil)
+(defvar *tests* nil "list of tests, symbols which have been 
+registered, presumably with DEFINE-TEST.")
+(defvar *current-test* nil "The current test being run.")
+(defvar *break-on-error* nil "Whether to break into the debugger (or 
+default error handler) or whether to capture the error and treat it as 
+a test failure.")
 
 (defmacro define-test (test-name &body body)
-  "Define a test.  A function of the same name with empty lambda list will be defined."
+  "Define a test.  A function of the same name with empty lambda list 
+will be defined."
   (declare (type symbol test-name))
   `(progn
      (pushnew ',test-name *tests*)
@@ -40,7 +44,8 @@
    (test :initarg :test
 	 :reader test-condition-test
 	 :initform *current-test*
-	 :type (or null symbol))))
+	 :type (or null symbol)))
+  (:documentation "Parent condition for the conditions in the jimka-test package."))
 (define-condition test-pass (test-condition)
   ())
 (define-condition test-fail (test-condition)
@@ -49,11 +54,13 @@
    (received :reader test-condition-received
 	     :initarg :received)
    (arguments :reader test-condition-arguments
-	      :initarg :arguments)))
+	      :initarg :arguments))
+  (:documentation "Condition designating a failed assertion"))
 (define-condition test-error (test-condition)
   ((error :initarg :error
 	  :reader test-condition-error
-	  :type error)))
+	  :type error))
+  (:documentation "Condition designating a non-asserted error."))
 
 (defun test-report (num-passed failed errors)
   "Report the results of the tests--printed to stdout."
@@ -74,8 +81,12 @@
     (format t "  ~A~%" (test-condition-test f))))
 
 (defun run-tests (&key ((:tests *tests*) *tests*) ((:break-on-error *break-on-error*) nil))
-  "Run all the defined tests, and print a report.  If :TESTS is provided, only the
-specified tests will be run."
+  "Run all the defined tests, and print a report.  If :TESTS is
+provided, only the specified tests will be run.  If :break-on-error is
+t (nil is default), then an error evokes the normall error hanlder,
+e.g., debugger, however by default errors are captured, which abandons
+the current test, registers the error, and continues to the next
+test."
   (let ((num-pass 0)
 	(failed nil)
 	(errors nil)
@@ -128,8 +139,8 @@ specified tests will be run."
 
 (defun run-package-tests (packages)
   "Run all the tests whose name is in one of the spedified packages.
-PACAKGES is a package designator, compatible with CL:DO-SYMBOLS,
-or list of package designators."
+PACAKGES is a package designator, compatible with CL:DO-SYMBOLS, or
+list of package designators."
   (let (package-tests)
     (dolist (package (if (listp packages)
 			 packages
@@ -173,6 +184,7 @@ assertion passes, fails, or errors."
   (not (null object)))
 
 (defmacro assert-true (code)
+  "E.g. (assert-true (> 4 3))"
   (typecase code
     (cons
      `(test-for t
@@ -188,7 +200,9 @@ assertion passes, fails, or errors."
 		',code))))
 		
 
+
 (defmacro assert-false (code)
+  "E.g. (assert-false (< 4 3))"
   (typecase code
     (cons
      `(test-for nil
@@ -204,6 +218,10 @@ assertion passes, fails, or errors."
 		',code))))
 
 (defun raises (thunk)
+  "Internal function which calls this given function, ignores its
+return value, and returns the list of conditions its evaluation
+raised."
+  (declare (type (function () t) thunk))
   (let (conditions)
     (ignore-errors
      (handler-bind ((t (lambda (c)
@@ -212,6 +230,7 @@ assertion passes, fails, or errors."
     conditions))
 
 (defmacro assert-error (error-type-specifier expr)
+  "E.g., (assert-error division-by-zero (/ 3 0))"
   `(assert-true (find ',error-type-specifier
 		      (raises (lambda ()
 				,expr))
