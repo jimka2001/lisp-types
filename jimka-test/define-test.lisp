@@ -66,6 +66,12 @@ will be defined."
   "Report the results of the tests--printed to stdout."
   (format t "------------------~%")
   (format t "Summary of tests:~%")
+  (format t "PACKAGES: ~A~%" (let (packages)
+			       (dolist (test *tests*)
+				 (when (symbol-package test)
+				   (pushnew (package-name (symbol-package test)) packages
+					    :test #'string=)))
+			       packages))
   (format t "TOTAL TESTS: ~D~%" (length *tests*))
   (format t "ASSERTIONS PASSED: ~D~%" num-passed)
   (format t "ASSERTIONS FAILED: ~D~%" (length failed))
