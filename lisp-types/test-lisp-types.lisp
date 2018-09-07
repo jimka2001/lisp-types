@@ -138,7 +138,7 @@
   (assert-true (equal (reduce-lisp-type '(function (&rest (and integer number)) (and list cons)))
 		      '(function (&rest integer) cons)))
 
-  (assert-error 'error (reduce-lisp-type '(function (&rest t t))))
+  (assert-error error (reduce-lisp-type '(function (&rest t t))))
 
 
   ;; &key
