@@ -1,4 +1,4 @@
-;; Copyright (c) 2016 EPITA Research and Development Laboratory
+;; Copyright (c) 2018 EPITA Research and Development Laboratory
 ;;
 ;; Permission is hereby granted, free of charge, to any person obtaining
 ;; a copy of this software and associated documentation
@@ -24,7 +24,6 @@
   :depends-on (:lisp-types
                :cl-robdd
                :cl-robdd-analysis
-               :fr.epita.lrde.subtypep
 	       (:version :lisp-unit "0.9.0"))
   :components
   ((:module "lisp-types"

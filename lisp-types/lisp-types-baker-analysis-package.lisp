@@ -19,20 +19,9 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(defpackage :lisp-types-analysis
-  (:use :cl :lisp-types :cl-robdd :cl-robdd-analysis)
+(defpackage :lisp-types-baker-analysis
+  (:use :cl :lisp-types :cl-robdd :lisp-types-analysis :cl-robdd-analysis :lisp-unit)
   (:export
-   "*DECOMPOSE-FUN-PARAMETERIZED-NAMES*"
-   "*BUCKET-REPORTERS*"
-   "*PERF-RESULTS*"
-   "*DESTINATION-DIR*"
-   "MDTD-REPORT-PROFILE"
-   "MDTD-REPORT"
-   "PARAMETERIZATION-REPORT"
-   "DEF-REPORT"
-   "DEFINE-MDTD-FUNCTION"
-   "BIG-TEST-REPORT"
-   "TYPES/CMP-PERF"
-   "TYPES/CMP-PERFS"
-   "VALID-SUBTYPES"
+   "MDTD-BDD-GRAPH-BAKER"
+   "PARAMETERIZED-MDTD-BDD-GRAPH"   
 ))

@@ -1484,7 +1484,16 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
 							 :plist-hash plist-hash
 							 :profile-plists profile-plists))))))
 
-(defvar *destination-dir* "/Users/jnewton/newton.16.edtchs/src")
+(defvar *autogen-dir* (find nil '("/Users/jnewton/research/autogen"
+				  "/Volumes/Disk2/jimka/research/autogen")
+			    :test-not #'equal
+			    :key #'probe-file))
+
+(defvar *destination-dir* (find nil '("/Users/jnewton/newton.16.edtchs/src"
+				      "/Users/jnewton/analysis"
+				      "/Volumes/Disk2/jimka/research/autogen")
+				:test-not #'equal
+				:key #'probe-file))
 (defun test-report (&key sample (prefix "") (re-run t) (suite-time-out (* 60 60 4))
                       (time-out (* 3 60)) normalize (destination-dir *destination-dir*)
                       types file-name (limit 15) tag hilite-min (num-tries 2)
@@ -1634,7 +1643,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                   #'< :key #'caddr)
             :data data))))
 
-(defun gen-parameters-summary-tabular (&key (destination-dir "/Users/jnewton/analysis") (autogen-dir "/Users/jnewton/research/autogen"))
+(defun gen-parameters-summary-tabular (&key (destination-dir *destination-dir*) (autogen-dir *autogen-dir*))
   "generate latex tabular fig.summary.parameters"
   (destructuring-bind (&key attributes &allow-other-keys) (do-analysis :path autogen-dir)
     ;; attributes
@@ -1688,7 +1697,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
 (defvar *bucket-reporters* nil)
 (defvar *bucket-reporter-properites* nil)
 
-(defun do-analysis (&key (path "/Users/jnewton/Disk2/research/autogen"))
+(defun do-analysis (&key (path *autogen-dir*))
   (analysis (loop :for (tag bucket-reporter) :in  *bucket-reporters*
 		  :for properties := (find tag *bucket-reporter-properites* :test #'equal :key (getter :tag))
 		  :for sorted := (getf properties :file-name)
@@ -1806,10 +1815,6 @@ sleeping before the code finishes evaluating."
 								   mdtd-bdd-graph
 								   
 								   mdtd-sat
-
-                                                                   ;; mdtd-bdd-graph-baker
-                                                                   ;; mdtd-graph-baker
-								   
 								   ))
                                         (bucket-reporters *bucket-reporters*)
 					(profile-function-legend (make-hash-table :test #'equal))
@@ -1860,25 +1865,7 @@ sleeping before the code finishes evaluating."
                                               mdtd-rtev2
                                               mdtd-graph)))
 
-(defun baker-report (&key (re-run t) (multiplier 1.8) (create-png-p t) (destination-dir *destination-dir*)
-                       (bucket-reporters *bucket-reporters*))
-  (declare (type string destination-dir)
-	   (type number multiplier))
-  (big-test-report :re-run re-run
-                   :prefix "baker-"
-                   :multiplier multiplier
-                   :normalize nil
-                   :time-out 20
-                   :num-tries 2
-                   :hilite-min nil
-                   :destination-dir destination-dir
-                   :create-png-p create-png-p
-                   :bucket-reporters bucket-reporters
-                   :decomposition-functions '( 
-                                              mdtd-bdd-graph
-                                              mdtd-bdd-graph-baker
-                                              mdtd-graph
-                                              mdtd-graph-baker)))
+
 
 (defun mdtd-report (&key (re-run t) (multiplier 2.5) (create-png-p t) (bucket-reporters *bucket-reporters*) (destination-dir *destination-dir*))
   (big-test-report :re-run re-run
@@ -1988,32 +1975,57 @@ sleeping before the code finishes evaluating."
       (format t "summary-list~%")
       (filter summary-list :summary))))
 
+(defvar *reports* nil)
+(defun make-report (name report-function)
+  (declare (type string name))
+  (setf *reports* (remove name *reports*
+			  :test #'string=
+			  :key #'car))
+  (push (list name report-function)
+	*reports*))
+  
+(defmacro def-report (name lambda-list &body body)
+  `(make-report ',name
+		(lambda ,lambda-list
+		  ,@body)))
+
+(def-report "big" (&key re-run destination-dir create-png-p &allow-other-keys)
+  (big-test-report :re-run re-run
+		   :create-png-p create-png-p
+		   :bucket-reporters *bucket-reporters*
+		   :prefix "big-"
+		   :destination-dir destination-dir))
+
+(def-report "best" (&key re-run destination-dir create-png-p &allow-other-keys)
+  (best-2-report :re-run re-run
+		 :create-png-p create-png-p
+		 :bucket-reporters *bucket-reporters*
+		 :destination-dir  destination-dir))
+
+(def-report "param" (&key re-run destination-dir create-png-p &allow-other-keys)
+  (parameterization-report :re-run re-run
+			   :create-png-p create-png-p
+			   :bucket-reporters *bucket-reporters*
+			   :destination-dir  destination-dir))
+
+(def-report "mdtd" (&key re-run destination-dir create-png-p &allow-other-keys)
+  (mdtd-report :re-run re-run
+	       :create-png-p create-png-p
+	       :bucket-reporters *bucket-reporters*
+	       :destination-dir  destination-dir))
+
 (defun rebuild-plots (&key (destination-dir "/Users/jnewton/analysis") (create-png-p t))
   (let ((plist-hash (make-hash-table :test #'equal))
 	(profile-function-legend (make-hash-table :test #'equal)))
     (dotimes (bucket-index (length *bucket-reporters*))
       (let ((*bucket-reporters* (list (nth bucket-index *bucket-reporters*))))
-	(big-test-report :re-run nil
-			 :create-png-p create-png-p
-			 :bucket-reporters *bucket-reporters*
-			 :prefix "big-"
-			 :destination-dir destination-dir)
-	(best-2-report :re-run nil
-		       :create-png-p create-png-p
-		       :bucket-reporters *bucket-reporters*
-		       :destination-dir  destination-dir)
-        (baker-report :re-run nil
-                      :create-png-p create-png-p
-                      :bucket-reporters *bucket-reporters*
-                      :destination-dir  destination-dir)
-	(parameterization-report :re-run nil
-				 :create-png-p create-png-p
-				 :bucket-reporters *bucket-reporters*
-				 :destination-dir  destination-dir)
-	(mdtd-report :re-run nil
+	(dolist (report *reports*)
+	  (destructuring-bind (name report-function) report
+	    (funcall report-function
+		     :re-run nil
 		     :create-png-p create-png-p
-		     :bucket-reporters *bucket-reporters*
-		     :destination-dir  destination-dir)
+		     :destination-dir destination-dir)))
+	
 	(dotimes (decompose-function-index (length *decomposition-functions*))
 	  (format t "=== generating mdtd-profile files for ~d-~d ~A ~A ~%" decompose-function-index bucket-index
 		  (getf (nth bucket-index *bucket-reporter-properites*)
@@ -2100,7 +2112,7 @@ sleeping before the code finishes evaluating."
 		  '("STRONG" "WEAK")
 		  )))
 
-(defun rebuild-analysis (&key (destination-dir "/Users/jnewton/analysis") (autogen-dir "/Users/jnewton/research/autogen"))
+(defun rebuild-analysis (&key (destination-dir *destination-dir*) (autogen-dir *autogen-dir*))
   (rebuild-plots :destination-dir destination-dir :create-png-p t)
   (generate-latex-plots :analysis-dir destination-dir
 			:gen-samples nil
@@ -2108,7 +2120,6 @@ sleeping before the code finishes evaluating."
   (gen-parameters-summary-tabular :destination-dir destination-dir :autogen-dir autogen-dir)
   (gen-mdtd-profile-single-figures :destination-dir destination-dir :autogen-dir autogen-dir)
 )
-
 
 (defun convert-name-once (destination-dir fname)
   ;; fname = "mdtd-profile-0-6-member.sexp"

@@ -1,4 +1,4 @@
-;; Copyright (c) 2016-18 EPITA Research and Development Laboratory
+;; Copyright (c) 2018 EPITA Research and Development Laboratory
 ;;
 ;; Permission is hereby granted, free of charge, to any person obtaining
 ;; a copy of this software and associated documentation
@@ -19,20 +19,17 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(defpackage :lisp-types-analysis
-  (:use :cl :lisp-types :cl-robdd :cl-robdd-analysis)
-  (:export
-   "*DECOMPOSE-FUN-PARAMETERIZED-NAMES*"
-   "*BUCKET-REPORTERS*"
-   "*PERF-RESULTS*"
-   "*DESTINATION-DIR*"
-   "MDTD-REPORT-PROFILE"
-   "MDTD-REPORT"
-   "PARAMETERIZATION-REPORT"
-   "DEF-REPORT"
-   "DEFINE-MDTD-FUNCTION"
-   "BIG-TEST-REPORT"
-   "TYPES/CMP-PERF"
-   "TYPES/CMP-PERFS"
-   "VALID-SUBTYPES"
-))
+
+(asdf:defsystem :lisp-types-baker-analysis
+  :depends-on (:lisp-types
+	       :cl-robdd
+	       :lisp-types-analysis
+               :fr.epita.lrde.subtypep
+	       (:version :lisp-unit "0.9.0"))
+  :components
+  ((:module "lisp-types"
+    :components
+    ((:file "lisp-types-baker-analysis-package")
+     (:file "analysis-baker")
+     (:file "test-baker")
+     ))))
