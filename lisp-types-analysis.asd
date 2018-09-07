@@ -22,9 +22,10 @@
 
 (asdf:defsystem :lisp-types-analysis
   :depends-on (:lisp-types
+	       :cl-fad
                :cl-robdd
                :cl-robdd-analysis
-	       (:version :lisp-unit "0.9.0"))
+	       :jimka-test)
   :components
   ((:module "lisp-types"
     :components

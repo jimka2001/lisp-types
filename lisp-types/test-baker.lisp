@@ -22,14 +22,9 @@
 (in-package :lisp-types-baker-analysis)
 
 (defun test ()
-  (let ((*print-summary* t)
-	(*print-failures* t)
-	(*summarize-results* t)
-	(*print-errors* t))
-    (run-tests :all :lisp-types-baker-analysis)))
+  (run-package-tests :lisp-types-baker-analysis))
 
 
-;; i'm not sure why lisp-unit package is required here
 (define-test baker/decompose-simple
   (assert-false (mdtd-graph (list nil)))
   (assert-false (mdtd-graph-baker (list nil)))
@@ -223,12 +218,8 @@
   (let ((*subtypep* #'baker:subtypep))
     (assert-true (lisp-types::reduce-lisp-type-once '(AND (AND NUMBER (NOT RATIO)) (NOT FLOAT)) :full T))))
 
-
-(DEFUN BAKER/EXAMPLE-1 ()
+(DEFINE-TEST BAKER/EXAMPLE-1
   (ASSERT-TRUE
    (baker:SUBTYPEP
     '(NOT (AND (AND SYMBOL (NOT KEYWORD)) (EQL 12.0d0))) T)))
-
-(DEFINE-TEST BAKER/EXAMPLE-1
-  (BAKER/EXAMPLE-1))
 

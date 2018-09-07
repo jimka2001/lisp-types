@@ -24,8 +24,9 @@
   :depends-on (:lisp-types
 	       :cl-robdd
 	       :lisp-types-analysis
+	       :lisp-types-test
                :fr.epita.lrde.subtypep
-	       (:version :lisp-unit "0.9.0"))
+	       :jimka-test)
   :components
   ((:module "lisp-types"
     :components

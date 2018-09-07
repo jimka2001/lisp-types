@@ -25,7 +25,7 @@
                :lisp-types-analysis
                :bordeaux-threads
                :closer-mop
-	       (:version :lisp-unit "0.9.0")
+	       :jimka-test
                ;; :sb-profile
                :sb-sprof)
   :components
