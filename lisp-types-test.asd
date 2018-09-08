@@ -50,4 +50,5 @@
      (:file "test-dnf")
      (:file "test-reduce-lisp-type-once")
      (:file "test-bdd-typecase")
+     (:file "test-reduce")
      ))))
