@@ -22,6 +22,18 @@
 
 (in-package :lisp-types-baker-analysis)
 
+(setf *profile-functions*
+      (union *profile-functions*
+	     '(
+	       baker::baker-subtypep
+	       baker::numeric-types->ranges
+	       baker::split-type
+	       baker::recursively-expand-type
+	       baker::literal-type-null?
+	       baker::type-keep-if
+	       baker::type/map-atomic-types
+	       )))
+
 (defun baker-report (&key (re-run t) (multiplier 1.8) (create-png-p t) (destination-dir *destination-dir*)
                        (bucket-reporters *bucket-reporters*))
   (declare (type string destination-dir)
