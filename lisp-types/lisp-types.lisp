@@ -353,7 +353,8 @@ symbol _ somewhere (recursively)."
      type)
     ((member (car type) '(and or not))
      (cons (car type) (alphabetize
-		       (mapcar #'alphabetize-type (cdr type)))))
+		       (mapcar #'alphabetize-type (remove-duplicates (remove-duplicates (cdr type) :test #'eq)
+								     :test #'equal)))))
     ((eq 'cons (car type))
      (cons 'cons (mapcar #'alphabetize-type (cdr type))))
     ((eq 'member (car type))
@@ -455,9 +456,10 @@ E.g.  (rule-case 12 ;; OBJECT
     (loop :while (not (funcall test result arg))
 	  :do (progn (setf arg result)
 		     (setf result (funcall function arg))))
-    result))
-
-
+    ;; return arg rather than result, they are EQUAL, but this is a
+    ;; chance that arg was never changed, thus result may happen to be
+    ;; in short term memory and more easily GCed.
+    arg))
 
 (defun getter (field)
   (lambda (obj) (getf obj field)))
