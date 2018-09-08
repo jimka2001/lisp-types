@@ -24,6 +24,7 @@
   (:shadowing-import-from :lisp-types "TEST" "A")
   ;;(:shadowing-import-from :closer-mop "STANDARD-GENERIC-FUNCTION" "DEFMETHOD" "DEFGENERIC")
   (:use :cl :lisp-types :jimka-test ;;:closer-mop
+	:jimka-addons
         :lisp-types-analysis
         :cl-robdd
    #+sbcl :sb-pcl

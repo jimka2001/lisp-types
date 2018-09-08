@@ -20,9 +20,10 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 (asdf:defsystem :research
-  :depends-on (:2d-array-test
+  :depends-on (#+sbcl :2d-array-test
+	       :jimka-addons
 	       :dispatch-test
-	       :lisp-types-baker-analysis
+	       #+sbcl :lisp-types-baker-analysis
 	       :ndfa-test
 	       :rte-test
 	       :rte-regexp-test

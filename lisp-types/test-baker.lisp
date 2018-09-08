@@ -31,9 +31,6 @@
   (assert-true  (mdtd-graph (list t)))
   (assert-true  (mdtd-graph-baker (list t))))
 
-(defmacro forall (var data &body body)
-  `(every #'(lambda (,var) ,@body) ,data))
-
 (define-test test123
   (flet ((equal-n (&rest args)
            (and (cdr args)

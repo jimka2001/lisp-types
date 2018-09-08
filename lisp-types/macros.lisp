@@ -21,27 +21,6 @@
 
 (in-package   :lisp-types)
 
-(defmacro exists (obj data &body body)
-  (typecase obj
-    (list
-     (let ((var (gensym "exists")))
-       `(member-if (lambda (,var)
-                     (destructuring-bind ,obj ,var
-                       ,@body)) ,data)))
-    (t
-     `(member-if (lambda (,obj) ,@body) ,data))))
-
-
-(defmacro while (test &body body)
-  `(loop :while ,test
-	 :do (progn ,@body)))
-
-(defmacro forall (var data &body body)
-  `(every #'(lambda (,var) ,@body) ,data))
-
-(defmacro setof (var data &body body)
-  `(remove-if-not (lambda (,var) ,@body) ,data))
-
 (defmacro prog1-let ((var expr) &body body)
   `(let ((,var ,expr))
      ,@body

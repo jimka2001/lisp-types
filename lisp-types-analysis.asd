@@ -25,6 +25,7 @@
 	       :cl-fad
                :cl-robdd
                :cl-robdd-analysis
+	       :jimka-addons
 	       :jimka-test)
   :components
   ((:module "lisp-types"

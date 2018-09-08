@@ -20,7 +20,7 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 (defpackage :lisp-types
-  (:use :cl :cl-robdd)
+  (:use :cl :cl-robdd :jimka-addons)
   (:export
    "*SUBTYPEP*"
    "AMBIGUOUS-SUBTYPE"
@@ -63,4 +63,5 @@
    "SMARTER-SUBTYPEP"
    "SUBTYPEP-WRAPPER"
    "VALID-TYPE-P"
+   "WARN-AMBIGUOUS-SUBTYPE"
    ))

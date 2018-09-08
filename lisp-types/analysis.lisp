@@ -25,45 +25,6 @@
 (defparameter *decomposition-function-descriptors* nil)
 (defparameter *decomposition-functions* nil)
 
-(defun run-program (program args &rest options)
-  #+sbcl (apply #'sb-ext:run-program program args :search t options)
-  #+allegro (apply #'excl:run-shell-command
-                   (apply #'vector (cons program args))
-                   :wait t
-                   options
-                   )
-  )
-
-(defmacro exists (obj data &body body)
-  (typecase obj
-    (list
-     (let ((var (gensym "exists")))
-       `(member-if (lambda (,var)
-                     (destructuring-bind ,obj ,var
-                       ,@body)) ,data)))
-    (t
-     `(member-if (lambda (,obj) ,@body) ,data))))
-
-(defmacro forall (var data &body body)
-  `(every #'(lambda (,var) ,@body) ,data))
-
-(defmacro while (test &body body)
-  `(loop :while ,test
-	 :do (progn ,@body)))
-
-(defmacro setof (var data &body body)
-  `(remove-if-not (lambda (,var) ,@body) ,data))
-
-(defun getter (field)
-  (lambda (obj) (getf obj field)))
-
-(defun user-read (&rest args)
-  "Calls read with the specified ARGS, but with *PACKAGE* bound to the CL-USER package.  
-The effect of this is that symbols like NIL and - get read as COMMON-LISP:NIL and COMMON-LISP:- rather 
-than as keywords."
-  (let ((*package* (find-package :cl-user)))
-    (apply #'read args)))
-
 (defun locate-symbol (name)
   "Return a list of symbols which is a collection of symbols from all packages which have the given symbol-name"
   (let (symbols)
@@ -759,7 +720,7 @@ to a set of types returned from %mdtd-bdd."
     (when (and create-png-p
                (plusp min-num-points))
       (run-program *gnuplot* (list gnuplot-file)
-                   :search t 
+		   ;; TODO not sure if allegro understands these options
                    :output png-filename
                    :error *error-output*
                    :if-output-exists :supersede))))
@@ -1381,14 +1342,19 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
     (format t "   ~A]~%" gnu-name))
   (when create-png-p
     (let* ((gnu-file (change-extension gnu-name "png"))
-           (process (run-program *gnuplot* (list gnu-name)
-                                 :search t
+           (#+sbcl process
+	    #+allegro exit-status
+	    (run-program *gnuplot* (list gnu-name)
+				 :wait t
+				 ;; TODO not sure whether allegro understands these options
                                  :output gnu-file
                                  :error *error-output*
                                  :if-output-exists :supersede)))
       (when (empty-file-p gnu-file)
         (warn "gnuplot exited with code=~A produced empty output file ~A from input ~A"
-              (sb-ext:process-exit-code process) gnu-file gnu-name)))))
+              #+sbcl (sb-ext:process-exit-code process)
+	      #+allegro exit-status
+	      gnu-file gnu-name)))))
 
 (defun create-profile-scatter-plot-summary-decompose (summary decompose &key smooth destination-dir (comment "") create-png-p profile-plists
 									  (threshold 0.15) (num-functions-per-plot 4) file-name prefix
@@ -1788,11 +1754,12 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                      :file-name "subtypes-of-t")
 
 (defun call-with-caffeinate (thunk)
-  (let ((caff (sb-ext:run-program "caffeinate"
-                                  '("-i" "sleep" "31449600") ;; sleep for 1 year or until killed
-                                  :search t :wait nil)))
+  (let ((caff (run-program "caffeinate"
+			   '("-i" "sleep" "31449600") ;; sleep for 1 year or until killed
+			   ;; TODO not sure how to do :wait nil with allegro
+			   :wait nil)))
     (prog1 (funcall thunk)
-      (sb-ext:process-kill caff 1))))
+      (process-kill caff 1))))
 
 (defmacro caffeinate (&body body)
   "Evaluate the given code body, but using the caffeinate macOS program to prevent the system from

@@ -25,9 +25,10 @@
                :lisp-types-analysis
                :bordeaux-threads
                :closer-mop
+	       :jimka-addons
 	       :jimka-test
                ;; :sb-profile
-               :sb-sprof)
+               #+sbcl :sb-sprof)
   :components
   ((:module "lisp-types"
     :components

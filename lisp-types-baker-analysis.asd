@@ -27,6 +27,7 @@
 	       :lisp-types-analysis
 	       :lisp-types-test
                :fr.epita.lrde.subtypep
+	       :jimka-addons
 	       :jimka-test)
   :components
   ((:module "lisp-types"
