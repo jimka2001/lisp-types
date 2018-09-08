@@ -107,7 +107,7 @@ will be defined."
         (format str "~A ~A" day-of-week month)
         (format str " ~2D ~2D:~2,'0D:~2,'0D ~S" date hour minute second year)))))
 
-(defun run-tests (&key ((:tests *tests*) *tests*) ((:break-on-error *break-on-error*) nil))
+(defun run-tests (&key ((:tests *tests*) *tests*) ((:break-on-error *break-on-error*) *break-on-error*))
   "Run all the defined tests, and print a report.  If :TESTS is
 provided, only the specified tests will be run.  If :break-on-error is
 t (nil is default), then an error evokes the normall error hanlder,
@@ -158,22 +158,22 @@ test."
 		   (declare (type test-pass p)
 			    (ignore p))
 		   (incf num-pass)))
-	  (let ((*package* (find-package :keyword)))
-	    (format t "Running: ~D/~D ~S~%" (incf test-num) num-tests *current-test*))
 	  (handler-bind ((test-pass #'handle-pass)
 			 (test-error #'handle-assertion-error)
 			 (test-fail #'handle-fail)
 			 (error #'handle-error))
 	    (format t "Starting: ~A~%" (encode-time))
+	    (let ((*package* (find-package :keyword)))
+	      (format t "Running: ~D/~D ~S~%" (incf test-num) num-tests *current-test*))
 	    (funcall *current-test*)
 	    (format t "Finished: ~A~%" (encode-time))))))
     (test-report tests-start num-pass failed errors)))
 
-(defun run-1-test (test-name)
+(defun run-1-test (test-name &key ((:break-on-error *break-on-error*) *break-on-error*))
   "Run one test and print a report."
-  (run-tests :tests (list test-name)))
+  (run-tests :tests (list test-name) :break-on-error *break-on-error*))
 
-(defun run-package-tests (packages)
+(defun run-package-tests (packages  &key ((:break-on-error *break-on-error*) *break-on-error*))
   "Run all the tests whose name is in one of the spedified packages.
 PACAKGES is a package designator, compatible with CL:DO-SYMBOLS, or
 list of package designators."
@@ -184,7 +184,7 @@ list of package designators."
       (do-symbols (name package)
 	(when (member name *tests*)
 	  (pushnew name package-tests))))
-    (run-tests :tests package-tests)))
+    (run-tests :tests package-tests :break-on-error *break-on-error*)))
 
 (defun test-for (expected test-function gen-arguments code)
   "Internal function used by ASSERT-TRUE and ASSERT-FALSE.
