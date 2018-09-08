@@ -62,6 +62,7 @@
 (defgeneric construct-graph (g u))
 
 (defmethod decompose-graph-1 ((g graph) u)
+  (declare (ignore u))
   (loop :while (or (blue g) (green g))
         :do (dolist (x->y (blue g))
               (destructuring-bind (x y) x->y
@@ -69,7 +70,8 @@
         :do (dolist (xy (green g))
               (destructuring-bind (x y) xy
                 (break-touching g x y))))
-  (extract-disjoint g))
+  (remove-duplicates (remove nil (extract-disjoint g))
+		     :test #'equal))
 
 (defmethod decompose-graph-1 :around ((g graph) u)
   (construct-graph g u)
@@ -94,7 +96,8 @@
         :do (dolist (x->y (blue g))
               (destructuring-bind (x y) x->y
                 (break-loop g x y))))
-  (extract-disjoint g))
+  (remove-duplicates (remove nil (extract-disjoint g))
+		     :test #'equal))
 
 (defun decompose-by-graph-2 (u &key (graph-class 'sexp-graph))
   (declare (type list u))

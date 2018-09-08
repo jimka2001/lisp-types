@@ -41,7 +41,8 @@
                (equivalent-types-p a b))
 	     (remember (type)
                ;;(format t "  equivalent ? to=~A~%"  type)
-	       (pushnew type type-specifiers :test #'already-in-list)))
+	       (when type
+		 (pushnew type type-specifiers :test #'already-in-list))))
       (while type-specifiers
         ;;(format t "~D type specifiers~%" (length type-specifiers))
 
@@ -62,7 +63,9 @@
                (remember (type-to-dnf `(and ,A ,B)))
                (remember (type-to-dnf `(and ,A (not ,B))))
                (remember (type-to-dnf `(and (not ,A) ,B))))))))
-      (mapcar 'reduce-lisp-type-full decomposition))))
+      (remove-duplicates
+       (remove nil (mapcar 'reduce-lisp-type-full decomposition))
+       :test #'equal))))
 
 
 (defun mdtd-rtev2 (type-specifiers)
