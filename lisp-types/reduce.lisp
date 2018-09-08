@@ -207,7 +207,7 @@
            (again (type)
              (cond
                ((atom type) type)
-               ((member (car type) '(or and no))
+               ((member (car type) '(or and not))
                 (cons (car type)
                       (mapcar #'type-to-dnf (cdr type))))
                (t
@@ -827,5 +827,3 @@ reduction which does not involve calls to subtypep."
 
 (defun reduce-lisp-type-simple (type)
   (reduce-lisp-type type :full nil))
-
-
