@@ -62,7 +62,7 @@ will be defined."
 	  :type error))
   (:documentation "Condition designating a non-asserted error."))
 
-(defun test-report (num-passed failed errors)
+(defun test-report (tests-start-time num-passed failed errors)
   "Report the results of the tests--printed to stdout."
   (format t "------------------~%")
   (format t "Summary of tests:~%")
@@ -84,7 +84,28 @@ will be defined."
 		(count f failed :key #'test-condition-test ) f))))
   (format t "ERRORS: ~D~%" (length errors))
   (dolist (f errors)
-    (format t "  ~A~%" (test-condition-test f))))
+    (format t "  ~A~%" (test-condition-test f)))
+  (format t "ELAPSED TIME: ")
+  (let ((elapsed (- (get-universal-time) tests-start-time)))
+    (cond ((< elapsed 60)
+	   (format t "~D seconds~%" elapsed))
+	  ((< elapsed (* 60 60))
+	   (format t "~D minutes ~D seconds~%" (truncate elapsed 60) (mod elapsed 60)))
+	  (t
+	   (format t "~D hours~%" (/ elapsed 60.0 60.0))))))
+
+(defun encode-time (&key (time (get-universal-time))
+		    &aux (decoded-time (multiple-value-list (decode-universal-time time))))
+  "Create a string similar to the UNIX date command: e.g., \"Thu Aug  3 10:39:18 2017\""
+  (destructuring-bind (second minute hour date month year day-of-week ;; (0 = Monday)
+                       daylight-savings-times ;; T (daylight savings times) or NIL (standard time)
+                       timezone) decoded-time
+    (declare (ignore timezone daylight-savings-times))
+    (let ((day-of-week (aref #("Mon" "Tue" "Wed" "Thu" "Fri" "Sat" "Sun") day-of-week))
+          (month (aref #("no-month" "Jan" "Feb" "Mar" "Apr" "May" "Jun" "Jul" "Aug" "Sep" "Oct" "Nov" "Dec") month)))
+      (with-output-to-string (str)
+        (format str "~A ~A" day-of-week month)
+        (format str " ~2D ~2D:~2,'0D:~2,'0D ~S" date hour minute second year)))))
 
 (defun run-tests (&key ((:tests *tests*) *tests*) ((:break-on-error *break-on-error*) nil))
   "Run all the defined tests, and print a report.  If :TESTS is
@@ -97,6 +118,7 @@ test."
 	(failed nil)
 	(errors nil)
 	(num-tests (length *tests*))
+	(tests-start (get-universal-time))
 	(test-num 0))
     (format t "Running tests from packages: ~A~%" (let (packages)
 						    (dolist (test *tests*)
@@ -142,8 +164,10 @@ test."
 			 (test-error #'handle-assertion-error)
 			 (test-fail #'handle-fail)
 			 (error #'handle-error))
-	    (funcall *current-test*)))))
-    (test-report num-pass failed errors)))
+	    (format t "Starting: ~A~%" (encode-time))
+	    (funcall *current-test*)
+	    (format t "Finished: ~A~%" (encode-time))))))
+    (test-report tests-start num-pass failed errors)))
 
 (defun run-1-test (test-name)
   "Run one test and print a report."
