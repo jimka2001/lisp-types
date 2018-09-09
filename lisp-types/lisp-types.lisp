@@ -471,7 +471,9 @@ E.g.  (rule-case 12 ;; OBJECT
     ;; return arg rather than result, they are EQUAL, but this is a
     ;; chance that arg was never changed, thus result may happen to be
     ;; in short term memory and more easily GCed.
-    arg))
+    (if (eq test #'equal)
+	arg
+	result)))
 
 
 
