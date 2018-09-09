@@ -133,9 +133,14 @@
 	       (t
 		 (cons op dup-free))))
 	   (make-or (operands)
-	     (make-op 'or t nil operands))
+	     (make-op 'or t nil (remove-subs operands)))
 	   (make-and (operands)
-	     (make-op 'and nil t operands))
+	     (if (exists t2 operands
+		   (exists t1 operands
+		     (and (not (eq t1 t2))
+			  (cached-subtypep t1 (list 'not t2)))))
+		 nil ; (and ...) contains disjoint types so return empty-type=nil
+		 (make-op 'and nil t (remove-supers operands))))
 	   (do-and (a b)
 	     (cond ((eq a nil)
 		    nil)
