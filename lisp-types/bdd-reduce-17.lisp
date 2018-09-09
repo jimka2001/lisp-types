@@ -320,15 +320,11 @@
   (mapcar #'bdd-to-dnf (mapcar #'label (disjoint g))))
 
 
-(defmethod decompose-graph-2 :around ((g bdd-graph) u)
-  (construct-graph g u)
-  (call-next-method))
-
-
 (defmethod decompose-graph-1 :around ((g bdd-graph) u)
   (ltbdd-with-new-hash ()
    (call-next-method)))
 
 (defmethod decompose-graph-2 :around ((g bdd-graph) u)
   (ltbdd-with-new-hash ()
-   (call-next-method)))
+    (construct-graph g u)
+    (call-next-method)))

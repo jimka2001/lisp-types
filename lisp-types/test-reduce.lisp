@@ -23,6 +23,10 @@
 
 (shadow-all-symbols :package-from :lisp-types :package-into :lisp-types-test)
 
+(assert (not (equal (type-expand 'test-array-rank)
+		    'test-array-rank)))
+
+
 (define-test test/deftypes
   (let ((defined-types '(test-float-radix
 			 test-float-digits

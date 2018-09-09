@@ -40,7 +40,8 @@
      (:file "test-perf")
      (:file "test-typecase" :depends-on ("test-lisp-types"))
      (:file "test-sat" :depends-on ("test-lisp-types"
-                                    "test-perf"))
+                                    "test-perf"
+				    "test-classes"))
      (:file "test-graph" :depends-on ("test-lisp-types"
                                       "test-perf"))
      (:file "test-bdd" :depends-on ("test-classes"
@@ -50,5 +51,5 @@
      (:file "test-dnf")
      (:file "test-reduce-lisp-type-once")
      (:file "test-bdd-typecase")
-     (:file "test-reduce")
+     (:file "test-reduce" :depends-on ("test-classes"))
      ))))

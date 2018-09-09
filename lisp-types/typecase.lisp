@@ -169,24 +169,6 @@ compiler may issue warnings about removing unreachable code."
                           :do (next (cons items so-far) k))))))
       (next nil 0))))
 
-(defun lconc (buf items)
-  (cond
-    ((null buf)
-     (cons items (last items)))
-    ((null (car buf))
-     (setf (car buf) items)
-     (setf (cdr buf) (last items))
-     buf)
-    ((null items)
-     buf)
-    (t
-     (setf (cdr (cdr buf)) items)
-     (setf (cdr buf) (last items))
-     buf)))
-
-(defun tconc (buf &rest items)
-  (lconc buf items))
-
 (defmacro auto-permute-typecase (obj &body clauses
                                  &aux (*reduce-member-type* nil))
   "Syntactically similar to TYPECASE. Expands to a call to TYPECASE but
