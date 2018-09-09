@@ -1391,11 +1391,11 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
 							 :profile-plists profile-plists))))))
 
 (defvar *autogen-dir* (find-if #'directory-exists-p '("/Users/jnewton/research/autogen"
-					      "/Volumes/Disk2/jimka/research/autogen")))
+						      "/Volumes/Disk2/jimka/research/autogen")))
 
 (defvar *destination-dir* (find-if #'directory-exists-p '("/Users/jnewton/newton.16.edtchs/src"
-						  "/Users/jnewton/analysis"
-						  "/Volumes/Disk2/jimka/research/autogen")))
+							  "/Users/jnewton/analysis"
+							  "/Volumes/Disk2/jimka/research/autogen")))
 
 (defun test-report (&key sample (prefix "") (re-run t) (suite-time-out (* 60 60 4))
                       (time-out (* 3 60)) normalize (destination-dir *destination-dir*)
@@ -1769,11 +1769,9 @@ sleeping before the code finishes evaluating."
                                               mdtd-rtev2
                                               mdtd-graph)))
 
-
-
 (defun mdtd-report (&key (re-run t) (multiplier 2.5) (create-png-p t) (bucket-reporters *bucket-reporters*) (destination-dir *destination-dir*))
   (big-test-report :re-run re-run
-                   :prefix "bdd-ws-" ;; should change to best-4-
+                   :prefix "bdd-ws-"
                    :multiplier multiplier
                    :normalize nil
                    :time-out 20
