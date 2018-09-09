@@ -660,7 +660,6 @@
     (when (and create-png-p
                (plusp min-num-points))
       (run-program *gnuplot* (list gnuplot-file)
-		   ;; TODO not sure if allegro understands these options
                    :output png-filename
                    :error *error-output*
                    :if-output-exists :supersede))))
