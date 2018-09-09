@@ -144,8 +144,7 @@
 
 (define-test type/graph-8
   (SET-EXCLUSIVE-OR (MDTD-GRAPH '(BIT ATOM TEST-ARRAY-RANK))
-		    (MDTD-RTEV2 '(BIT ATOM TEST-ARRAY-RANK)) TEST
-		    #'EQUIVALENT-TYPES-P))
+		    (MDTD-RTEV2 '(BIT ATOM TEST-ARRAY-RANK)) :TEST #'EQUIVALENT-TYPES-P))
 
 (define-test type/graph
   (assert-false (set-exclusive-or (MDTD-GRAPH '( COMPLEX
