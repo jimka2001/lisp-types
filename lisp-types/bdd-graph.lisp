@@ -36,8 +36,7 @@
               (let ((dot-path (merge-pathnames (make-pathname :type "dot") pathname)))
                 (bdd-graph-to-dot graph (namestring dot-path))
                 (run-program "dot" (list "-Tpng" (namestring dot-path)
-                                         "-o" out)
-                             :search t)))))
+                                         "-o" out))))))
      out)
     ((eql t)
      (bdd-graph-to-dot graph *standard-output*))
@@ -108,9 +107,5 @@
   (mdtd-bdd-graph type-specifiers :bdd-hash-strength :weak-dynamic))
 
 (defun mdtd-bdd-graph (type-specifiers &key ((:bdd-hash-strength *bdd-hash-strength*) :weak-dynamic)
-                                                    ((:subtypep *subtypep*) *subtypep*))
+					 ((:subtypep *subtypep*) *subtypep*))
   (decompose-by-graph-1 type-specifiers :graph-class 'bdd-graph))
-
-(defun mdtd-bdd-graph-baker (type-specifiers)
-  (mdtd-bdd-graph type-specifiers :subtypep #'baker:baker-subtypep))
-

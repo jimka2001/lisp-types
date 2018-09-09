@@ -20,13 +20,18 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 (defpackage :lisp-types-analysis
-  (:use :cl :lisp-types :cl-robdd :cl-robdd-analysis)
+  (:use :cl :cl-fad :lisp-types :cl-robdd :cl-robdd-analysis :jimka-addons)
   (:export
-   "*DECOMPOSE-FUN-PARAMETERIZED-NAMES*"
    "*BUCKET-REPORTERS*"
+   "*DECOMPOSE-FUN-PARAMETERIZED-NAMES*"
+   "*DESTINATION-DIR*"
    "*PERF-RESULTS*"
-   "MDTD-REPORT-PROFILE"
+   "BDD-COLLECT-ATOMIC-TYPES"
+   "BIG-TEST-REPORT"
+   "DEF-REPORT"
+   "DEFINE-MDTD-FUNCTION"
    "MDTD-REPORT"
+   "MDTD-REPORT-PROFILE"
    "PARAMETERIZATION-REPORT"
    "TYPES/CMP-PERF"
    "TYPES/CMP-PERFS"

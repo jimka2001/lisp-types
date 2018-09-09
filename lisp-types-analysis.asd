@@ -1,4 +1,4 @@
-;; Copyright (c) 2016 EPITA Research and Development Laboratory
+;; Copyright (c) 2018 EPITA Research and Development Laboratory
 ;;
 ;; Permission is hereby granted, free of charge, to any person obtaining
 ;; a copy of this software and associated documentation
@@ -22,10 +22,11 @@
 
 (asdf:defsystem :lisp-types-analysis
   :depends-on (:lisp-types
+	       :cl-fad
                :cl-robdd
                :cl-robdd-analysis
-               :fr.epita.lrde.subtypep
-	       (:version :lisp-unit "0.9.0"))
+	       :jimka-addons
+	       :jimka-test)
   :components
   ((:module "lisp-types"
     :components

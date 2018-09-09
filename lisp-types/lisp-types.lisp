@@ -21,17 +21,27 @@
 
 (in-package   :lisp-types)
 
+(defvar *amibiguous-subtypes* nil)
+
 (define-condition ambiguous-subtype (style-warning)
   ((sub   :type (or symbol nil cons) :initarg :sub :initform :UNINITIALIZED)
    (super :type (or symbol nil cons) :initarg :super :initform :UNINITIALIZED)
    (consequence :type (or string nil) :initarg :consequence :initform nil))
   (:documentation "Warning raised when unable to determine the subtype relationship.")
-  (:report (lambda (condition stream)
+  (:report (lambda (condition stream &aux (triple (list (slot-value condition 'sub)
+							(slot-value condition 'super)
+							(slot-value condition 'consequence))))
 	     (format stream "Cannot determine whether ~S is a subtype of ~S"
 		     (slot-value condition 'sub)
 		     (slot-value condition 'super))
 	     (when (slot-value condition 'consequence)
 	       (format stream ", ~A" (slot-value condition 'consequence))))))
+
+(defun warn-ambiguous-subtype (&rest triple &key sub super consequence)
+  (unless (member triple *amibiguous-subtypes* :test #'equal)
+    (push triple *amibiguous-subtypes*)
+    (warn 'ambiguous-subtype :sub sub :super super
+			     :consequence consequence)))
 		     
 (defun hash-to-list (hash &aux list)
   "HASH is a hashtable with test=EQUAL which has been used with ENTER-CONSES.
@@ -246,13 +256,15 @@ i.e., is a subtype of nil."
                "Two types are considered equivalent if each is a subtype of the other."
   (let ((T1 (type-to-dnf T1))
         (T2 (type-to-dnf T2)))
-    (multiple-value-bind (T1<=T2 okT1T2) (smarter-subtypep T1 T2)
-      (if (and okT1T2 (not T1<=T2))
-          (values nil t) ; no need to call subtypep a second time
-          (multiple-value-bind (T2<=T1 okT2T1) (smarter-subtypep T2 T1)
-            (if (and okT2T1 (not T2<=T1))
-                (values nil t)
-                (values (and T1<=T2 T2<=T1) (and okT1T2 okT2T1))))))))
+    (if (equal T1 T2)
+	'(t t)
+	(multiple-value-bind (T1<=T2 okT1T2) (smarter-subtypep T1 T2)
+	  (if (and okT1T2 (not T1<=T2))
+	      (values nil t)  ; no need to call subtypep a second time
+	      (multiple-value-bind (T2<=T1 okT2T1) (smarter-subtypep T2 T1)
+		(if (and okT2T1 (not T2<=T1))
+		    (values nil t)
+		    (values (and T1<=T2 T2<=T1) (and okT1T2 okT2T1)))))))))
 
 (defmacro caching-types (&body body)
   `(call-with-disjoint-hash
@@ -353,7 +365,8 @@ symbol _ somewhere (recursively)."
      type)
     ((member (car type) '(and or not))
      (cons (car type) (alphabetize
-		       (mapcar #'alphabetize-type (cdr type)))))
+		       (mapcar #'alphabetize-type (remove-duplicates (remove-duplicates (cdr type) :test #'eq)
+								     :test #'equal)))))
     ((eq 'cons (car type))
      (cons 'cons (mapcar #'alphabetize-type (cdr type))))
     ((eq 'member (car type))
@@ -455,10 +468,12 @@ E.g.  (rule-case 12 ;; OBJECT
     (loop :while (not (funcall test result arg))
 	  :do (progn (setf arg result)
 		     (setf result (funcall function arg))))
-    result))
+    ;; return arg rather than result, they are EQUAL, but this is a
+    ;; chance that arg was never changed, thus result may happen to be
+    ;; in short term memory and more easily GCed.
+    (if (eq test #'equal)
+	arg
+	result)))
 
 
-
-(defun getter (field)
-  (lambda (obj) (getf obj field)))
 

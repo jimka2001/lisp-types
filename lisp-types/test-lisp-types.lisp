@@ -27,20 +27,8 @@
 
 
 
-(defun run-1-test (test-name)
-  (let ((*print-summary* t)
-	(*print-failures* t)
-	(*summarize-results* t)
-	(*print-errors* t))
-    (lisp-unit:run-tests (list test-name) (symbol-package test-name))))
-
-
 (defun test ()
-  (let ((*print-summary* t)
-	(*print-failures* t)
-	(*summarize-results* t)
-	(*print-errors* t))
-    (run-tests :all :lisp-types-test)))
+  (run-package-tests :lisp-types-test))
 
 (define-test type/reduce-b
   (assert-true (equal (reduce-lisp-type '(AND ARITHMETIC-ERROR (NOT CELL-ERROR)))
@@ -150,7 +138,7 @@
   (assert-true (equal (reduce-lisp-type '(function (&rest (and integer number)) (and list cons)))
 		      '(function (&rest integer) cons)))
 
-  (assert-error 'error (reduce-lisp-type '(function (&rest t t))))
+  (assert-error error (reduce-lisp-type '(function (&rest t t))))
 
 
   ;; &key

@@ -19,11 +19,12 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(in-package :lisp-types-test)
+(in-package :lisp-types-baker-analysis)
 
-(shadow-all-symbols :package-from :lisp-types :package-into :lisp-types-test)
+(defun test ()
+  (run-package-tests :lisp-types-baker-analysis))
 
-;; i'm not sure why lisp-unit package is required here
+
 (define-test baker/decompose-simple
   (assert-false (mdtd-graph (list nil)))
   (assert-false (mdtd-graph-baker (list nil)))
@@ -36,6 +37,8 @@
                 (forall a args
                   (equal a (car args))))))
     (assert-true (equal-n 3 3 3 3 3 3 3 ))))
+
+
 
 (defun equal-n (&rest args)
   (and (cdr args)
@@ -208,18 +211,14 @@
 
 (define-test baker/reduce-lisp-type-2a
   (let ((*subtypep* #'cl:subtypep))
-    (assert-true (reduce-lisp-type-once '(AND (AND NUMBER (NOT RATIO)) (NOT FLOAT)) :full T))))
+    (assert-true (lisp-types::reduce-lisp-type-once '(AND (AND NUMBER (NOT RATIO)) (NOT FLOAT)) :full T))))
 
 (define-test baker/reduce-lisp-type-2b
   (let ((*subtypep* #'baker:subtypep))
-    (assert-true (reduce-lisp-type-once '(AND (AND NUMBER (NOT RATIO)) (NOT FLOAT)) :full T))))
+    (assert-true (lisp-types::reduce-lisp-type-once '(AND (AND NUMBER (NOT RATIO)) (NOT FLOAT)) :full T))))
 
-
-(DEFUN BAKER/EXAMPLE-1 ()
+(DEFINE-TEST BAKER/EXAMPLE-1
   (ASSERT-TRUE
    (baker:SUBTYPEP
     '(NOT (AND (AND SYMBOL (NOT KEYWORD)) (EQL 12.0d0))) T)))
-
-(DEFINE-TEST BAKER/EXAMPLE-1
-  (BAKER/EXAMPLE-1))
 

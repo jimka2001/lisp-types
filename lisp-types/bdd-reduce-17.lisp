@@ -62,6 +62,7 @@
 (defgeneric construct-graph (g u))
 
 (defmethod decompose-graph-1 ((g graph) u)
+  (declare (ignore u))
   (loop :while (or (blue g) (green g))
         :do (dolist (x->y (blue g))
               (destructuring-bind (x y) x->y
@@ -69,7 +70,8 @@
         :do (dolist (xy (green g))
               (destructuring-bind (x y) xy
                 (break-touching g x y))))
-  (extract-disjoint g))
+  (remove-duplicates (remove nil (extract-disjoint g))
+		     :test #'equal))
 
 (defmethod decompose-graph-1 :around ((g graph) u)
   (construct-graph g u)
@@ -94,7 +96,8 @@
         :do (dolist (x->y (blue g))
               (destructuring-bind (x y) x->y
                 (break-loop g x y))))
-  (extract-disjoint g))
+  (remove-duplicates (remove nil (extract-disjoint g))
+		     :test #'equal))
 
 (defun decompose-by-graph-2 (u &key (graph-class 'sexp-graph))
   (declare (type list u))
@@ -256,14 +259,6 @@
 (defmethod node-empty-type ((node sexp-node))
   (null (label node)))
 
-;; (defmethod node-subtypep :around ((x sexp-node) (y sexp-node))
-;;   (multiple-value-bind (s1 ok1) (call-next-method)
-;;     (let ((cl-s (multiple-value-list (cl:subtypep (label x) (label y))))
-;; 	  (bk-s (multiple-value-list (baker:subtypep (label x) (label y)))))
-;;       (warn "(1) ~A <: ~A --> baker=~A cl=~A"
-;; 	    (label x) (label y) bk-s cl-s))
-;;     (values s1 ok1)))
-
 (defmethod node-subtypep ((x sexp-node) (y sexp-node))
   (cached-subtypep (label x) (label y)))
 
@@ -325,15 +320,11 @@
   (mapcar #'bdd-to-dnf (mapcar #'label (disjoint g))))
 
 
-(defmethod decompose-graph-2 :around ((g bdd-graph) u)
-  (construct-graph g u)
-  (call-next-method))
-
-
 (defmethod decompose-graph-1 :around ((g bdd-graph) u)
   (ltbdd-with-new-hash ()
    (call-next-method)))
 
 (defmethod decompose-graph-2 :around ((g bdd-graph) u)
   (ltbdd-with-new-hash ()
-   (call-next-method)))
+    (construct-graph g u)
+    (call-next-method)))

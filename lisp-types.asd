@@ -22,9 +22,10 @@
 (asdf:defsystem :lisp-types
   :depends-on (:dispatch
                :cl-robdd
+	       :jimka-addons
                ;; :sb-profile
-               :sb-sprof
-               :fr.epita.lrde.subtypep)
+               #+sbcl :sb-sprof
+               )
   :components
   ((:module "lisp-types"
     :components

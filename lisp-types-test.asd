@@ -25,9 +25,10 @@
                :lisp-types-analysis
                :bordeaux-threads
                :closer-mop
-	       (:version :lisp-unit "0.9.0")
+	       :jimka-addons
+	       :jimka-test
                ;; :sb-profile
-               :sb-sprof)
+               #+sbcl :sb-sprof)
   :components
   ((:module "lisp-types"
     :components
@@ -39,15 +40,16 @@
      (:file "test-perf")
      (:file "test-typecase" :depends-on ("test-lisp-types"))
      (:file "test-sat" :depends-on ("test-lisp-types"
-                                    "test-perf"))
+                                    "test-perf"
+				    "test-classes"))
      (:file "test-graph" :depends-on ("test-lisp-types"
                                       "test-perf"))
      (:file "test-bdd" :depends-on ("test-classes"
                                     "test-lisp-types"
                                     "test-perf"))
      (:file "test-bdd-reduce-17")
-     (:file "test-baker")
      (:file "test-dnf")
      (:file "test-reduce-lisp-type-once")
      (:file "test-bdd-typecase")
+     (:file "test-reduce" :depends-on ("test-classes"))
      ))))

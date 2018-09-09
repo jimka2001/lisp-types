@@ -23,17 +23,6 @@
 (in-package :lisp-types)
 
 
-(defun run-program (program args &rest options)
-  #+sbcl (apply #'sb-ext:run-program program args :search t options)
-  #+allegro (apply #'excl:run-shell-command
-                   (apply #'vector (cons program args))
-                   :wait t
-                   options
-                   )
-  )
-
-
-
 (defvar *verbose-caching* nil)
 (defvar *caching-thresh* 2048)
 (defvar *secret-default-value* (list nil))

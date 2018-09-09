@@ -25,45 +25,6 @@
 (defparameter *decomposition-function-descriptors* nil)
 (defparameter *decomposition-functions* nil)
 
-(defun run-program (program args &rest options)
-  #+sbcl (apply #'sb-ext:run-program program args :search t options)
-  #+allegro (apply #'excl:run-shell-command
-                   (apply #'vector (cons program args))
-                   :wait t
-                   options
-                   )
-  )
-
-(defmacro exists (obj data &body body)
-  (typecase obj
-    (list
-     (let ((var (gensym "exists")))
-       `(member-if (lambda (,var)
-                     (destructuring-bind ,obj ,var
-                       ,@body)) ,data)))
-    (t
-     `(member-if (lambda (,obj) ,@body) ,data))))
-
-(defmacro forall (var data &body body)
-  `(every #'(lambda (,var) ,@body) ,data))
-
-(defmacro while (test &body body)
-  `(loop :while ,test
-	 :do (progn ,@body)))
-
-(defmacro setof (var data &body body)
-  `(remove-if-not (lambda (,var) ,@body) ,data))
-
-(defun getter (field)
-  (lambda (obj) (getf obj field)))
-
-(defun user-read (&rest args)
-  "Calls read with the specified ARGS, but with *PACKAGE* bound to the CL-USER package.  
-The effect of this is that symbols like NIL and - get read as COMMON-LISP:NIL and COMMON-LISP:- rather 
-than as keywords."
-  (let ((*package* (find-package :cl-user)))
-    (apply #'read args)))
-
 (defun locate-symbol (name)
   "Return a list of symbols which is a collection of symbols from all packages which have the given symbol-name"
   (let (symbols)
@@ -392,66 +353,6 @@ than as keywords."
                                        keyword compiled-function ;; sbcl has problems with keyword and compiled-function, so lets ignore these
                                        )))
 
-(defun check-decomposition (given calculated)
-  "debugging function to assure that a given list of types GIVEN corresponds correctly
-to a set of types returned from %mdtd-bdd."
-  (ltbdd-with-new-hash ()
-    (let ((bdd-given (bdd `(or ,@given)))
-          (bdd-calculated (bdd `(or ,@calculated))))
-      (unless (bdd-subtypep bdd-given bdd-calculated)
-        (error "union of given types ~A is not a subset of union of~%    calculated types ~A~%difference is ~A"
-               given calculated (bdd-to-dnf (bdd-and-not bdd-given bdd-calculated))))
-      (unless (bdd-subtypep bdd-calculated bdd-given)
-        (error "union of calculated types ~A is not a subset of~%    union of given types ~A~%difference is ~A"
-               calculated given (bdd-to-dnf (bdd-and-not bdd-calculated bdd-given))))
-      (dolist (c calculated)
-        (when (bdd-empty-type (bdd c))
-          (error "calculated empty type ~A" c))
-        (unless (exists g given
-                  (bdd-subtypep (bdd c) (bdd g)))
-          (error "calculated type ~A is not a subset of any given type ~A"
-                 c given))
-        (dolist (c2 (remove c calculated))
-          (when (bdd-type-equal (bdd c2) (bdd c))
-            (error "calculated two equal types ~A = ~A" c c2)))))))
-
-(defun find-decomposition-discrepancy (&optional (type-specs '(test-array-rank test-array-total-size bignum bit
-                                                               complex fixnum float test-float-digits
-                                                               test-float-radix integer number ratio rational real
-                                                               test-char-code ;; char-int
-                                                               double-float ;; long-float
-                                                               unsigned-byte)))
-  (labels ((recure ( type-specs)
-             (when (cdr type-specs)
-               (recure (cdr type-specs)))
-             (format t "~%~%~%n = ~D~%~%~%~%" (length type-specs))
-             (let* ((bdd-types (mdtd-bdd type-specs))
-                    (def-types (mdtd-baseline type-specs))
-                    (common (intersection bdd-types def-types :test #'equivalent-types-p))
-                    (bdd-left-over (set-difference bdd-types common :test #'equivalent-types-p))
-                    (def-left-over (set-difference def-types common :test #'equivalent-types-p)))
-               (unless (= (length def-types)
-                          (length bdd-types))
-                 (format t "n=~D bdd=~D  def=~D~%" (length type-specs) (length bdd-types) (length def-types))
-                 (format t " given  :~A~%" type-specs)
-                 (format t " common :~A~%" common)
-                 (format t "    bdd :~A~%" bdd-left-over)
-                 (format t "    def :~A~%" def-left-over)
-                 (dolist (com common)
-                   (dolist (types (list bdd-left-over def-left-over))
-                     (dolist (spec types)
-                       (when (subtypep-wrapper spec com)
-                         (format t " ~A <: ~A~%" spec com))
-                       (when (subtypep-wrapper com spec)
-                         (format t " ~A <: ~A~%" com spec)))))
-                 (format t "checking calculated bdd types~%")
-                 (check-decomposition type-specs bdd-types)
-                 (format t "checking calculated def types~%")
-                 (check-decomposition type-specs def-types)
-                 (return-from find-decomposition-discrepancy nil)
-                 ))))
-    (recure type-specs)))
-
 (defun compare/results (all-results &aux (good-results (setof res all-results
                                                          (and res
                                                               (null (getf res :time-out)))))
@@ -759,7 +660,6 @@ to a set of types returned from %mdtd-bdd."
     (when (and create-png-p
                (plusp min-num-points))
       (run-program *gnuplot* (list gnuplot-file)
-                   :search t 
                    :output png-filename
                    :error *error-output*
                    :if-output-exists :supersede))))
@@ -1381,18 +1281,24 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
     (format t "   ~A]~%" gnu-name))
   (when create-png-p
     (let* ((gnu-file (change-extension gnu-name "png"))
-           (process (run-program *gnuplot* (list gnu-name)
-                                 :search t
+           (#+sbcl process
+	    #+allegro exit-status
+	    (run-program *gnuplot* (list gnu-name)
+				 :wait t
+				 ;; TODO not sure whether allegro understands these options
                                  :output gnu-file
                                  :error *error-output*
                                  :if-output-exists :supersede)))
       (when (empty-file-p gnu-file)
         (warn "gnuplot exited with code=~A produced empty output file ~A from input ~A"
-              (sb-ext:process-exit-code process) gnu-file gnu-name)))))
+              #+sbcl (sb-ext:process-exit-code process)
+	      #+allegro exit-status
+	      gnu-file gnu-name)))))
 
 (defun create-profile-scatter-plot-summary-decompose (summary decompose &key smooth destination-dir (comment "") create-png-p profile-plists
 									  (threshold 0.15) (num-functions-per-plot 4) file-name prefix
 									  profile-function-legend plist-hash)
+  (declare (ignore create-png-p))
   (let ((curve-hash (make-hash-table :test #'equal))
 	top-names)
     (declare (notinline sort))
@@ -1484,7 +1390,13 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
 							 :plist-hash plist-hash
 							 :profile-plists profile-plists))))))
 
-(defvar *destination-dir* "/Users/jnewton/newton.16.edtchs/src")
+(defvar *autogen-dir* (find-if #'directory-exists-p '("/Users/jnewton/research/autogen"
+					      "/Volumes/Disk2/jimka/research/autogen")))
+
+(defvar *destination-dir* (find-if #'directory-exists-p '("/Users/jnewton/newton.16.edtchs/src"
+						  "/Users/jnewton/analysis"
+						  "/Volumes/Disk2/jimka/research/autogen")))
+
 (defun test-report (&key sample (prefix "") (re-run t) (suite-time-out (* 60 60 4))
                       (time-out (* 3 60)) normalize (destination-dir *destination-dir*)
                       types file-name (limit 15) tag hilite-min (num-tries 2)
@@ -1634,7 +1546,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                   #'< :key #'caddr)
             :data data))))
 
-(defun gen-parameters-summary-tabular (&key (destination-dir "/Users/jnewton/analysis") (autogen-dir "/Users/jnewton/research/autogen"))
+(defun gen-parameters-summary-tabular (&key (destination-dir *destination-dir*) (autogen-dir *autogen-dir*))
   "generate latex tabular fig.summary.parameters"
   (destructuring-bind (&key attributes &allow-other-keys) (do-analysis :path autogen-dir)
     ;; attributes
@@ -1688,7 +1600,7 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
 (defvar *bucket-reporters* nil)
 (defvar *bucket-reporter-properites* nil)
 
-(defun do-analysis (&key (path "/Users/jnewton/Disk2/research/autogen"))
+(defun do-analysis (&key (path *autogen-dir*))
   (analysis (loop :for (tag bucket-reporter) :in  *bucket-reporters*
 		  :for properties := (find tag *bucket-reporter-properites* :test #'equal :key (getter :tag))
 		  :for sorted := (getf properties :file-name)
@@ -1781,11 +1693,12 @@ SUITE-TIME-OUT is the number of time per call to TYPES/CMP-PERFS."
                      :file-name "subtypes-of-t")
 
 (defun call-with-caffeinate (thunk)
-  (let ((caff (sb-ext:run-program "caffeinate"
-                                  '("-i" "sleep" "31449600") ;; sleep for 1 year or until killed
-                                  :search t :wait nil)))
+  (let ((caff (run-program "caffeinate"
+			   '("-i" "sleep" "31449600") ;; sleep for 1 year or until killed
+			   ;; TODO not sure how to do :wait nil with allegro
+			   :wait nil)))
     (prog1 (funcall thunk)
-      (sb-ext:process-kill caff 1))))
+      (process-kill caff 1))))
 
 (defmacro caffeinate (&body body)
   "Evaluate the given code body, but using the caffeinate macOS program to prevent the system from
@@ -1806,10 +1719,6 @@ sleeping before the code finishes evaluating."
 								   mdtd-bdd-graph
 								   
 								   mdtd-sat
-
-                                                                   ;; mdtd-bdd-graph-baker
-                                                                   ;; mdtd-graph-baker
-								   
 								   ))
                                         (bucket-reporters *bucket-reporters*)
 					(profile-function-legend (make-hash-table :test #'equal))
@@ -1860,25 +1769,7 @@ sleeping before the code finishes evaluating."
                                               mdtd-rtev2
                                               mdtd-graph)))
 
-(defun baker-report (&key (re-run t) (multiplier 1.8) (create-png-p t) (destination-dir *destination-dir*)
-                       (bucket-reporters *bucket-reporters*))
-  (declare (type string destination-dir)
-	   (type number multiplier))
-  (big-test-report :re-run re-run
-                   :prefix "baker-"
-                   :multiplier multiplier
-                   :normalize nil
-                   :time-out 20
-                   :num-tries 2
-                   :hilite-min nil
-                   :destination-dir destination-dir
-                   :create-png-p create-png-p
-                   :bucket-reporters bucket-reporters
-                   :decomposition-functions '( 
-                                              mdtd-bdd-graph
-                                              mdtd-bdd-graph-baker
-                                              mdtd-graph
-                                              mdtd-graph-baker)))
+
 
 (defun mdtd-report (&key (re-run t) (multiplier 2.5) (create-png-p t) (bucket-reporters *bucket-reporters*) (destination-dir *destination-dir*))
   (big-test-report :re-run re-run
@@ -1988,32 +1879,58 @@ sleeping before the code finishes evaluating."
       (format t "summary-list~%")
       (filter summary-list :summary))))
 
+(defvar *reports* nil)
+(defun make-report (name report-function)
+  (declare (type string name))
+  (setf *reports* (remove name *reports*
+			  :test #'string=
+			  :key #'car))
+  (push (list name report-function)
+	*reports*))
+  
+(defmacro def-report (name lambda-list &body body)
+  `(make-report ',name
+		(lambda ,lambda-list
+		  ,@body)))
+
+(def-report "big" (&key re-run destination-dir create-png-p &allow-other-keys)
+  (big-test-report :re-run re-run
+		   :create-png-p create-png-p
+		   :bucket-reporters *bucket-reporters*
+		   :prefix "big-"
+		   :destination-dir destination-dir))
+
+(def-report "best" (&key re-run destination-dir create-png-p &allow-other-keys)
+  (best-2-report :re-run re-run
+		 :create-png-p create-png-p
+		 :bucket-reporters *bucket-reporters*
+		 :destination-dir  destination-dir))
+
+(def-report "param" (&key re-run destination-dir create-png-p &allow-other-keys)
+  (parameterization-report :re-run re-run
+			   :create-png-p create-png-p
+			   :bucket-reporters *bucket-reporters*
+			   :destination-dir  destination-dir))
+
+(def-report "mdtd" (&key re-run destination-dir create-png-p &allow-other-keys)
+  (mdtd-report :re-run re-run
+	       :create-png-p create-png-p
+	       :bucket-reporters *bucket-reporters*
+	       :destination-dir  destination-dir))
+
 (defun rebuild-plots (&key (destination-dir "/Users/jnewton/analysis") (create-png-p t))
   (let ((plist-hash (make-hash-table :test #'equal))
 	(profile-function-legend (make-hash-table :test #'equal)))
     (dotimes (bucket-index (length *bucket-reporters*))
       (let ((*bucket-reporters* (list (nth bucket-index *bucket-reporters*))))
-	(big-test-report :re-run nil
-			 :create-png-p create-png-p
-			 :bucket-reporters *bucket-reporters*
-			 :prefix "big-"
-			 :destination-dir destination-dir)
-	(best-2-report :re-run nil
-		       :create-png-p create-png-p
-		       :bucket-reporters *bucket-reporters*
-		       :destination-dir  destination-dir)
-        (baker-report :re-run nil
-                      :create-png-p create-png-p
-                      :bucket-reporters *bucket-reporters*
-                      :destination-dir  destination-dir)
-	(parameterization-report :re-run nil
-				 :create-png-p create-png-p
-				 :bucket-reporters *bucket-reporters*
-				 :destination-dir  destination-dir)
-	(mdtd-report :re-run nil
+	(dolist (report *reports*)
+	  (destructuring-bind (name report-function) report
+	    (declare (ignore name))
+	    (funcall report-function
+		     :re-run nil
 		     :create-png-p create-png-p
-		     :bucket-reporters *bucket-reporters*
-		     :destination-dir  destination-dir)
+		     :destination-dir destination-dir)))
+	
 	(dotimes (decompose-function-index (length *decomposition-functions*))
 	  (format t "=== generating mdtd-profile files for ~d-~d ~A ~A ~%" decompose-function-index bucket-index
 		  (getf (nth bucket-index *bucket-reporter-properites*)
@@ -2100,7 +2017,7 @@ sleeping before the code finishes evaluating."
 		  '("STRONG" "WEAK")
 		  )))
 
-(defun rebuild-analysis (&key (destination-dir "/Users/jnewton/analysis") (autogen-dir "/Users/jnewton/research/autogen"))
+(defun rebuild-analysis (&key (destination-dir *destination-dir*) (autogen-dir *autogen-dir*))
   (rebuild-plots :destination-dir destination-dir :create-png-p t)
   (generate-latex-plots :analysis-dir destination-dir
 			:gen-samples nil
@@ -2108,7 +2025,6 @@ sleeping before the code finishes evaluating."
   (gen-parameters-summary-tabular :destination-dir destination-dir :autogen-dir autogen-dir)
   (gen-mdtd-profile-single-figures :destination-dir destination-dir :autogen-dir autogen-dir)
 )
-
 
 (defun convert-name-once (destination-dir fname)
   ;; fname = "mdtd-profile-0-6-member.sexp"

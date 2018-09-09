@@ -23,6 +23,9 @@
 
 (shadow-all-symbols :package-from :lisp-types :package-into :lisp-types-test)
 
+(assert (not (equal (type-expand 'test-array-rank)
+		    'test-array-rank)))
+
 (define-test type/sat1
   ;; crashes in allegro
   (let* ((A '(1 2 3 4 5 6 7 8 9 10 12 13))

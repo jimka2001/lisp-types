@@ -1,4 +1,4 @@
-;; Copyright (c) 2016 EPITA Research and Development Laboratory
+;; Copyright (c) 2018 EPITA Research and Development Laboratory
 ;;
 ;; Permission is hereby granted, free of charge, to any person obtaining
 ;; a copy of this software and associated documentation
@@ -20,19 +20,19 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-(defpackage :lisp-types-test
-  (:shadowing-import-from :lisp-types "TEST" "A")
-  ;;(:shadowing-import-from :closer-mop "STANDARD-GENERIC-FUNCTION" "DEFMETHOD" "DEFGENERIC")
-  (:use :cl :lisp-types :jimka-test ;;:closer-mop
-	:jimka-addons
-        :lisp-types-analysis
-        :cl-robdd
-   #+sbcl :sb-pcl
-   #+allegro :aclmop
-        ))
-
-
-(in-package :lisp-types-test)
-
-(shadow-all-symbols :package-from :lisp-types :package-into :lisp-types-test)
-
+(asdf:defsystem :lisp-types-baker-analysis
+  :depends-on (:lisp-types
+	       :cl-robdd
+	       :cl-robdd-test
+	       :lisp-types-analysis
+	       :lisp-types-test
+               :fr.epita.lrde.subtypep
+	       :jimka-addons
+	       :jimka-test)
+  :components
+  ((:module "lisp-types"
+    :components
+    ((:file "lisp-types-baker-analysis-package")
+     (:file "analysis-baker")
+     (:file "test-baker")
+     ))))

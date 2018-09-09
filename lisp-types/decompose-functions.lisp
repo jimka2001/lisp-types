@@ -99,30 +99,54 @@
 (make-decompose-fun-combos)
 
 
-(setf *decomposition-function-descriptors*
-  (let ((color 0))
-    `((:names (mdtd-baseline) :max-num-types 15 :gnu-color ,(nth (incf color) *colors*) :legend t)
-      (:names (mdtd-rtev2) :max-num-types nil  :gnu-color ,(nth (incf color) *colors*) :legend t)
-      (:names (mdtd-sat)  :gnu-color ,(nth (incf color) *colors*)  :legend t)
-      (:names (mdtd-graph)  :gnu-color ,(nth (incf color) *colors*) :legend t)
-      (:names (mdtd-bdd-strong)  :gnu-color ,(nth (incf color) *colors*) :legend t)
-      (:names (mdtd-bdd-weak) :gnu-color ,(nth (incf color) *colors*) :legend t)
-      (:names (mdtd-bdd-weak-dynamic) :gnu-color ,(nth (incf color) *colors*) :legend t)
-      (:names (mdtd-bdd) :gnu-color ,(nth (incf color) *colors*) :legend t)
-      (:names ,*decompose-fun-parameterized-names*  :gnu-color "b2daff" :color "light-blue" :legend nil)
-      (:names (mdtd-bdd-graph-strong)  :gnu-color ,(nth (incf color) *colors*) :linewidth 1  :legend t)
-      (:names (mdtd-bdd-graph-weak-dynamic)  :gnu-color ,(nth (incf color) *colors*) :linewidth 1  :legend t)
-      (:names (mdtd-bdd-graph)  :gnu-color ,(nth (incf color) *colors*) :linewidth 1  :legend t)
-      (:names (mdtd-bdd-graph-weak)  :gnu-color ,(nth (incf color) *colors*) :linewidth 1  :legend t)
-      (:names (parameterized-mdtd-bdd-graph) :gnu-color "ff4444" :linewidth 1 :legend t)
-      (:names (local-minimum) :gnu-color "000000" :color "black" :linewidth 2 :legend t)
-      (:names (mdtd-bdd-graph-baker) :gnu-color ,(nth (incf color) *colors*) :linewidth 1  :legend t)
-      (:names (mdtd-graph-baker)  :gnu-color ,(nth (incf color) *colors*) :legend t))))
 
-(setf *decomposition-functions*
-      (set-difference (mapcan (lambda (plist)
-				(copy-list (getf plist :names))) *decomposition-function-descriptors*)
-		      (cons 'local-minimum *decompose-fun-parameterized-names*)))
+
+(defun define-mdtd-function (&key names max-num-types
+			       gnu-color
+			       color
+			       (linewidth 1)
+			       (legend t))
+  (let ((names (if (listp names)
+		   names
+		   (list names))))
+    (setf *decomposition-function-descriptors*
+	  (remove names *decomposition-function-descriptors*
+		  :key (getter :names)
+		  :test-not #'set-exclusive-or))
+    (push (list :names names
+		:max-num-types max-num-types
+		:gnu-color (or gnu-color
+			       ;; find first color in (cdr *colors*) which is not already used in *decomposition-function-descriptors*
+			       (find-if-not (lambda (color)
+					      (find color *decomposition-function-descriptors*
+						    :key (getter :gnu-color)
+						    ;; string-equal is case-independent string=
+						    :test #'string-equal))
+					    (cdr *colors*)))
+		:linewidth linewidth
+		:legend legend
+		:color color)
+	  *decomposition-function-descriptors*)
+    (setf *decomposition-functions*
+	  (set-difference (mapcan (lambda (plist)
+				    (copy-list (getf plist :names))) *decomposition-function-descriptors*)
+			  (cons 'local-minimum *decompose-fun-parameterized-names*)))))
+
+(define-mdtd-function :names 'mdtd-baseline :max-num-types 15)
+(define-mdtd-function :names 'mdtd-rtev2)
+(define-mdtd-function :names 'mdtd-sat)
+(define-mdtd-function :names 'mdtd-graph)
+(define-mdtd-function :names 'mdtd-bdd-strong)
+(define-mdtd-function :names 'mdtd-bdd-weak)
+(define-mdtd-function :names 'mdtd-bdd-weak-dynamic)
+(define-mdtd-function :names 'mdtd-bdd)
+(define-mdtd-function :names *decompose-fun-parameterized-names*  :gnu-color "b2daff" :color "light-blue" :legend nil)
+(define-mdtd-function :names 'mdtd-bdd-graph-strong)
+(define-mdtd-function :names 'mdtd-bdd-graph-weak-dynamic)
+(define-mdtd-function :names 'mdtd-bdd-graph)
+(define-mdtd-function :names 'mdtd-bdd-graph-weak)
+(define-mdtd-function :names 'parameterized-mdtd-bdd-graph :gnu-color "ff4444")
+(define-mdtd-function :names 'local-minimum :gnu-color "000000" :color "black" :linewidth 2)
 
 (defun parameterization-report (&key (re-run t) (multiplier 1) (create-png-p t) (destination-dir *destination-dir*)
                                   (bucket-reporters *bucket-reporters*))
