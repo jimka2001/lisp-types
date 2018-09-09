@@ -20,8 +20,9 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 (defpackage :lisp-types-baker-analysis
-  (:use :cl :lisp-types :cl-robdd :lisp-types-analysis :cl-robdd-analysis :jimka-test)
+  (:use :cl :lisp-types :cl-robdd :lisp-types-analysis :cl-robdd-analysis :jimka-test :jimka-addons)
   (:export
    "MDTD-BDD-GRAPH-BAKER"
-   "PARAMETERIZED-MDTD-BDD-GRAPH"   
+   "PARAMETERIZED-MDTD-BDD-GRAPH"
+   "BAKER-REPORT"
 ))
