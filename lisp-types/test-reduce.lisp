@@ -23,6 +23,20 @@
 
 (shadow-all-symbols :package-from :lisp-types :package-into :lisp-types-test)
 
+(define-test test/deftypes
+  (let ((defined-types '(test-float-radix
+			 test-float-digits
+			 test-array-rank
+			 test-array-total-size
+			 test-char-code
+			 test-char-int)))
+    (dolist (type defined-types)
+      (assert-false (equal type (type-expand type))))))
+
+
+(define-test test/type-to-dnf
+  (assert-true (type-to-dnf '(AND (NOT (AND INTEGER (NOT BIT)))
+			          (AND ATOM (NOT BIT))))))
 
 (define-test test/type-to-dnf-bottom-up-1
   (assert-true (equal nil
