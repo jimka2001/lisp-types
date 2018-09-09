@@ -1391,12 +1391,11 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
 							 :profile-plists profile-plists))))))
 
 (defvar *autogen-dir* (or (find-if #'directory-exists-p '("/Users/jnewton/research/autogen"
-						      "/Volumes/Disk2/jimka/research/autogen"
+							  "/Volumes/Disk2/jimka/research/autogen"
 							  "/lrde/home/jnewton/analysis"))
 			  (error "cannot find suitable value for *autogen-dir*")))
 
-(defvar *destination-dir* (or (find-if #'directory-exists-p '("/Users/jnewton/newton.16.edtchs/src"
-							      "/Users/jnewton/analysis"
+(defvar *destination-dir* (or (find-if #'directory-exists-p '("/Users/jnewton/analysis"
 							      "/Volumes/Disk2/jimka/research/autogen"
 							      "/lrde/home/jnewton/analysis"))
 			      (error "cannot find suitable value for *destination-dir*")))
