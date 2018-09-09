@@ -1390,12 +1390,16 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
 							 :plist-hash plist-hash
 							 :profile-plists profile-plists))))))
 
-(defvar *autogen-dir* (find-if #'directory-exists-p '("/Users/jnewton/research/autogen"
-						      "/Volumes/Disk2/jimka/research/autogen")))
+(defvar *autogen-dir* (or (find-if #'directory-exists-p '("/Users/jnewton/research/autogen"
+						      "/Volumes/Disk2/jimka/research/autogen"
+							  "/lrde/home/jnewton/analysis"))
+			  (error "cannot find suitable value for *autogen-dir*")))
 
-(defvar *destination-dir* (find-if #'directory-exists-p '("/Users/jnewton/newton.16.edtchs/src"
-							  "/Users/jnewton/analysis"
-							  "/Volumes/Disk2/jimka/research/autogen")))
+(defvar *destination-dir* (or (find-if #'directory-exists-p '("/Users/jnewton/newton.16.edtchs/src"
+							      "/Users/jnewton/analysis"
+							      "/Volumes/Disk2/jimka/research/autogen"
+							      "/lrde/home/jnewton/analysis"))
+			      (error "cannot find suitable value for *destination-dir*")))
 
 (defun test-report (&key sample (prefix "") (re-run t) (suite-time-out (* 60 60 4))
                       (time-out (* 3 60)) normalize (destination-dir *destination-dir*)
