@@ -116,31 +116,36 @@
            (not? (obj)
              (and (consp obj)
                   (eq 'not (car obj))))
-	   (make-op (op one zero operands &aux (dup-free (remove-duplicates (remove-duplicates (remove zero operands) :test #'eq)
-								:test #'equal)))
+           (un-duplicate (zero operands)
+             (remove-duplicates (remove-duplicates (remove zero operands)
+                                                   :test #'eq)
+                                :test #'equal))
+           (make-op (op one zero operands
+                     &aux (dup-free (un-duplicate zero operands)))
 	     (cond
 	       ((null dup-free)
 		zero)
 	       ((null (cdr dup-free))
 		(car dup-free))
 	       ((or (exists x dup-free
-		       (and (not? x)
-			    (member (cadr x) dup-free :test #'eq)))
-		     (exists x dup-free
-		       (and (not? x)
-			    (member (cadr x) dup-free :test #'equal))))
+                      (and (not? x)
+                           (member (cadr x) dup-free :test #'eq)))
+                    (exists x dup-free
+                      (and (not? x)
+                           (member (cadr x) dup-free :test #'equal))))
 		one)
 	       (t
-		 (cons op dup-free))))
+                (cons op dup-free))))
 	   (make-or (operands)
 	     (make-op 'or t nil (remove-subs operands)))
 	   (make-and (operands)
-	     (if (exists t2 operands
-		   (exists t1 operands
-		     (and (not (eq t1 t2))
-			  (cached-subtypep t1 (list 'not t2)))))
-		 nil ; (and ...) contains disjoint types so return empty-type=nil
-		 (make-op 'and nil t (remove-supers operands))))
+             (if (exists t2 operands
+                   (exists t1 operands
+                     (and (not (eq t1 t2))
+                          (cached-subtypep t1 (list 'not t2)))))
+                 nil
+
+                 (make-op 'and nil t (remove-supers operands))))
 	   (do-and (a b)
 	     (cond ((eq a nil)
 		    nil)
@@ -171,6 +176,10 @@
 		   (t
 		    (do-and (list 'and a) b))))
 	   (do-or (a b)
+             ;; The do-and and do-or functions are not duals, becasue
+             ;; both arguments a and b are in dnf form.  This means
+             ;; (or (and ...)...) is a valid value of a or b but
+             ;; (and (or ...) ...) is not.
 	     (cond ((eq a t)
 		    t)
 		   ((eq b t)
@@ -200,11 +209,9 @@
 		   ((eq a nil)
 		    t)
 		   ((and? a)
-		    (make-or (mapcar (lambda (x)
-				       (do-not x)) (cdr a))))
+		    (make-or (mapcar #'do-not (cdr a))))
 		   ((or? a)
-		    (make-and (mapcar (lambda (x)
-					(do-not x)) (cdr a))))
+		    (make-and (mapcar #'do-not (cdr a))))
 		   ((not? a)
 		    (cadr a))
 		   (t
