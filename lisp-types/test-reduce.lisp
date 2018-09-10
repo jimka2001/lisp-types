@@ -51,15 +51,31 @@
 		      (type-to-dnf-bottom-up 'number)))
   (assert-true (equal '(not number)
 		      (type-to-dnf-bottom-up '(not number))))
-  (assert-true (equal '(and number string)
+  (assert-true (equal nil
+                      (type-to-dnf-bottom-up '(and number (not number)))))
+  (assert-true (equal t
+                      (type-to-dnf-bottom-up '(or number (not number)))))
+  (assert-true (equal nil
 		      (type-to-dnf-bottom-up '(and number string))))
+  (assert-true (equal '(and z1 z2)
+		      (type-to-dnf-bottom-up '(and z1 z2))))
   (assert-true (equal '(or number string)
 		      (type-to-dnf-bottom-up '(or number string))))
-  (assert-true (equal '(and number string list)
+  (assert-true (equal nil
 		      (type-to-dnf-bottom-up '(and (and number string) list))))
-  (assert-true (equal '(and number string list)
+  (assert-true (equal nil
 		      (type-to-dnf-bottom-up '(and number (and string list)))))
-  (assert-true (equal '(or (not number) (not string))
+
+
+  (assert-true (equal '(and z1 z2 z3)
+		      (type-to-dnf-bottom-up '(and (and z1 z2) z3))))
+  (assert-true (equal '(and z1 z2 z3)
+		      (type-to-dnf-bottom-up '(and z1 (and z2 z3)))))
+
+
+  (assert-true (equal '(or (not z1) (not z2))
+		      (type-to-dnf-bottom-up '(not (and z1 z2)))))
+  (assert-true (equal t
 		      (type-to-dnf-bottom-up '(not (and number string)))))
   (assert-true (equal '(and (not number) (not string))
 		      (type-to-dnf-bottom-up '(and (not number) (not string)))))
@@ -72,12 +88,12 @@
   (assert-true (equal (type-to-dnf-bottom-up '(or a (or b (or c d))))
 		      '(or a b c d)))
   (assert-true (equal (type-to-dnf-bottom-up '(and (not (or a b))
-					           (not (or c d))))
+                                               (not (or c d))))
 		      '(and (not a) (not b) (not c) (not d))))
   (assert-true (equal (type-to-dnf-bottom-up '(not (and (not a) (not b) (not c) (not d))))
 		      '(or a b c d)))
   (assert-true (equal (type-to-dnf-bottom-up '(not (and (not (or a b))
-						        (not (or c d)))))
+                                                    (not (or c d)))))
 		      '(or a b c d)))
   (assert-true (equal (type-to-dnf-bottom-up '(not (or a b c d)))
 		      '(and (not a) (not b) (not c) (not d))))
@@ -95,6 +111,66 @@
 
   (assert-true (equal (type-to-dnf-bottom-up '(and a (or (not x) (not (and y z)))))
 		      '(or (and a (not x)) (and a (not y)) (and a (not z)))))
+
+  (assert-true (type-to-dnf-bottom-up '(not (not (not (not t))))))
+  (assert-false (type-to-dnf-bottom-up '(not (not (not (not nil))))))
+  (assert-false (type-to-dnf-bottom-up '(not (not (not (not (and string (not string))))))))
+  (assert-true (type-to-dnf-bottom-up '(not (not (not (not (or string (not string))))))))
+
+
+  (assert-true (type-to-dnf-bottom-up '(or (and string (not string))
+                                        (or string (not string)))))
+  
+  (assert-true (type-to-dnf-bottom-up '(or (or string (not string))
+                                            (and string (not string)))))
+  
+  
+  (assert-false (type-to-dnf-bottom-up '(and (and string (not string))
+                                         (or string (not string)))))
+  
+  (assert-false (type-to-dnf-bottom-up '(and (or string (not string))
+                                         (and string (not string)))))
+  
+
+  
+  (assert-false (type-to-dnf-bottom-up '(not (or (and string (not string))
+                                              (or string (not string))))))
+  
+  (assert-false (type-to-dnf-bottom-up '(not (or (or string (not string))
+                                                 (and string (not string))))))
+  
+  
+  (assert-true (type-to-dnf-bottom-up '(not (and (and string (not string))
+                                                 (or string (not string))))))
+  
+  (assert-true (type-to-dnf-bottom-up '(not (and (or string (not string))
+                                             (and string (not string))))))
+
+
+  (assert-true (type-to-dnf-bottom-up '(not (not (or (and string (not string))
+                                                     (or string (not string)))))))
+  
+  (assert-true (type-to-dnf-bottom-up '(not (not (or (or string (not string))
+                                        (and string (not string)))))))
+  
+  
+  (assert-false (type-to-dnf-bottom-up '(not (not (and (and string (not string))
+                                                   (or string (not string)))))))
+  
+  (assert-false (type-to-dnf-bottom-up '(not (not (and (or string (not string))
+                                                   (and string (not string)))))))
+
+
+
+  (assert-false (type-to-dnf-bottom-up '(not (not (and (not (and string (not string)))
+                                                   (not (or string (not string))))))))
+  
+  (assert-true (type-to-dnf-bottom-up '(not (not (or (not (or string (not string)))
+                                                  (not (and string (not string))))))))
+
+
+  
+
   )
   
   

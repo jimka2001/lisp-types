@@ -126,7 +126,7 @@
 	       ((null dup-free)
 		zero)
 	       ((null (cdr dup-free))
-		(car dup-free))
+ 		(car dup-free))
 	       ((or (exists x dup-free
                       (and (not? x)
                            (member (cadr x) dup-free :test #'eq)))
@@ -137,15 +137,20 @@
 	       (t
                 (cons op dup-free))))
 	   (make-or (operands)
-	     (make-op 'or t nil (remove-subs operands)))
+	     (make-op 'or
+                      t ; one
+                      nil ; zero
+                      (remove-subs operands)))
 	   (make-and (operands)
              (if (exists t2 operands
                    (exists t1 operands
                      (and (not (eq t1 t2))
                           (cached-subtypep t1 (list 'not t2)))))
-                 nil
-
-                 (make-op 'and nil t (remove-supers operands))))
+                 nil 
+                 (make-op 'and
+                          nil ; one
+                          t ; zero
+                          (remove-supers operands))))
 	   (do-and (a b)
 	     (cond ((eq a nil)
 		    nil)
@@ -202,8 +207,8 @@
 		    (cond ((or? b)
 			   (do-or (list 'or a) b))
 			  (t
-			   (list 'or a b))))))
-	   (do-not (a)
+			   (make-or (list a b)))))))
+           (do-not (a)
 	     (cond ((eq a t)
 		    nil)
 		   ((eq a nil)
