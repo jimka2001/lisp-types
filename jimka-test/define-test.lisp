@@ -277,12 +277,12 @@ raised."
   (assert-false (= 1 3))
   (assert-true (= 1 1))
   (assert-true (= 2 2))
-  (assert-true (= 2 3))
+  (assert-false (= 2 3))
   (assert-error division-by-zero (/ 1 0))
   (let ((a 2)
 	(b 1))
     (assert-false (< a b)))
-  (assert-true (string= "abc" "ABC"))
-  (assert-error 'error
+  (assert-true (string-equal "abc" "ABC"))
+  (assert-error error
 		(error "some error"))
 )
