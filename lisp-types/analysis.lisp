@@ -1951,7 +1951,7 @@ sleeping before the code finishes evaluating."
     (make-stand-alone-legends destination-dir profile-function-legend plist-hash)
     ))
 
-(defun gen-mdtd-profile-single-figures (&key destination-dir autogen-dir)
+(defun gen-mdtd-profile-single-figures (&key (destination-dir *destination-dir*) (autogen-dir *autogen-dir*))
   (labels ((make-figures (output matching key value caption)
 	     (when matching
 	       (let ((columns 3))
@@ -1981,16 +1981,23 @@ sleeping before the code finishes evaluating."
 		 (format output "\\end{tabular}~%")
 		 (format output "\\scalebox{0.9}{\\input{legend-~A-~A.ltxdat}}~%" key value)
 		 (format output "}~%~%"))))
+	   (collect-names (key)
+	     ;; return a list of all filenames of the form <prefix><some-value><suffix>
+	     (loop :for decomp :in *decomposition-functions*
+		   :for f = (symbol-name decomp)
+		   :nconc (loop :for reporter-prop :in *bucket-reporter-properites*
+				:for report = (getf reporter-prop :file-name)
+				:for fname = (format nil "~A/mdtd-profile-single-~A-~A-scatter-by-~A-smooth.ltxdat"
+						     autogen-dir decomp report key)
+				:if (probe-file fname)
+				  :collect (pathname-name (pathname fname)))))
 	   (make-section (key key2 values caption-format forbidden)
 	     (with-open-file (output (format nil "~A/mdtd-profile-by-~A.ltxdat" destination-dir key)
 				     :direction :output
 				     :if-exists :supersede
 				     :if-does-not-exist :create)
 	       (format t "writing to ~A~%" output)
-	       (let* ((dir (directory (format nil "~A/mdtd-profile-single*-scatter-by-~A-smooth.ltxdat"
-					      autogen-dir key)))
-		      
-		      (ltxdat-files (mapcar #'pathname-name dir)))
+	       (let ((ltxdat-files (collect-names key)))
 		 (dolist (value (sort values #'> :key #'length))
 		   (let ((matching (setof ltxdat ltxdat-files
 				     (search value ltxdat))))
@@ -2027,25 +2034,3 @@ sleeping before the code finishes evaluating."
   (gen-mdtd-profile-single-figures :destination-dir destination-dir :autogen-dir autogen-dir)
 )
 
-(defun convert-name-once (destination-dir fname)
-  ;; fname = "mdtd-profile-0-6-member.sexp"
-  ;; converts name to "mdtd-profile-single-PARAMETERIZED-MDTD-BDD-GRAPH-member.sexp"
-  (with-open-file (istream (format nil "~A/~A" destination-dir fname)
-			   :direction :input
-			   :if-does-not-exist :error)
-    (format t "reading ~A~%" istream)
-    (let ((plist (user-read istream nil nil)))
-      (destructuring-bind (&key summary data date &allow-other-keys) plist
-	(assert (= 1 (length data)))
-	(unless date
-	  (setf (getf plist :date)
-		(encode-time (get-universal-time))))
-	(destructuring-bind ((&key decompose &allow-other-keys)) data
-	  (with-open-file (ostream (format nil "~A/mdtd-profile-single-~A-~A.sexp"
-					   destination-dir  decompose summary)
-				   :direction :output
-				   :if-exists :supersede
-				   :if-does-not-exist :create)
-	    (format t "writing ~A~%" ostream)
-	    (let ((*package* (find-package "CL")))
-	      (format ostream "~S~%" plist))))))))
