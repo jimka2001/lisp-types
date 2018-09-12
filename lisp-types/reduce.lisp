@@ -122,26 +122,26 @@
                                 :test #'equal))
            (make-op (op one zero operands
                      &aux (dup-free (un-duplicate zero operands)))
-	     (cond
-	       ((null dup-free)
-		zero)
-	       ((null (cdr dup-free))
- 		(car dup-free))
-	       ((or (exists x dup-free
+             (cond
+               ((null dup-free)
+                zero)
+               ((null (cdr dup-free))
+                (car dup-free))
+               ((or (exists x dup-free
                       (and (not? x)
                            (member (cadr x) dup-free :test #'eq)))
                     (exists x dup-free
                       (and (not? x)
                            (member (cadr x) dup-free :test #'equal))))
-		one)
-	       (t
+                one)
+               (t
                 (cons op dup-free))))
-	   (make-or (operands)
-	     (make-op 'or
+           (make-or (operands)
+             (make-op 'or
                       t ; one
                       nil ; zero
                       (remove-subs operands)))
-	   (make-and (operands)
+           (make-and (operands)
              (if (exists t2 operands
                    (exists t1 operands
                      (and (not (eq t1 t2))
@@ -151,83 +151,113 @@
                           nil ; one
                           t ; zero
                           (remove-supers operands))))
-	   (do-and (a b)
-	     (cond ((eq a nil)
-		    nil)
-		   ((eq b nil)
-		    nil)
-		   ((eq a t)
-		    b)
-		   ((eq b t)
-		    a)
-		   ((and? a)
-		    (cond ((and? b)
-			   (make-and (append (cdr a) (cdr b))))
-			  ((or? b)
-			   (make-or (loop :for y :in (cdr b)
-					  :collect (do-and a y))))
-			  (t
-			   (do-and a (list 'and b)))))
-		   ((or? a)
-		    (cond ((and? b)
-			   (make-or (loop :for x :in (cdr a)
-					  :collect (do-and x b))))
-			  ((or? b)
-			   (make-or (loop :for x :in (cdr a)
-					  :nconc (loop :for y :in (cdr b)
-						       :collect (do-and x y)))))
-			  (t
-			   (do-and a (list 'and b)))))
-		   (t
-		    (do-and (list 'and a) b))))
-	   (do-or (a b)
+           (do-and (dnf-a dnf-b)
+	     ;; dnf-a and dnf-b are type specifiers in dnf form.
+	     ;; this means they are not in an invalid form, so we don't
+	     ;; have to worry about cases like
+	     ;;   (not (or ..))
+	     ;;   (not (and ..))
+	     ;;   (and (or ...))
+	     ;;   (and (and ...))
+	     ;;   (or (or ...))
+	     ;; There are 6x6=36 cases, many of the duplicates
+	     ;;   dnf-a or dnf-b may be
+
+	     ;;   (and a b)   | t  nil  (or) (and) (not) (other)
+	     ;;   ------------+---+----+----+-----+-----+------
+	     ;;   t           | 3   2     3    3     3     3
+	     ;;   nil         | 1   1     1    1     1     1
+	     ;;   (or  ...)   | 4   2     9    8    10    10
+	     ;;   (and ...)   | 4   2     6    5     7     7
+	     ;;   (not ...)   | 4   2    11   11    11    11
+	     ;;   other       | 4   2    11   11    11    11
+	     ;;
+             (cond ((eq dnf-a nil) ; case 1
+                    nil)
+                   ((eq dnf-b nil) ; case 2
+                    nil)
+                   ((eq dnf-a t)   ; case 3
+                    dnf-b)
+                   ((eq dnf-b t)   ; case 4
+                    dnf-a)
+                   ((and? dnf-a)
+                    (cond ((and? dnf-b) ; case 5
+                           (make-and (append (cdr dnf-a) (cdr dnf-b))))
+                          ((or? dnf-b)  ; case 6
+                           (make-or (loop :for y :in (cdr dnf-b)
+                                          :collect (do-and dnf-a y))))
+                          (t  ; case 7
+                           (do-and dnf-a (list 'and dnf-b)))))
+                   ((or? dnf-a)
+                    (cond ((and? dnf-b) ; 8
+                           (make-or (loop :for x :in (cdr dnf-a)
+                                          :collect (do-and x dnf-b))))
+                          ((or? dnf-b)  ; 9
+                           (make-or (loop :for x :in (cdr dnf-a)
+                                          :nconc (loop :for y :in (cdr dnf-b)
+                                                       :collect (do-and x y)))))
+                          (t ; 10
+                           (do-and dnf-a (list 'and dnf-b)))))
+                   (t ;; 11
+                    (do-and (list 'and dnf-a) dnf-b))))
+           (do-or (dnf-a dnf-b)
              ;; The do-and and do-or functions are not duals, becasue
              ;; both arguments a and b are in dnf form.  This means
-             ;; (or (and ...)...) is a valid value of a or b but
+             ;; (or (and ...)...) is a valid value of dnf-a or dnf-b but
              ;; (and (or ...) ...) is not.
-	     (cond ((eq a t)
-		    t)
-		   ((eq b t)
-		    t)
-		   ((eq a nil)
-		    b)
-		   ((eq b nil)
-		    a)
-		   ((and? a)
-		    (cond ((or? b)
-			   (make-or (cons a (cdr b))))
-			  (t
-			   (make-or (list a b)))))
-		   ((or? a)
-		    (cond ((or? b)
-			   (make-or (append (cdr a) (cdr b))))
-			  (t
-			   (do-or a (list 'or b)))))
-		   (t
-		    (cond ((or? b)
-			   (do-or (list 'or a) b))
-			  (t
-			   (make-or (list a b)))))))
-           (do-not (a)
-	     (cond ((eq a t)
-		    nil)
-		   ((eq a nil)
-		    t)
-		   ((and? a)
-		    (make-or (mapcar #'do-not (cdr a))))
-		   ((or? a)
-		    (make-and (mapcar #'do-not (cdr a))))
-		   ((not? a)
-		    (cadr a))
-		   (t
-		    (list 'not a)))))
+	     ;; Also (not (and)) and (not (or)) don't appear.
+	     ;;
+	     ;;   (or a b)    | t  nil  (or) (and) (not) (other)
+	     ;;   ------------+---+----+----+-----+-----+------
+	     ;;   t           | 1   1    1     1     1     1
+	     ;;   nil         | 2   3    3     3     3     3
+	     ;;   (or  ...)   | 2   4    7     8     8     8
+	     ;;   (and ...)   | 2   4    5     6     6     6
+	     ;;   (not ...)   | 2   4    9    10    10    10
+	     ;;   other       | 2   4    9    10    10    10
+             (cond ((eq dnf-a t) ; case 1
+                    t)
+                   ((eq dnf-b t) ; case 2
+                    t)
+                   ((eq dnf-a nil) ; case 3
+                    dnf-b)
+                   ((eq dnf-b nil) ; case 4
+                    dnf-a)
+                   ((and? dnf-a)
+                    (cond ((or? dnf-b) ; case 5
+                           (make-or (cons dnf-a (cdr dnf-b))))
+                          (t ; case 6
+                           (make-or (list dnf-a dnf-b)))))
+                   ((or? dnf-a)
+                    (cond ((or? dnf-b) ; 7
+                           (make-or (append (cdr dnf-a) (cdr dnf-b))))
+                          (t ; 8
+                           (do-or dnf-a (list 'or dnf-b)))))
+                   (t
+                    (cond ((or? dnf-b) ; case 9
+                           (do-or (list 'or dnf-a) dnf-b))
+                          (t ; case 10
+                           (make-or (list dnf-a dnf-b)))))))
+           (do-not (dnf-a)
+             (cond ((eq dnf-a t)
+                    nil)
+                   ((eq dnf-a nil)
+                    t)
+                   ((and? dnf-a)
+                    (make-or (mapcar #'do-not (cdr dnf-a))))
+                   ((or? dnf-a)
+                    (make-and (mapcar #'do-not (cdr dnf-a))))
+                   ((not? dnf-a)
+                    (cadr dnf-a))
+                   (t
+                    (list 'not dnf-a)))))
     (cond
       ((and? type)
        (reduce #'do-and (mapcar #'type-to-dnf-bottom-up (cdr type))
-	       :initial-value t))
+               :initial-value t))
       ((or? type)
        (reduce #'do-or (mapcar #'type-to-dnf-bottom-up (cdr type))
-	       :initial-value nil))
+               :initial-value nil))
       ((not? type)
        (do-not (type-to-dnf-bottom-up (cadr type))))
       (t
