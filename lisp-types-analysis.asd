@@ -21,6 +21,9 @@
 
 
 (asdf:defsystem :lisp-types-analysis
+  :version "1.0"
+  :description "Analysis code used in PhD research of lisp type reduction using s-expressions and ROBDDs"
+  :license "MIT"
   :depends-on (:lisp-types
 	       :cl-fad
                :cl-robdd
