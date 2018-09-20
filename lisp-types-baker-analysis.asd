@@ -22,8 +22,8 @@
 
 (asdf:defsystem :lisp-types-baker-analysis
   :version "1.0"
-  :description ""
-  :license ""
+  :description "Extension of lisp-types-analysis and lisp-types-analysis-test for testing the baker subtypep algorithm"
+  :license "MIT"
   :depends-on (:lisp-types
 	       :cl-robdd
 	       :cl-robdd-test

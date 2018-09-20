@@ -21,7 +21,7 @@
 
 (asdf:defsystem :lisp-types
   :version "1.0"
-  :description ""
+  :description "Lisp type reduction utilities, and CL type-system compatible ROBDD implementation"
   :license "MIT"
   :depends-on (:dispatch
                :cl-robdd
