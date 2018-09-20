@@ -20,6 +20,9 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 (asdf:defsystem :research
+  :version "1.0"
+  :description ""
+  :license ""
   :depends-on (#+sbcl :2d-array-test
 	       :jimka-addons
 	       :dispatch-test

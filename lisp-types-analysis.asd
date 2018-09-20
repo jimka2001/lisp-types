@@ -21,6 +21,9 @@
 
 
 (asdf:defsystem :lisp-types-analysis
+  :version "1.0"
+  :description ""
+  :license ""
   :depends-on (:lisp-types
 	       :cl-fad
                :cl-robdd

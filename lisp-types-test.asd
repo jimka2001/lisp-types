@@ -21,6 +21,9 @@
 
 
 (asdf:defsystem :lisp-types-test
+  :version "1.0"
+  :description ""
+  :license ""
   :depends-on (:lisp-types
                :lisp-types-analysis
                :bordeaux-threads

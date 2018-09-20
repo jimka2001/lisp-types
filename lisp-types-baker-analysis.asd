@@ -21,6 +21,9 @@
 
 
 (asdf:defsystem :lisp-types-baker-analysis
+  :version "1.0"
+  :description ""
+  :license ""
   :depends-on (:lisp-types
 	       :cl-robdd
 	       :cl-robdd-test
