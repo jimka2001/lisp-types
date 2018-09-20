@@ -282,7 +282,11 @@ raised."
   (let ((a 2)
 	(b 1))
     (assert-false (< a b)))
-  (assert-true (string-equal "abc" "ABC"))
+  (let ((a "abc")
+	(b "ABCD"))
+    (assert-true (string-equal a b))
+    (assert-true (string-equal (concatenate 'string a b)
+			       (format nil "~A~A" b a))))
   (assert-error error
 		(error "some error"))
 )
