@@ -23,7 +23,7 @@
 (asdf:defsystem :lisp-types-analysis
   :version "1.0"
   :description ""
-  :license ""
+  :license "MIT"
   :depends-on (:lisp-types
 	       :cl-fad
                :cl-robdd

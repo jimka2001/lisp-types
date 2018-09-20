@@ -23,7 +23,7 @@
 (asdf:defsystem :lisp-types-test
   :version "1.0"
   :description ""
-  :license ""
+  :license "MIT"
   :depends-on (:lisp-types
                :lisp-types-analysis
                :bordeaux-threads

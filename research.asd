@@ -22,7 +22,7 @@
 (asdf:defsystem :research
   :version "1.0"
   :description ""
-  :license ""
+  :license "MIT"
   :depends-on (#+sbcl :2d-array-test
 	       :jimka-addons
 	       :dispatch-test

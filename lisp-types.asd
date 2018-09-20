@@ -22,7 +22,7 @@
 (asdf:defsystem :lisp-types
   :version "1.0"
   :description ""
-  :license ""
+  :license "MIT"
   :depends-on (:dispatch
                :cl-robdd
 	       :jimka-addons
