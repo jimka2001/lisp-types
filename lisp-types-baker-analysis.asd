@@ -32,7 +32,7 @@
 	       :lisp-types-test
                :fr.epita.lrde.subtypep
 	       :jimka-addons
-	       :jimka-test)
+	       :scrutiny)
   :components
   ((:module "lisp-types"
     :components

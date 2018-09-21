@@ -23,7 +23,7 @@
 (defpackage :lisp-types-test
   (:shadowing-import-from :lisp-types "TEST" "A")
   ;;(:shadowing-import-from :closer-mop "STANDARD-GENERIC-FUNCTION" "DEFMETHOD" "DEFGENERIC")
-  (:use :cl :lisp-types :jimka-test ;;:closer-mop
+  (:use :cl :lisp-types :scrutiny ;;:closer-mop
 	:jimka-addons
         :lisp-types-analysis
         :cl-robdd

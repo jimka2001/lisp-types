@@ -29,7 +29,7 @@
                :bordeaux-threads
                :closer-mop
 	       :jimka-addons
-	       :jimka-test
+	       :scrutiny
                ;; :sb-profile
                #+sbcl :sb-sprof)
   :components

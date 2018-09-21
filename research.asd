@@ -30,6 +30,6 @@
 	       :ndfa-test
 	       :rte-test
 	       :rte-regexp-test
-	       :jimka-test)
+	       :scrutiny)
   :components
   ())

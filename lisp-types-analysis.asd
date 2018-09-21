@@ -29,7 +29,7 @@
                :cl-robdd
                :cl-robdd-analysis
 	       :jimka-addons
-	       :jimka-test)
+	       :scrutiny)
   :components
   ((:module "lisp-types"
     :components
