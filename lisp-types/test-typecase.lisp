@@ -23,7 +23,8 @@
 
 (in-package :lisp-types-test)
 
-(shadow-all-symbols :package-from :lisp-types :package-into :lisp-types-test)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (shadow-all-symbols :package-from :lisp-types :package-into :lisp-types-test))
 
 (define-test lisp-types/disjoint-typecase
   (assert-true (equal (macroexpand-1 '(lisp-types::disjoint-typecase fred

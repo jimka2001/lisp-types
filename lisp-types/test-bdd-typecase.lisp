@@ -21,7 +21,8 @@
 
 (in-package :lisp-types-test)
 
-(shadow-all-symbols :package-from :lisp-types :package-into :lisp-types-test)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (shadow-all-symbols :package-from :lisp-types :package-into :lisp-types-test))
 
 
 (defun cmp-equal (obj1 obj2)

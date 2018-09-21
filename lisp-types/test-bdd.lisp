@@ -21,8 +21,10 @@
 
 (in-package :lisp-types-test)
 
-(shadow-all-symbols :package-from :lisp-types :package-into :lisp-types-test)
-(shadow-all-symbols :package-from :lisp-types-analysis :package-into :lisp-types-test)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (shadow-all-symbols :package-from :lisp-types :package-into :lisp-types-test))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (shadow-all-symbols :package-from :lisp-types-analysis :package-into :lisp-types-test))
 
 (assert (not (equal (type-expand 'test-array-rank)
 		    'test-array-rank)))

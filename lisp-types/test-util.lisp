@@ -23,7 +23,8 @@
 
 (in-package :lisp-types-test)
 
-(shadow-all-symbols :package-from :lisp-types :package-into :lisp-types-test)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (shadow-all-symbols :package-from :lisp-types :package-into :lisp-types-test))
 
 (def-cache-fun (cache-it call-with-cache) (a b)
     "testing function"
