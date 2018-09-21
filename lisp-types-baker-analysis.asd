@@ -27,6 +27,7 @@
   :depends-on (:lisp-types
 	       :cl-robdd
 	       :cl-robdd-test
+	       :cl-robdd-analysis-test
 	       :lisp-types-analysis
 	       :lisp-types-test
                :fr.epita.lrde.subtypep
