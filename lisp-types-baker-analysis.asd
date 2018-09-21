@@ -31,7 +31,7 @@
 	       :lisp-types-analysis
 	       :lisp-types-test
                :fr.epita.lrde.subtypep
-	       :jimka-addons
+	       :adjuvant
 	       :scrutiny)
   :components
   ((:module "lisp-types"

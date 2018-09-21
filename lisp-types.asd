@@ -25,7 +25,7 @@
   :license "MIT"
   :depends-on (:dispatch
                :cl-robdd
-	       :jimka-addons
+	       :adjuvant
                ;; :sb-profile
                #+sbcl :sb-sprof
                )

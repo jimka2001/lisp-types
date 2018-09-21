@@ -24,7 +24,7 @@
   :description "Top level package which loads everything to do analsis in PhD research"
   :license "MIT"
   :depends-on (#+sbcl :2d-array-test
-	       :jimka-addons
+	       :adjuvant
 	       :dispatch-test
 	       #+sbcl :lisp-types-baker-analysis
 	       :ndfa-test

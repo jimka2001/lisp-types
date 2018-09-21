@@ -28,7 +28,7 @@
                :lisp-types-analysis
                :bordeaux-threads
                :closer-mop
-	       :jimka-addons
+	       :adjuvant
 	       :scrutiny
                ;; :sb-profile
                #+sbcl :sb-sprof)
