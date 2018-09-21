@@ -127,17 +127,11 @@
     (setof e l3
       (not (subtypep-wrapper e nil)))))
 
-
-
-;;(length  *number-combos*)
-
 (defvar *cl-type-combos*
   (loop for types on *cl-types*
         nconc (loop for t2 in (cdr types)
                  with t1 = (car types)
-                 nconc (list t1 `(and ,t1 ,t2) `(or ,t1, t2)))))
-
-
+		    nconc (list t1 `(and ,t1 ,t2) `(or ,t1, t2)))))
 
 (defun encode-time (time &aux (decoded-time (multiple-value-list (decode-universal-time time))))
   "Create a string similar to the UNIX date command: e.g., \"Thu Aug  3 10:39:18 2017\""
@@ -150,11 +144,6 @@
       (with-output-to-string (str)
         (format str "~A ~A" day-of-week month)
         (format str " ~2D ~2D:~2,'0D:~2,'0D ~S" date hour minute second year)))))
-
-(defun garbage-collect ()
-  #+sbcl (sb-ext::gc :full t)
-  #+allegro (excl:gc t)
-)
 
 (defun types/cmp-perfs (&key
                           (re-run t)
