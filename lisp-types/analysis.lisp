@@ -479,16 +479,6 @@
                           (incf c))))
     c))
 
-(defun group-by (data &key key (test #'eql))
-  (declare (type list data)
-           (type (function (t) t) key)
-           (type (function (t t) t) test))
-  (let ((hash (make-hash-table :test test)))
-    (dolist (item data)
-      (push item (gethash (funcall key item) hash nil)))
-    (loop for key being the hash-keys of hash
-          collect (list key (gethash key hash)))))
-
 (defvar *gnuplot* (if (probe-file "/opt/local/bin/gnuplot")
 		      "/opt/local/bin/gnuplot"
 		      "gnuplot"))

@@ -24,12 +24,12 @@
   :description "Top level package which loads everything to do analsis in PhD research"
   :license "MIT"
   :depends-on (#+sbcl :2d-array-test
-	       :adjuvant
-	       :dispatch-test
-	       #+sbcl :lisp-types-baker-analysis
-	       :ndfa-test
-	       :rte-test
-	       :rte-regexp-test
-	       :scrutiny)
-  :components
-  ())
+               :adjuvant
+	       :adjuvant-test
+               :dispatch-test
+               #+sbcl :lisp-types-baker-analysis
+               :ndfa-test
+               :rte-test
+               :rte-regexp-test
+               :dispatch-test
+               :scrutiny))
