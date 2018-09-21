@@ -32,4 +32,5 @@
                :rte-test
                :rte-regexp-test
                :dispatch-test
-               :scrutiny))
+               :scrutiny
+	       :scrutiny-test))
