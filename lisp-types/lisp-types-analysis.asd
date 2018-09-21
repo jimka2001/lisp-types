@@ -20,23 +20,21 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-(asdf:defsystem :lisp-types-baker-analysis
+(asdf:defsystem :lisp-types-analysis
   :version "1.0"
-  :description "Extension of lisp-types-analysis and lisp-types-analysis-test for testing the baker subtypep algorithm"
+  :description "Analysis code used in PhD research of lisp type reduction using s-expressions and ROBDDs"
   :license "MIT"
   :depends-on (:lisp-types
-	       :cl-robdd
-	       :cl-robdd-test
-	       :cl-robdd-analysis-test
-	       :lisp-types-analysis
-	       :lisp-types-test
-               :fr.epita.lrde.subtypep
+	       :cl-fad
+               :cl-robdd
+               :cl-robdd-analysis
 	       :adjuvant
 	       :scrutiny)
   :components
-  ((:module "lisp-types"
+  ((:module "src"
     :components
-    ((:file "lisp-types-baker-analysis-package")
-     (:file "analysis-baker")
-     (:file "test-baker")
+    ((:file "lisp-types-analysis-package")
+     (:file "analysis")
+     (:file "decompose-functions")
+     (:file "slow-decompose")
      ))))

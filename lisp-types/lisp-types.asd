@@ -30,7 +30,7 @@
                #+sbcl :sb-sprof
                )
   :components
-  ((:module "lisp-types"
+  ((:module "src"
     :components
     ((:file "lisp-types-package")
      (:file "macros")

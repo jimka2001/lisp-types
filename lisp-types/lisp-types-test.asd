@@ -1,4 +1,4 @@
-;; Copyright (c) 2018 EPITA Research and Development Laboratory
+;; Copyright (c) 2016 EPITA Research and Development Laboratory
 ;;
 ;; Permission is hereby granted, free of charge, to any person obtaining
 ;; a copy of this software and associated documentation
@@ -20,21 +20,39 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-(asdf:defsystem :lisp-types-analysis
+(asdf:defsystem :lisp-types-test
   :version "1.0"
-  :description "Analysis code used in PhD research of lisp type reduction using s-expressions and ROBDDs"
+  :description ""
   :license "MIT"
   :depends-on (:lisp-types
-	       :cl-fad
-               :cl-robdd
-               :cl-robdd-analysis
+               :lisp-types-analysis
+               :bordeaux-threads
+               :closer-mop
 	       :adjuvant
-	       :scrutiny)
+	       :scrutiny
+               ;; :sb-profile
+               #+sbcl :sb-sprof)
   :components
-  ((:module "lisp-types"
+  ((:module "src"
     :components
-    ((:file "lisp-types-analysis-package")
-     (:file "analysis")
-     (:file "decompose-functions")
-     (:file "slow-decompose")
+    ((:file "test-setup")
+     (:file "debug")
+     (:file "test-classes")
+     (:file "test-lisp-types" :depends-on ("test-classes"))
+     (:file "test-util")
+     (:file "test-perf")
+     (:file "test-typecase" :depends-on ("test-lisp-types"))
+     (:file "test-sat" :depends-on ("test-lisp-types"
+                                    "test-perf"
+				    "test-classes"))
+     (:file "test-graph" :depends-on ("test-lisp-types"
+                                      "test-perf"))
+     (:file "test-bdd" :depends-on ("test-classes"
+                                    "test-lisp-types"
+                                    "test-perf"))
+     (:file "test-bdd-reduce-17")
+     (:file "test-dnf")
+     (:file "test-reduce-lisp-type-once")
+     (:file "test-bdd-typecase")
+     (:file "test-reduce" :depends-on ("test-classes"))
      ))))

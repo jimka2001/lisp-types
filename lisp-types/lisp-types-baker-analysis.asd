@@ -1,4 +1,4 @@
-;; Copyright (c) 2016 EPITA Research and Development Laboratory
+;; Copyright (c) 2018 EPITA Research and Development Laboratory
 ;;
 ;; Permission is hereby granted, free of charge, to any person obtaining
 ;; a copy of this software and associated documentation
@@ -20,39 +20,23 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-(asdf:defsystem :lisp-types-test
+(asdf:defsystem :lisp-types-baker-analysis
   :version "1.0"
-  :description ""
+  :description "Extension of lisp-types-analysis and lisp-types-analysis-test for testing the baker subtypep algorithm"
   :license "MIT"
   :depends-on (:lisp-types
-               :lisp-types-analysis
-               :bordeaux-threads
-               :closer-mop
+	       :cl-robdd
+	       :cl-robdd-test
+	       :cl-robdd-analysis-test
+	       :lisp-types-analysis
+	       :lisp-types-test
+               :fr.epita.lrde.subtypep
 	       :adjuvant
-	       :scrutiny
-               ;; :sb-profile
-               #+sbcl :sb-sprof)
+	       :scrutiny)
   :components
-  ((:module "lisp-types"
+  ((:module "src"
     :components
-    ((:file "test-setup")
-     (:file "debug")
-     (:file "test-classes")
-     (:file "test-lisp-types" :depends-on ("test-classes"))
-     (:file "test-util")
-     (:file "test-perf")
-     (:file "test-typecase" :depends-on ("test-lisp-types"))
-     (:file "test-sat" :depends-on ("test-lisp-types"
-                                    "test-perf"
-				    "test-classes"))
-     (:file "test-graph" :depends-on ("test-lisp-types"
-                                      "test-perf"))
-     (:file "test-bdd" :depends-on ("test-classes"
-                                    "test-lisp-types"
-                                    "test-perf"))
-     (:file "test-bdd-reduce-17")
-     (:file "test-dnf")
-     (:file "test-reduce-lisp-type-once")
-     (:file "test-bdd-typecase")
-     (:file "test-reduce" :depends-on ("test-classes"))
+    ((:file "lisp-types-baker-analysis-package")
+     (:file "analysis-baker")
+     (:file "test-baker")
      ))))
