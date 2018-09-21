@@ -133,18 +133,6 @@
                  with t1 = (car types)
 		    nconc (list t1 `(and ,t1 ,t2) `(or ,t1, t2)))))
 
-(defun encode-time (time &aux (decoded-time (multiple-value-list (decode-universal-time time))))
-  "Create a string similar to the UNIX date command: e.g., \"Thu Aug  3 10:39:18 2017\""
-  (destructuring-bind (second minute hour date month year day-of-week ;; (0 = Monday)
-                       daylight-savings-times ;; T (daylight savings times) or NIL (standard time)
-                       timezone) decoded-time
-    (declare (ignore timezone daylight-savings-times))
-    (let ((day-of-week (aref #("Mon" "Tue" "Wed" "Thu" "Fri" "Sat" "Sun") day-of-week))
-          (month (aref #("no-month" "Jan" "Feb" "Mar" "Apr" "May" "Jun" "Jul" "Aug" "Sep" "Oct" "Nov" "Dec") month)))
-      (with-output-to-string (str)
-        (format str "~A ~A" day-of-week month)
-        (format str " ~2D ~2D:~2,'0D:~2,'0D ~S" date hour minute second year)))))
-
 (defun types/cmp-perfs (&key
                           (re-run t)
                           (verify nil)
