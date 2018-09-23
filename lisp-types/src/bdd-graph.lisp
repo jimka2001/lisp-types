@@ -83,11 +83,6 @@
        (print-touching)
        (print-sub-super)
        (print-foot)))))
- 
-
-
-
-
 
 (defun count-connections-per-node (node)
   (+ (length (getf node :touches))

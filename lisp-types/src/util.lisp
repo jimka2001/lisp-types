@@ -234,24 +234,3 @@ dynamic extend of WITH-SUBTYPEP-CACHE"
             (list hh mm ss)
             (format nil "~D:~D:~D" hh mm ss)))))
 
-(defun rnd-element (data n &aux (r (random n)) (tail (nthcdr r data)))
-  "DATA list of objects.
-N length of DATA (caller needs to calcualte this for efficiency.
-returns a list of two elements 1) a randomly selected element of DATA
-  and 2) a copy of data with the element removed, sharing a tail of DATA."
-  (list (car tail) (nconc (ldiff data tail) (cdr tail))))
-
-(defun choose-randomly (data n)
-  "return a list of N elements from DATA chosen at random, (in random order).
-If N > (length of data) then a permutation of DATA is returned"
-  (let ((len (length data))
-        random-data)
-    (dotimes (_ (min n len))
-      (destructuring-bind (r tail) (rnd-element data len)
-        (setf data tail)
-        (push r random-data)
-        (decf len)))
-    random-data))
-
-(defun shuffle-list (data)
-  (choose-randomly data (length data)))

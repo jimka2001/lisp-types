@@ -21,25 +21,27 @@
 
 (in-package   :lisp-types)
 
-(defvar *amibiguous-subtypes* nil)
+(defvar *ambiguous-subtypes* nil "Special variable containing ambiguous subtype information which has already been warned about.")
 
 (define-condition ambiguous-subtype (style-warning)
   ((sub   :type (or symbol nil cons) :initarg :sub :initform :UNINITIALIZED)
    (super :type (or symbol nil cons) :initarg :super :initform :UNINITIALIZED)
    (consequence :type (or string nil) :initarg :consequence :initform nil))
   (:documentation "Warning raised when unable to determine the subtype relationship.")
-  (:report (lambda (condition stream &aux (triple (list (slot-value condition 'sub)
-							(slot-value condition 'super)
-							(slot-value condition 'consequence))))
+  (:report (lambda (condition stream)
 	     (format stream "Cannot determine whether ~S is a subtype of ~S"
 		     (slot-value condition 'sub)
 		     (slot-value condition 'super))
 	     (when (slot-value condition 'consequence)
 	       (format stream ", ~A" (slot-value condition 'consequence))))))
 
-(defun warn-ambiguous-subtype (&rest triple &key sub super consequence)
-  (unless (member triple *amibiguous-subtypes* :test #'equal)
-    (push triple *amibiguous-subtypes*)
+(defun warn-ambiguous-subtype (&rest plist &key sub super consequence)
+  "Issue a warning, via WARN, if the given pair of types has a subtype
+relation which cannot be determined by SUBTYPEP.  However, the warning
+is supressed if this situation has happened already and memoized into
+*AMBIGUOUS-SUBTYPES*."
+  (unless (member plist *ambiguous-subtypes* :test #'equal)
+    (push plist *ambiguous-subtypes*)
     (warn 'ambiguous-subtype :sub sub :super super
 			     :consequence consequence)))
 		     
@@ -78,6 +80,7 @@
      ,@body))
 
 (defun valid-type-p (type-designator)
+  "Predicate to determine whether the given object is a valid type specifier."
   #+sbcl (handler-case (and (SB-EXT:VALID-TYPE-SPECIFIER-P type-designator)
                             (not (eq type-designator 'cl:*)))
            (SB-KERNEL::PARSE-UNKNOWN-TYPE (c) (declare (ignore c)) nil))
@@ -431,6 +434,7 @@ E.g.  (rule-case 12 ;; OBJECT
   (values nil))
 
 (defun remove-supers (types)
+  "Given a list of types, return a new list with with all elements removed which specifies a supertype of something else in the list.  If the list contains two elements which specify the same type, only one of them is removed, unless it is a supertype of something else in the list in which case both are removed."
   (labels ((recure (types acc)
 	     (cond
 	       ((null types)
@@ -446,6 +450,7 @@ E.g.  (rule-case 12 ;; OBJECT
     (recure types nil)))
 
 (defun remove-subs (types)
+  "Given a list of types, return a new list with with all elements removed which specifies a subtype of something else in the list.  If the list contains two elements which specify the same type, only one of them is removed, unless it is a subtype of something else in the list in which case both are removed."
   (labels ((recure (types acc)
 	     (cond
 	       ((null types)
