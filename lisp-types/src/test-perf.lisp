@@ -301,7 +301,7 @@
       (parameterized-mdtd-bdd-graph type-specifiers 
                                       :sort-nodes #'(lambda (graph)
                                                       (declare (notinline sort))
-                                                      (sort graph #'< :key #'count-parents-per-node))
+                                                      (sort graph #'< :key #'lisp-types::count-parents-per-node))
                                       :sort-strategy "TOP-TO-BOTTOM"
                                       :inner-loop :operation
                                       :do-break-sub :strict
@@ -316,7 +316,7 @@
       (parameterized-mdtd-bdd-graph type-specifiers 
                                                :sort-nodes #'(lambda (graph)
                                                                (declare (notinline sort))
-                                                               (sort graph #'< :key #'count-parents-per-node))
+                                                               (sort graph #'< :key #'lisp-types::count-parents-per-node))
                                                :sort-strategy "TOP-TO-BOTTOM"
                                                :inner-loop :operation
                                                :do-break-sub :strict
@@ -332,7 +332,7 @@
                                              :sort-nodes (lambda (graph)
                                                            (declare (notinline sort))
                                                            (sort graph #'< :key
-                                                                 #'count-connections-per-node))
+                                                                 #'lisp-types::count-connections-per-node))
                                              :sort-strategy  "INCREASING-CONNECTIONS"
                                              :inner-loop :node
                                              :do-break-sub :relaxed
