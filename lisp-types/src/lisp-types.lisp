@@ -270,6 +270,7 @@ i.e., is a subtype of nil."
 		    (values (and T1<=T2 T2<=T1) (and okT1T2 okT2T1)))))))))
 
 (defmacro caching-types (&body body)
+  "Evaluate the given body with several subtype related caches enabled."
   `(call-with-disjoint-hash
     (lambda ()
       (call-with-subtype-hash

@@ -8,10 +8,36 @@ Utilities dealing with CL types
 
 ### Typecase API
 
-* `reduced-typecase` -- 
-* `auto-permute-typecase` -- 
+* `reduced-typecase` --   Syntactically similar to `CL:TYPECASE`. Expands to a call to `CL:TYPECASE` but
+with cases reduced if possible.  In particular latter cases assume that previous
+cases have failed.  This macro preserves the order of the clauses, but is
+likely to change the executable logic (preserving semantics) of the test
+of each clause. E.g.,
+````lisp
+ (reduced-typecase obj
+    (float 41)
+    ((and number (not float)) 42))
+ ````
+Because if clause 2 is reached, it is known that obj is not a `FLOAT`, so this expands to
+````lisp 
+ (typecase obj
+    (float 41)
+    (number 42))
+ ````
+There may be cases when a type specifier reduces to `nil`, in which case the
+compiler may issue warnings about removing unreachable code."
+
+* `auto-permute-typecase` --  Syntactically similar to `CL:TYPECASE`. Expands to a call to `CL:TYPECASE` but
+with the types reduced and re-ordered to minimize a projected cost
+heuristic function.  Semantics of the typecase is preserved.
+
 
 ### MDTD functions
+
+The functions described here are all implementations of the same MDTD (maximal disjoint type decomposition) procedure.
+The algorithms differ considerably in their actual impelementations.  The details of the differences are described
+in the [PhD thesis](https://www.lrde.epita.fr/wiki/User:Jnewton).
+
 
 * `mdtd-baseline` -- 
 * `mdtd-bdd` -- 
@@ -30,18 +56,24 @@ Utilities dealing with CL types
 
 ### ROBDD API
 
-* `ltbdd` -- 
-* `ltbdd-node` -- 
-* `ltbdd-with-new-hash` -- 
-* `lisp-type-bdd-node` -- 
+* `ltbdd` -- Factory function to create an ROBDD object whose Boolean variables represent Common Lisp types, understanding subtype relations.  The BDD algebra functions may be used on these objects such as `bdd-and`, `bdd-or` etc.   See [cl-robdd](../cl-robdd/README.md)
+* `ltbdd-with-new-hash` -- macro -- Create a cache and dynamic extent used to evaluate the given code body.  The ROBDDs representing Common Lisp type specifiers created in this dynamic extent use this cache.
+
+````lisp
+PKG> (ltbdd-with-new-hash ()
+       (bdd-to-dnf (bdd-and (bdd-xor (ltbdd '(and string vector))
+                                     (ltbdd '(or ratio integer)))
+                            (bdd-or (ltbdd 'array)
+                                    (ltbdd 'number)))))
+==> (OR STRING INTEGER RATIO)
+````
 
 ### Subtype API
 
-* `*subtypep*` -- 
-* `ambiguous-subtype` -- 
-* `smarter-subtypep` -- 
-* `subtypep-wrapper` -- 
-* `caching-types` -- 
+* `smarter-subtypep` -- A somewhat smarter version of `cl:subtypep` which fixes some of the shortcomings of SBCL's `cl:subtypep`.
+* `*subtypep*` -- Special variable containing the subtypep function, normally this is the `#'CL:subtypep` function object, but can be an alternative function such as `#'baker:subtypep`
+* `subtypep-wrapper` -- Behaves like `CL:subtypep` but calls `*subtypep`.  Functions using this interface to `subtypep` can be made to use an alternate version such as `baker:subtypep` for testing, by rebinding `*subtypep`.
+* `caching-types` -- Evaluate the given body with several subtype-related caches enabled.
 
 ### Type simplification API
 * `reduce-lisp-type` -- Given a common lisp type designator such as `(AND A (or (not B) C))`, apply some
@@ -69,11 +101,6 @@ be even simpler in cases such as `(OR A B)`, or `(AND A B)`.  A few restrictions
 * `remove-subs` -- Given a list of types, return a new list with with all elements removed which specifies a subtype of something else in the list.  If the list contains two elements which specify the same type, only one of them is removed, unless it is a subtype of something else in the list in which case both are removed.
 * `remove-supers` -- Given a list of types, return a new list with with all elements removed which specifies a supertype of something else in the list.  If the list contains two elements which specify the same type, only one of them is removed, unless it is a supertype of something else in the list in which case both are removed.
 * `valid-type-p` --  Predicate to determine whether the given object is a valid type specifier.
-* `*ambiguous-subtypes*` -- Special variable containing ambiguous subtype information which has already been warned about.
-* `warn-ambiguous-subtype` --  Issue a warning, via `WARN`, if the given pair of types has a subtype
-relation which cannot be determined by `SUBTYPEP`.  However, the warning
-is supressed if this situation has happened already and memoized into
-`*AMBIGUOUS-SUBTYPES*`.
 
     
 
