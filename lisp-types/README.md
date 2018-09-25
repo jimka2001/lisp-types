@@ -13,17 +13,21 @@ with cases reduced if possible.  In particular latter cases assume that previous
 cases have failed.  This macro preserves the order of the clauses, but is
 likely to change the executable logic (preserving semantics) of the test
 of each clause. E.g.,
+
 ```lisp
-  (reduced-typecase obj
+(reduced-typecase obj
     (float 41)
     ((and number (not float)) 42))
 ```
+
 Because if clause 2 is reached, it is known that obj is not a `FLOAT`, so this expands to
+
 ```lisp 
-  (typecase obj
+(typecase obj
     (float 41)
     (number 42))
 ```
+
 There may be cases when a type specifier reduces to `nil`, in which case the
 compiler may issue warnings about removing unreachable code."
 
