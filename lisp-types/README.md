@@ -38,7 +38,7 @@ heuristic function.  Semantics of the typecase is preserved.
 
 ### MDTD functions
 
-MDTD = Maximal Disjoint Type Decomposition.  The problem entails taking a set V={A1, A2, ... An} of sets (set of types)
+MDTD = Maximal Disjoint Type Decomposition.  The problem entails taking a set V={A<sub>1</sub>, A<sub>2</sub>, ... A<sub>n</sub>} of sets (set of types)
 which are possibly overlapping each other...
 
 ![Venn Diagram before MDTD](images/venn-diagram-before-mdtd.png "venn-before")
@@ -51,7 +51,7 @@ that the union of all the A's is the same as the union of all the X's.
 ![Venn Diagram after MDTD](images/venn-diagram-after-mdtd.png "venn-after")
 
 
-Each Xi should be expressed as some Boolean combination of the A's.
+Each X<sub>i</sub> should be expressed as some Boolean combination of A<sub>1</sub> ... A<sub>n</sub>.
 
 ![MDTD Decomposition](images/mdtd-text.png "text")
 
