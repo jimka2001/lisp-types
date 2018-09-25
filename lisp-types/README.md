@@ -43,7 +43,7 @@ which are possibly overlapping each other...
 
 ![Venn Diagram before MDTD](images/venn-diagram-before-mdtd.png "venn-before")
 
-... and decomposing them into a disjoint sets D={X1, X2, ... Xm} of such
+... and decomposing them into a disjoint sets D={X<sub>1</sub>, X<sub>2</sub>, ... X<sub>m</sub>} of such
 that the union of all the A's is the same as the union of all the X's.
 
 
