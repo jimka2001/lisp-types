@@ -13,17 +13,17 @@ with cases reduced if possible.  In particular latter cases assume that previous
 cases have failed.  This macro preserves the order of the clauses, but is
 likely to change the executable logic (preserving semantics) of the test
 of each clause. E.g.,
-````lisp
+```lisp
   (reduced-typecase obj
     (float 41)
     ((and number (not float)) 42))
- ````
+```
 Because if clause 2 is reached, it is known that obj is not a `FLOAT`, so this expands to
-````lisp 
+```lisp 
   (typecase obj
     (float 41)
     (number 42))
- ````
+```
 There may be cases when a type specifier reduces to `nil`, in which case the
 compiler may issue warnings about removing unreachable code."
 
@@ -78,14 +78,14 @@ in the [PhD thesis](https://www.lrde.epita.fr/wiki/User:Jnewton).
 * `ltbdd` -- Factory function to create an ROBDD object whose Boolean variables represent Common Lisp types, understanding subtype relations.  The BDD algebra functions may be used on these objects such as `bdd-and`, `bdd-or` etc.   See [cl-robdd](../cl-robdd/README.md)
 * `ltbdd-with-new-hash` -- macro -- Create a cache and dynamic extent used to evaluate the given code body.  The ROBDDs representing Common Lisp type specifiers created in this dynamic extent use this cache.
 
-````lisp
+```lisp
 PKG> (ltbdd-with-new-hash ()
        (bdd-to-dnf (bdd-and (bdd-xor (ltbdd '(and string vector))
                                      (ltbdd '(or ratio integer)))
                             (bdd-or (ltbdd 'array)
                                     (ltbdd 'number)))))
 ==> (OR STRING INTEGER RATIO)
-````
+```
 
 ### Subtype API
 
