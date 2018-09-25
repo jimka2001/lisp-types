@@ -38,6 +38,9 @@ The functions described here are all implementations of the same MDTD (maximal d
 The algorithms differ considerably in their actual impelementations.  The details of the differences are described
 in the [PhD thesis](https://www.lrde.epita.fr/wiki/User:Jnewton).
 
+![Venn Diagram before MDTD](images/venn-diagram-before-mdtd.png "venn-before")
+![Venn Diagram after MDTD](images/venn-diagram-after-mdtd.png "venn-after")
+![MDTD Decomposition](images/mdtd-text.png "text")
 
 * `mdtd-baseline` -- 
 * `mdtd-bdd` -- 
