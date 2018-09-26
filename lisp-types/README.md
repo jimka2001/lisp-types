@@ -62,25 +62,79 @@ in the [PhD thesis](https://www.lrde.epita.fr/wiki/User:Jnewton).
 
 
 
-* `mdtd-baseline` -- 
-* `mdtd-bdd` -- 
-* `mdtd-bdd-graph` -- 
-* `mdtd-bdd-graph-strong` -- 
-* `mdtd-bdd-graph-weak` -- 
-* `mdtd-bdd-graph-weak-dynamic` -- 
-* `mdtd-bdd-strong` -- 
-* `mdtd-bdd-weak` -- 
-* `mdtd-bdd-weak-dynamic` -- 
-* `mdtd-graph` -- 
-* `mdtd-graph-baker` -- 
-* `mdtd-rtev2` -- 
-* `mdtd-sat` -- 
-* `parameterized-mdtd-bdd-graph` -- 
+* `mdtd-baseline` --  Given a list `TYPE-SPECIFIERS` of lisp type names, return a list of disjoint, 
+non-nil type-specifiers comprising the same union, with each of the resulting
+type-specifiers being a sub-type of one of the given type-specifiers.
+This implementation of MDTD uses an n-cube search over the given list of
+type specifiers searching for intersecting types, disjointing them, and 
+continuing the search until all intersections are exhausted.  Type manipulation
+is done using s-expressions and type reduction via `type-to-dnf`. This algorithm
+is simple programmatically, but known to be poorly performing, in most cases.
+
+* `mdtd-bdd` -- Very similar to `mdtd-baseline` except that type
+specifiers are represented as ROBDDs using the CL-ROBDD package, and
+the `lisp-type-bdd` class.
+
+* `mdtd-rtev2` -- A tweak of `mdtd-bdd` which attempts to reduce the
+complexity, but in some cases it performs worse.
+
+* `mdtd-graph` -- MDTD implementation which uses a hierarchy graph of
+the types to keep track of which types intersect other types, and thus
+avoid attempting to find the intersection of types which are known to
+not intersect.  This algorithm uses s-expressions to represent type
+specifiers.
+
+* `mdtd-bdd-graph` -- Similar to `mdtd-graph` but using BDDs as type
+representation data structure.
+
+* `mdtd-bdd-graph-strong` -- Similar to `mdtd-bdd-graph` but uses the
+default hash table to store the BDD forest.
+
+* `mdtd-bdd-graph-weak` -- Similar to `mdtd-bdd-graph` but uses a weak
+hash table to store the BDD forest.
+
+* `mdtd-bdd-graph-weak-dynamic` -- Similar to `mdtd-bdd-graph` but
+uses a weak hash table to store the BDD forest.  This algorithm
+improves on `mdtd-bdd-graph-weak` by decreasing the number of types
+the hash table is purged.  The hash table is maintained in a higher
+level dynamic extend than in the `mdtd-bdd-graph-weak` function.
+
+* `mdtd-bdd-strong` -- Similar to `mdtd-bdd` but using BDDs as type
+representation data structure.
+
+* `mdtd-bdd-weak` -- Similar to `mdtd-bdd` but uses the default hash
+table to store the BDD forest.
+
+* `mdtd-bdd-weak-dynamic` -- Similar to `mdtd-bdd` but uses a weak
+hash table to store the BDD forest.  This algorithm improves on
+`mdtd-bdd-weak` by decreasing the number of types the hash table is
+purged.  The hash table is maintained in a higher level dynamic extend
+than in the `mdtd-bdd-weak` function.
+
+* `mdtd-graph-baker` -- Similar to `mdtd-graph` but uses the BAKER
+algorithm rather than `cl:subtypep`.
+
+* `mdtd-sat` -- A simple ad-hoc SAT solver approach which simply
+iterates over every possible Boolean combination of all the given
+types and their complemnts.  This algorithm has suprisingly good
+performance on small test cases, but is generally the worst performing
+in general.
+
+* `parameterized-mdtd-bdd-graph` -- A very generalized version of
+`mdtd-bdd-graph` which was used to find which variants of the
+algorithm work best.
 
 ### ROBDD API
 
-* `ltbdd` -- Factory function to create an ROBDD object whose Boolean variables represent Common Lisp types, understanding subtype relations.  The BDD algebra functions may be used on these objects such as `bdd-and`, `bdd-or` etc.   See [cl-robdd](../cl-robdd/README.md)
-* `ltbdd-with-new-hash` -- macro -- Create a cache and dynamic extent used to evaluate the given code body.  The ROBDDs representing Common Lisp type specifiers created in this dynamic extent use this cache.
+* `ltbdd` -- Factory function to create an ROBDD object whose Boolean
+variables represent Common Lisp types, understanding subtype
+relations.  The BDD algebra functions may be used on these objects
+such as `bdd-and`, `bdd-or` etc.  See
+[cl-robdd](../cl-robdd/README.md)
+
+* `ltbdd-with-new-hash` -- macro -- Create a cache and dynamic extent
+used to evaluate the given code body.  The ROBDDs representing Common
+Lisp type specifiers created in this dynamic extent use this cache.
 
 ```lisp
 PKG> (ltbdd-with-new-hash ()

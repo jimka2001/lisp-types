@@ -77,7 +77,12 @@
   (declare (type list type-specifiers))
   "Given a list TYPE-SPECIFIERS of lisp type names, return a list of disjoint, 
 non-nil type-specifiers comprising the same union, with each of the resulting
-type-specifiers being a sub-type of one of the given type-specifiers."
+type-specifiers being a sub-type of one of the given type-specifiers.
+This implementation of MDTD uses an n^3 search over the given list of
+type specifiers searching for intersecting types, disjointing them, and 
+continuing the search until all intersections are exhausted.  Type manipulation
+is done using s-expressions and type reduction via TYPE-TO-DNF. This algorithm
+is simple programmatically, but known to be poorly performing, in most cases."
   (caching-types
     (slow-mdtd-baseline type-specifiers)))
 
