@@ -819,7 +819,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
 						   :smooth (smoothen xys)
 						   :samples (length xys)
 						   :decompose decompose
-						   :arguments (get (find-symbol decompose :lisp-types-analysis) 'decompose-properties)
+						   :arguments (get (find-symbol decompose :lisp-types-analysis) :decompose-properties)
 						   :options options)))))
                          #'< :key (getter :integral)))))))
     (t
@@ -856,9 +856,9 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
     (flet ((print-group (group)
              (destructuring-bind (decompose data) group
                (format stream "( :DECOMPOSE ~S" (symbol-name decompose))
-               (when (get decompose 'lisp-types::decompose-properties)
+               (when (get decompose :decompose-properties)
                  (let ((*package* (find-package "KEYWORD")))
-                   (format stream "~%:OPTIONS ~S" (get decompose 'lisp-types::decompose-properties))))
+                   (format stream "~%:OPTIONS ~S" (get decompose :decompose-properties))))
                (let ((time-outs (setof item data
                                   (getf item :time-out)))
                      (no-time-out (setof item data

@@ -54,7 +54,7 @@
     (assert-true (types/cmp-perfs :limit 3
                                   :file-name "bdd-numbers"
                                   :destination-dir "/tmp"
-                                  :decompose '(lisp-types::mdtd-bdd)
+                                  :decompose '(mdtd-bdd)
                                   :types (valid-subtypes 'number)))))
 
 #+sbcl
@@ -63,7 +63,7 @@
     (assert-true (types/cmp-perfs :limit 6
                                   :file-name "bdd-numbers"
                                   :destination-dir "/tmp"
-                                  :decompose '(lisp-types::mdtd-bdd)
+                                  :decompose '(mdtd-bdd)
                                   :types (valid-subtypes 'number)))))
 
 #+sbcl
@@ -72,7 +72,7 @@
     (assert-true (types/cmp-perfs :limit 15
                                   :file-name "bdd-numbers"
                                   :destination-dir "/tmp"
-                                  :decompose '(lisp-types::mdtd-bdd)
+                                  :decompose '(mdtd-bdd)
                                   :types (valid-subtypes 'number)))))
 
 
@@ -297,15 +297,18 @@
             (or (and (not reader-error) stream-error) (and reader-error (not style-warning)))
             (and (not arithmetic-error) reader-error (not structure-class) (not style-warning))
             (and (not arithmetic-error) (not reader-error) (not structure-class) style-warning))))
-    (ltbdd-with-new-hash ()
-      (parameterized-mdtd-bdd-graph type-specifiers 
+    (flet ((count-parents-per-node (node)
+	     (length (getf node :super-types))))
+
+      (ltbdd-with-new-hash ()
+	(parameterized-mdtd-bdd-graph type-specifiers 
                                       :sort-nodes #'(lambda (graph)
                                                       (declare (notinline sort))
-                                                      (sort graph #'< :key #'lisp-types::count-parents-per-node))
+                                                      (sort graph #'< :key #'count-parents-per-node))
                                       :sort-strategy "TOP-TO-BOTTOM"
                                       :inner-loop :operation
                                       :do-break-sub :strict
-                                      :do-break-loop t))))
+                                      :do-break-loop t)))))
 
 (define-test disjoint-cmp-l
   (let ((type-specifiers
@@ -313,30 +316,37 @@
             SYNONYM-STREAM ARITHMETIC-ERROR TEST-CHAR-CODE WARNING FLOAT-RADIX
             SIMPLE-BIT-VECTOR STREAM-ERROR ARRAY STYLE-WARNING)))
     (ltbdd-with-new-hash ()
-      (parameterized-mdtd-bdd-graph type-specifiers 
-                                               :sort-nodes #'(lambda (graph)
-                                                               (declare (notinline sort))
-                                                               (sort graph #'< :key #'lisp-types::count-parents-per-node))
-                                               :sort-strategy "TOP-TO-BOTTOM"
-                                               :inner-loop :operation
-                                               :do-break-sub :strict
-                                               :do-break-loop t))))
+      (flet ((count-parents-per-node (node)
+	       (length (getf node :super-types))))
+
+	(parameterized-mdtd-bdd-graph type-specifiers 
+				      :sort-nodes #'(lambda (graph)
+						      (declare (notinline sort))
+						      (sort graph #'< :key #'count-parents-per-node))
+				      :sort-strategy "TOP-TO-BOTTOM"
+				      :inner-loop :operation
+				      :do-break-sub :strict
+				      :do-break-loop t)))))
 
 ;; (lisp-types-test::sort-results "/Users/jnewton/newton.16.edtchs/src/member.sexp" nil)
 
 (defun perf-test-1 (&key (size 11))
-  (ltbdd-with-new-hash (&aux (type-specifiers (lisp-types::choose-randomly (loop :for name being the external-symbols in "SB-PCL"
-                                                                                 :when (find-class name nil)
-                                                                                   :collect name) size)))
-    (parameterized-mdtd-bdd-graph type-specifiers
-                                             :sort-nodes (lambda (graph)
-                                                           (declare (notinline sort))
-                                                           (sort graph #'< :key
-                                                                 #'lisp-types::count-connections-per-node))
-                                             :sort-strategy  "INCREASING-CONNECTIONS"
-                                             :inner-loop :node
-                                             :do-break-sub :relaxed
-                                             :do-break-loop nil)))
+  (ltbdd-with-new-hash (&aux (type-specifiers (choose-randomly (loop :for name being the external-symbols in "SB-PCL"
+								     :when (find-class name nil)
+								       :collect name) size)))
+    (flet ((count-connections-per-node (node)
+	     (+ (length (getf node :touches))
+		(length (getf node :sub-types))
+		(length (getf node :super-types)))))
+      (parameterized-mdtd-bdd-graph type-specifiers
+				    :sort-nodes (lambda (graph)
+						  (declare (notinline sort))
+						  (sort graph #'< :key
+							#'count-connections-per-node))
+				    :sort-strategy  "INCREASING-CONNECTIONS"
+				    :inner-loop :node
+				    :do-break-sub :relaxed
+				    :do-break-loop nil))))
 
 (defun read-trace (stream)
   (let (pending)

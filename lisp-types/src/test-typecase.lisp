@@ -27,7 +27,7 @@
   (shadow-all-symbols :package-from :lisp-types :package-into :lisp-types-test))
 
 (define-test lisp-types/disjoint-typecase
-  (assert-true (equal (macroexpand-1 '(lisp-types::disjoint-typecase fred
+  (assert-true (equal (macroexpand-1 '(disjoint-typecase fred
 				       (integer 42)
 				       (bignum 43)
 				       (number 44)
@@ -41,7 +41,7 @@
 			(STRING 45)
 			(NIL 46)
 			(NIL 47))))
-  (assert-true (equal (macroexpand-1 '(lisp-types::disjoint-typecase fred
+  (assert-true (equal (macroexpand-1 '(disjoint-typecase fred
 				       (integer 42)
 				       ((and number (not integer)) 43)
 				       ((and number (not bignum)) 44)))
@@ -51,7 +51,7 @@
 			(NIL 44)))))
 
 (define-test lisp-types/reduced-typecase
-  (assert-true (equal (macroexpand-1 '(lisp-types::reduced-typecase fred
+  (assert-true (equal (macroexpand-1 '(reduced-typecase fred
 				       (integer 42)
 				       (bignum 43)
 				       (number 44)
@@ -65,7 +65,7 @@
 			(STRING 45)
 			(FLOAT 46)
 			(NIL 47))))
-  (assert-true (equal (macroexpand-1 '(lisp-types::reduced-typecase fred
+  (assert-true (equal (macroexpand-1 '(reduced-typecase fred
 				       (integer 42)
 				       ((and number (not integer)) 43)
 				       ((and number (not bignum)) 44)))
@@ -80,7 +80,7 @@
 (defclass abc-174 (A-174 B-174 C-174) ())
 
 (define-test lisp-types/reduced-typecase2
-  (assert-true (equal (macroexpand-1 '(lisp-types::reduced-typecase fred
+  (assert-true (equal (macroexpand-1 '(reduced-typecase fred
 				       ((or A-174 B-174)
 					41)
 				       (A-174
@@ -88,7 +88,7 @@
 				       (B-174
 					43)))
 		      '(TYPECASE FRED ((OR A-174 B-174) 41) (NIL 42) (NIL 43))))
-  (assert-true (equal (macroexpand-1 '(lisp-types::reduced-typecase fred
+  (assert-true (equal (macroexpand-1 '(reduced-typecase fred
 				       ((and A-174 B-174)
 					41)
 				       (A-174
@@ -96,7 +96,7 @@
 				       (B-174
 					43)))
 		      '(TYPECASE FRED ((AND A-174 B-174) 41) (A-174 42) (B-174 43))))
-  (assert-true (equal (macroexpand-1 '(lisp-types::reduced-typecase fred
+  (assert-true (equal (macroexpand-1 '(reduced-typecase fred
 				       ((or (not A-174) B-174)
 					41)
 				       (A-174
@@ -104,7 +104,7 @@
 				       (B-174
 					43)))
 		      '(TYPECASE FRED ((OR B-174 (NOT A-174)) 41) (T 42) (NIL 43))))
-  (assert-true (equal (macroexpand-1 '(lisp-types::reduced-typecase fred
+  (assert-true (equal (macroexpand-1 '(reduced-typecase fred
 				       ((or (not (and A-174 B-174)) C-174)
 					41)
 				       (A-174

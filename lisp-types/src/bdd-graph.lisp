@@ -84,14 +84,6 @@
        (print-sub-super)
        (print-foot)))))
 
-(defun count-connections-per-node (node)
-  (+ (length (getf node :touches))
-     (length (getf node :sub-types))
-     (length (getf node :super-types))))
-
-(defun count-parents-per-node (node)
-  (length (getf node :super-types)))
-
 (defun mdtd-bdd-graph-strong (type-specifiers)
   (mdtd-bdd-graph type-specifiers :bdd-hash-strength :strong))
 

@@ -294,8 +294,3 @@
 
 (defun mdtd-graph (type-specifiers &key &allow-other-keys)
   (decompose-by-graph-1 type-specifiers :graph-class 'sexp-graph))
-
-
-
-
-
