@@ -147,9 +147,18 @@ PKG> (ltbdd-with-new-hash ()
 
 ### Subtype API
 
-* `smarter-subtypep` -- A somewhat smarter version of `cl:subtypep` which fixes some of the shortcomings of SBCL's `cl:subtypep`.
-* `*subtypep*` -- Special variable containing the subtypep function, normally this is the `#'CL:subtypep` function object, but can be an alternative function such as `#'baker:subtypep`
-* `subtypep-wrapper` -- Behaves like `CL:subtypep` but calls `*subtypep`.  Functions using this interface to `subtypep` can be made to use an alternate version such as `baker:subtypep` for testing, by rebinding `*subtypep`.
+* `smarter-subtypep` -- A somewhat smarter version of `cl:subtypep`
+which fixes some of the shortcomings of SBCL's `cl:subtypep`.
+
+* `*subtypep*` -- Special variable containing the subtypep function,
+normally this is the `#'CL:subtypep` function object, but can be an
+alternative function such as `#'baker:subtypep`
+
+* `subtypep-wrapper` -- Behaves like `CL:subtypep` but calls
+`*subtypep`.  Functions using this interface to `subtypep` can be
+made to use an alternate version such as `baker:subtypep` for
+testing, by rebinding `*subtypep`.
+
 * `caching-types` -- Evaluate the given body with several subtype-related caches enabled.
 
 ### Type simplification API
@@ -166,18 +175,41 @@ be even simpler in cases such as `(OR A B)`, or `(AND A B)`.  A few restrictions
 
 ### Type API using BDDs
 
-* `bdd-disjoint-types-p` -- Given two BDDs representing lisp type specifiers, determine their intersection is empty.
-* `bdd-empty-type` -- Given a BDDs representing a lisp type specifier, determine if represents the empty type.
-* `bdd-subtypep` -- Given two BDDs representing lisp type specifiers, determine if the first is a subtype of the second.
-* `bdd-type-equal` -- Given two BDDs representing lisp type specifiers, determine if the types are equivalent.
+* `bdd-disjoint-types-p` -- Given two BDDs representing lisp type
+specifiers, determine their intersection is empty.
+
+* `bdd-empty-type` -- Given a BDDs representing a lisp type specifier,
+determine if represents the empty type.
+
+* `bdd-subtypep` -- Given two BDDs representing lisp type specifiers,
+determine if the first is a subtype of the second.
+
+* `bdd-type-equal` -- Given two BDDs representing lisp type
+specifiers, determine if the types are equivalent.
 
 ### Other API
 
-* `disjoint-types-p` --  Determine whether two types are disjoint, i.e., is their interseciton is empty?
-* `equivalent-types-p` -- Determine whether two types are equivalent by asking whether each is a subtype of the other.  The subtype relation is determined by `smarter-subtypep`.
-* `remove-subs` -- Given a list of types, return a new list with with all elements removed which specifies a subtype of something else in the list.  If the list contains two elements which specify the same type, only one of them is removed, unless it is a subtype of something else in the list in which case both are removed.
-* `remove-supers` -- Given a list of types, return a new list with with all elements removed which specifies a supertype of something else in the list.  If the list contains two elements which specify the same type, only one of them is removed, unless it is a supertype of something else in the list in which case both are removed.
-* `valid-type-p` --  Predicate to determine whether the given object is a valid type specifier.
+* `disjoint-types-p` -- Determine whether two types are disjoint,
+i.e., is their interseciton is empty?
+
+* `equivalent-types-p` -- Determine whether two types are equivalent
+by asking whether each is a subtype of the other.  The subtype
+relation is determined by `smarter-subtypep`.
+
+* `remove-subs` -- Given a list of types, return a new list with with
+all elements removed which specifies a subtype of something else in
+the list.  If the list contains two elements which specify the same
+type, only one of them is removed, unless it is a subtype of something
+else in the list in which case both are removed.
+
+* `remove-supers` -- Given a list of types, return a new list with
+with all elements removed which specifies a supertype of something
+else in the list.  If the list contains two elements which specify the
+same type, only one of them is removed, unless it is a supertype of
+something else in the list in which case both are removed.
+
+* `valid-type-p` -- Predicate to determine whether the given object is
+a valid type specifier.
 
     
 
