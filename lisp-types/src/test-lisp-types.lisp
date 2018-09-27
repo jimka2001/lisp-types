@@ -490,3 +490,109 @@
                       '(OR (AND BIT FIXNUM (NOT BIT))
                         (AND BIT FIXNUM (NOT BIT) (NOT FIXNUM))
                         (AND BIT FIXNUM (NOT BIT) (NOT FIXNUM))))))
+
+(deftype A1 () '(member 1 2 3 4 5 6 7 8 9 10    12 13))
+(deftype A2 () '(member   2 3   5 6))
+(deftype A3 () '(member     3 4 5   7))
+(deftype A4 () '(member         5 6 7 8 9          13))
+(deftype A5 () '(member                 9))
+(deftype A6 () '(member                   10))
+(deftype A7 () '(member                      11))
+(deftype A8 () '(member                 9       12 13))
+
+(defun demo-baseline (U)
+  "version of mdtd-baseline algorithm used for demo purpose, which
+contains verbose information about the progress of the algorithm."
+  (labels ((union-types (new-types old-types)
+	     ;; prepend any elements of new-types to the beginning
+	     ;; of old-types unless they are already present.
+	     ;; equality measured with #'equivalent-types-p,
+	     ;; preserving the order of old-types	       
+	     (if (null new-types)
+		 old-types
+		 (union-types 
+		  (cdr new-types)
+		  (let ((new (type-to-dnf-bottom-up (car new-types))))
+		    (cond
+		      ((subtypep new nil)
+		       old-types)
+		      (t
+		       (adjoin (car new-types)
+			;; new
+			old-types
+			:test #'equivalent-types-p)))))))
+	   (find-intersecting (U)
+	     (map-pairs (lambda (x y)
+			  (unless (subtypep `(and ,x ,y) nil)
+			    (return-from find-intersecting (values x y))))
+			U)
+	     nil)
+	   (set-minus (yes no &key acc (test #'eq))
+	     (cond
+	       ((null yes)
+		(nreverse acc))
+	       ((member (car yes) no :test test)
+		(set-minus (cdr yes) no :acc acc :test test))
+	       (t
+		(set-minus (cdr yes) no :acc (cons (car yes) acc) :test test))))
+	   (type-minus (yes no)
+	     (set-minus yes no :test #'equivalent-types-p))
+	   (print-types (prefix S &aux (indent 2) (n 0))
+	     (format t "~A (~%" prefix)
+	     (dolist (v S)
+	       (incf n)
+	       (dotimes (_ indent)
+		 (format t " "))
+	       (format t "~D: ~A~%" n v))
+	     (format t ")~%")))
+
+    (let ((step 0)
+	  (D ()))
+      (while t
+	(format t "------------ step=~D -------------~%" (incf step))
+	(let ((new-disjoint (setof v U
+			      (forall w (remove v U)
+				(disjoint-types-p v w)))))
+	  (format t "found ~A disjoint:~%" (length new-disjoint))
+	  (print-types "new-disjoint" new-disjoint)
+	  (setf D (union-types new-disjoint D)
+		U (type-minus U new-disjoint)))
+
+	(format t "D=~A U=~A~%" (length D) (length U))
+	(print-types "D" D)
+	(print-types "U" U)
+
+	(cond
+	  ((null U)
+	   (return-from demo-baseline D))
+	  (t
+	   (multiple-value-bind (X Y) (find-intersecting U)
+	     (when (null (or X Y))
+	       (error "didn't find intersection"))
+	     (format t "intersecting:~%  ~A~%  ~A~%" X Y)
+
+	     (unless (yes-or-no-p "continue?")
+	       (return-from demo-baseline nil))
+	     
+	     (let ((X<Y (subtypep X Y))
+		   (Y<X (subtypep Y X)))
+	       (setf U (cond
+			 ((and X<Y Y<X)
+			  (remove Y U))
+			 (X<Y
+			  (union-types (type-minus (list `(and ,Y (not ,X))) D)
+				       (remove Y U)))
+			 (Y<X
+			  (union-types (type-minus (list `(and ,X (not ,Y))) D)
+				       (remove X U)))
+			 (t
+			  (union-types (type-minus (list `(and ,X (not ,Y))
+							 `(and ,Y (not ,X))
+							 `(and ,X ,Y)) D)
+				       (set-minus U (list X Y))))))))))))))
+
+
+(define-test type/demo-baseline
+  (let ((U `(A1 A2 A3 A4 A5 A6 A7 A8)))
+    (demo-baseline U)))
+			      
