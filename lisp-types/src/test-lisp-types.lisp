@@ -521,10 +521,10 @@ contains verbose information about the progress of the algorithm."
 			;; new
 			old-types
 			:test #'equivalent-types-p)))))))
-	   (find-intersecting (U)
+	   (find-intersecting-pair (U)
 	     (map-pairs (lambda (x y)
 			  (unless (subtypep `(and ,x ,y) nil)
-			    (return-from find-intersecting (values x y))))
+			    (return-from find-intersecting-pair (values x y))))
 			U)
 	     nil)
 	   (set-minus (yes no &key acc (test #'eq))
@@ -566,7 +566,7 @@ contains verbose information about the progress of the algorithm."
 	  ((null U)
 	   (return-from demo-baseline D))
 	  (t
-	   (multiple-value-bind (X Y) (find-intersecting U)
+	   (multiple-value-bind (X Y) (find-intersecting-pair U)
 	     (when (null (or X Y))
 	       (error "didn't find intersection"))
 	     (format t "intersecting:~%  ~A~%  ~A~%" X Y)
@@ -580,15 +580,21 @@ contains verbose information about the progress of the algorithm."
 			 ((and X<Y Y<X)
 			  (remove Y U))
 			 (X<Y
-			  (union-types (type-minus (list `(and ,Y (not ,X))) D)
+			  ;; add Y!X to U and remove Y from U,
+			  ;; unless Y!X is already in D in which case
+			  ;;    just remove Y from U.
+			  (union-types (type-minus (list `(and ,Y (not ,X)))
+						   D)
 				       (remove Y U)))
 			 (Y<X
-			  (union-types (type-minus (list `(and ,X (not ,Y))) D)
+			  (union-types (type-minus (list `(and ,X (not ,Y)))
+						   D)
 				       (remove X U)))
 			 (t
 			  (union-types (type-minus (list `(and ,X (not ,Y))
 							 `(and ,Y (not ,X))
-							 `(and ,X ,Y)) D)
+							 `(and ,X ,Y))
+						   D)
 				       (set-minus U (list X Y))))))))))))))
 
 
