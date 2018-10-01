@@ -500,7 +500,7 @@
 (deftype A7 () '(member                      11))
 (deftype A8 () '(member                 9       12 13))
 
-(defun demo-baseline (U)
+(defun demo-baseline (U &key (interactive nil))
   "version of mdtd-baseline algorithm used for demo purpose, which
 contains verbose information about the progress of the algorithm."
   (labels ((union-types (new-types old-types)
@@ -571,8 +571,9 @@ contains verbose information about the progress of the algorithm."
 	       (error "didn't find intersection"))
 	     (format t "intersecting:~%  ~A~%  ~A~%" X Y)
 
-	     (unless (yes-or-no-p "continue?")
-	       (return-from demo-baseline nil))
+	     (cond ((null interactive))
+		   ((null (yes-or-no-p "continue?"))
+		    (return-from demo-baseline nil)))			  
 	     
 	     (let ((X<Y (subtypep X Y))
 		   (Y<X (subtypep Y X)))
@@ -600,5 +601,5 @@ contains verbose information about the progress of the algorithm."
 
 (define-test type/demo-baseline
   (let ((U `(A1 A2 A3 A4 A5 A6 A7 A8)))
-    (demo-baseline U)))
+    (demo-baseline U :interactive t)))
 			      
