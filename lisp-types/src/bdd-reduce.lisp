@@ -72,7 +72,6 @@
                                       :positive  new-positive
                                       :negative new-negative))
                   (key (bdd-make-key label (bdd-ident new-positive) (bdd-ident new-negative))))
-             (incr-hash)
              (setf (gethash key (bdd-hash)) bdd)
              (setf (gethash key (bdd-hash))
                    (bdd-reduce-allocated bdd new-positive new-negative)))))))))
