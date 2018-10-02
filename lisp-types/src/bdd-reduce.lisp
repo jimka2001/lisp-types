@@ -65,16 +65,16 @@
         (cond
           ((eq new-positive new-negative) ;; 2.5%
            new-positive)
-          ((bdd-find (bdd-hash) label new-positive new-negative)) ;;7%
+          ((bdd-find label new-positive new-negative)) ;;7%
           (t
            (let* ((bdd (make-instance bdd-node-class
                                       :label label
-                                      :positive  new-positive
-                                      :negative new-negative))
-                  (key (bdd-make-key label (bdd-ident new-positive) (bdd-ident new-negative))))
-             (setf (gethash key (bdd-hash)) bdd)
-             (setf (gethash key (bdd-hash))
-                   (bdd-reduce-allocated bdd new-positive new-negative)))))))))
+                                      :positive new-positive
+                                      :negative new-negative)))
+
+	     (setf (bdd-find label new-positive new-negative) bdd
+		   (bdd-find label new-positive new-negative)
+		   (bdd-reduce-allocated bdd new-positive new-negative)))))))))
 
 (defmethod bdd-allocate (label (positive-bdd lisp-type-bdd-node) (negative-bdd bdd) &key (bdd-node-class (class-of positive-bdd)))
   (declare (type (not (eql bdd-node)) bdd-node-class))

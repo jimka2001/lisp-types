@@ -130,7 +130,14 @@ algorithm work best.
 variables represent Common Lisp types, understanding subtype
 relations.  The BDD algebra functions may be used on these objects
 such as `bdd-and`, `bdd-or` etc.  See
-[cl-robdd](../cl-robdd/README.md)
+[cl-robdd](../cl-robdd/README.md).  The function `ltbdd` differs from
+the function `bdd` in that `bdd` understands all Boolean variables to
+be independent, assigning no particular semantics to labels.  In
+particular variable names such as 'integer' and 'string' have no
+special menaing.  With the function, `ltbdd`, however, labels are
+interpreted as type specifiers.  Thus the expression `(and string
+number)` is understood to be the empty type `nil`, and '(or fixnum
+number)` is understood to be the same type as 'number`.
 
 * `ltbdd-with-new-hash` -- macro -- Create a cache and dynamic extent
 used to evaluate the given code body.  The ROBDDs representing Common
