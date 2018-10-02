@@ -177,7 +177,6 @@
              (t3 (ltbdd '(member 0 2 4)))
              (bdds (list t1 t2 t3))
              (U (reduce #'bdd-or bdds :initial-value *bdd-false*)))
-        (assert-false (eq '= (bdd-cmp '(member  0 2 4) '(member 0 2))))
         (forall x '(0 1 2 4)
           (assert-true (bdd-type-p x U)))
         (assert-false (bdd-type-p 3 U))
