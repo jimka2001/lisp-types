@@ -135,24 +135,14 @@ Each element of REDUCTION-RULES is a plist having at least the keys
         nil
         reduced)))
 
+
 (defun bdd-reduce (label bdd search)
-  "This recursive function starts at a BDD whose bdd-label is LABEL, but during the
-recursive descent, LEVEL remains fixed, while BDD walks the BDD dag.  At each step,
-until we reach a leaf, we call BDD-FIND-REDUCTION to see if the BDD can be reduced
-according to the LABEL which is now the label of some parent in its lineage."
   (declare (type (or lisp-type-bdd bdd-leaf) bdd)
            (type list search))
-  (labels ((recure (bdd)
-             (cond
-               ((typep bdd 'bdd-leaf)
-                bdd)
-               ((bdd-find-reduction label bdd search))
-               (t
-                (%bdd-node (bdd-label bdd)
-                           (recure (bdd-positive bdd))
-                           (recure (bdd-negative bdd))
-                           :bdd-node-class 'lisp-type-bdd-node)))))
-    (recure bdd)))
+  "This function starts at a BDD and walks the bdd applying BDD-FIND-REDUNCTION 
+to each node using the given LABEL and SEARCH."
+  (bdd-walk bdd (lambda (bdd)
+		  (bdd-find-reduction label bdd search)) :bdd-node-class 'lisp-type-bdd-node))
 
 ;; when converting a lisp-type-bdd to dnf, we need to remove subtypes
 ;; from every (OR ...) clause
@@ -494,10 +484,10 @@ of min-terms, this function returns a list of the min-terms."
                 nil)
                (bdd-node
                 (nconc (mapcar (lambda (positive)
-                                 (%bdd-node (bdd-label term) positive *bdd-false* :bdd-node-class 'lisp-type-bdd-node))
+                                 (bdd-ensure-node (bdd-label term) positive *bdd-false* :bdd-node-class 'lisp-type-bdd-node))
                                (recure (bdd-positive term)))
                        (mapcar (lambda (negative)
-                                 (%bdd-node (bdd-label term) *bdd-false* negative :bdd-node-class 'lisp-type-bdd-node))
+                                 (bdd-ensure-node (bdd-label term) *bdd-false* negative :bdd-node-class 'lisp-type-bdd-node))
                                (recure (bdd-negative term))))))))
     (recure bdd)))
 

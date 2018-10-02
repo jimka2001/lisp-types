@@ -186,6 +186,7 @@
   (assert-true (equal (reduce-lisp-type '(OR (NOT A-150) B-151))
                       '(not a-150))))
 
+
 (deftype non-number () `(not number))
 (deftype non-integer () `(not integer))
 (define-test type/bdd-reduce
@@ -196,48 +197,47 @@
     ;; 1) disjoint on left
     ;;  (number (string nil t) nil)
     ;;  --> (number t nil)
-    (assert-true (equal (bdd-serialize
+    (assert-true (equal (bdd-to-expr
                          (ltbdd-node 'number
                                    (ltbdd-node 'string nil t)
                                    nil))
-                        '(number t nil)))
+                        'number))
         
     ;; 2) disjoint on right of negative type
-    (assert-true (equal (bdd-serialize
+    (assert-true (equal (bdd-to-expr
                          (ltbdd-node 'non-number
                                    nil
                                    (ltbdd-node 'string nil t)))
-                        '(non-number nil t)))
+                        '(not non-number)))
                       
     ;; 3) subtype on right
-    (assert-true (equal (bdd-serialize
+    (assert-true (equal (bdd-to-expr
                          (ltbdd-node 'integer
                                    (ltbdd-node 'number t nil)
                                    nil))
-                        '(integer t nil)))
+			'integer))
 
     ;; 4) subtype on left of negative type
-    (assert-true (equal (bdd-serialize
+    (assert-true (equal (bdd-to-expr
                          (ltbdd-node 'non-number
                                    (ltbdd-node 'integer nil t)
                                    nil))
-                        '(non-number t nil)))
+                        'non-number))
                       
 
     ;; 5) supertype on left
-    (assert-true (equal (bdd-serialize
+    (assert-true (equal (bdd-to-expr
                          (ltbdd-node 'integer
                                    (ltbdd-node 'number t nil)
                                    nil))
-                        '(integer t nil)))
+                        'integer))
 
     ;; 6) supertype on right of negative type
-    (assert-true (equal (bdd-serialize
+    (assert-true (equal (bdd-to-expr
                          (ltbdd-node 'non-integer
                                    nil
                                    (ltbdd-node 'number t nil)))
-                        '(non-integer nil t)))))
-
+                        '(not non-integer)))))
                    
 (define-test test/bdd-type-p
   (ltbdd-with-new-hash ()

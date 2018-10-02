@@ -153,8 +153,8 @@
                              (format html "<ul>~%")
                              (format html "<li> <pre>DNF of original = ~S</pre>~%" (bdd-to-dnf bdd-type-orig))
                              (format html "<li> <pre>DNF of graph    = ~S</pre>~%" (bdd-to-dnf graph-bdd))
-                             (format html "<li> <pre>BDD of original = ~S</pre>~%" (bdd-serialize bdd-type-orig))
-                             (format html "<li> <pre>BDD of graph    = ~S</pre>~%" (bdd-serialize graph-bdd))
+                             (format html "<li> <pre>BDD of original = ~A</pre>~%" bdd-type-orig)
+                             (format html "<li> <pre>BDD of graph    = ~A</pre>~%" graph-bdd)
                              (format html "</ul>~%"))
                             (t
                              (format html "ERROR in graph:<br>~%")

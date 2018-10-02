@@ -144,15 +144,15 @@
        (cond
          ((and (member f1 *satisfies-symbols*)
                (member f2 *satisfies-symbols*))
-          (%bdd-cmp t1 t2))
+          (compare-objects t1 t2))
          ((member f1 *satisfies-symbols*)
           '>)
          ((member f2 *satisfies-symbols*)
           '<)
          (t
-          (%bdd-cmp t1 t2)))))
+          (compare-objects t1 t2)))))
     (t
-     (%bdd-cmp t1 t2))))
+     (compare-objects t1 t2))))
 
 (defun bdd-typecase-expander (obj clauses if-then-else)
   (let ((*satisfies-symbols* nil)

@@ -601,5 +601,5 @@ contains verbose information about the progress of the algorithm."
 
 (define-test type/demo-baseline
   (let ((U `(A1 A2 A3 A4 A5 A6 A7 A8)))
-    (demo-baseline U :interactive t)))
+    (demo-baseline U :interactive nil)))
 			      
