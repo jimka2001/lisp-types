@@ -22,6 +22,7 @@
 
 (asdf:defsystem :lisp-types-baker-analysis
   :version "1.0"
+  :author "Jim Newton"
   :description "Extension of lisp-types-analysis and lisp-types-analysis-test for testing the baker subtypep algorithm"
   :license "MIT"
   :depends-on (:lisp-types

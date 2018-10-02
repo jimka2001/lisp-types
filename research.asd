@@ -21,6 +21,7 @@
 
 (asdf:defsystem :research
   :version "1.0"
+  :author "Jim Newton"
   :description "Top level package which loads everything to do analsis in PhD research"
   :license "MIT"
   :depends-on (#+sbcl :2d-array-test

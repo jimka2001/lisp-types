@@ -22,6 +22,7 @@
 
 (asdf:defsystem :lisp-types-test
   :version "1.0"
+  :author "Jim Newton"
   :description ""
   :license "MIT"
   :depends-on (:lisp-types
