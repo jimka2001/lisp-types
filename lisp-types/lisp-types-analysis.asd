@@ -21,7 +21,7 @@
 
 
 (asdf:defsystem :lisp-types-analysis
-  :version "1.0"
+  :version (:read-file-form "../version.lisp")
   :author "Jim Newton"
   :description "Analysis code used in PhD research of lisp type reduction using s-expressions and ROBDDs"
   :license "MIT"

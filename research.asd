@@ -20,7 +20,7 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 (asdf:defsystem :research
-  :version "1.0"
+  :version (:read-file-form "version.lisp")
   :author "Jim Newton"
   :description "Top level package which loads everything to do analsis in PhD research"
   :license "MIT"

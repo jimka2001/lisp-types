@@ -20,7 +20,7 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 (asdf:defsystem :lisp-types
-  :version "1.0"
+  :version (:read-file-form "../version.lisp")
   :author "Jim Newton"
   :description "Lisp type reduction utilities, and CL type-system compatible ROBDD implementation"
   :license "MIT"
