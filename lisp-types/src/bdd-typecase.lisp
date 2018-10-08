@@ -155,14 +155,15 @@
      (compare-objects t1 t2))))
 
 (defun bdd-typecase-expander (obj clauses if-then-else)
-  (let ((*satisfies-symbols* nil)
-        (*reduce-member-type* nil)
-        (var (gensym "obj")))
-    (let* ((*bdd-cmp-function* #'bdd-typecase-cmp)
-           (bdd-arg (typecase-to-type clauses))
-           (bdd (bdd bdd-arg)))
-      `(,(funcall if-then-else bdd var)
-        ,obj))))
+  (bdd-with-new-hash ()
+    (let ((*satisfies-symbols* nil)
+          (*reduce-member-type* nil)
+          (var (gensym "obj")))
+      (let* ((*bdd-cmp-function* #'bdd-typecase-cmp)
+             (bdd-arg (typecase-to-type clauses))
+             (bdd (bdd bdd-arg)))
+        `(,(funcall if-then-else bdd var)
+          ,obj)))))
 
 
 (defmacro bdd-typecase (obj &rest clauses)
