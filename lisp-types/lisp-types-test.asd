@@ -32,7 +32,7 @@
 	       :adjuvant
 	       :scrutiny
                ;; :sb-profile
-               #+sbcl :sb-sprof)
+               (:feature :sbcl :sb-sprof))
   :components
   ((:module "src"
     :components

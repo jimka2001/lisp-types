@@ -24,11 +24,11 @@
   :author "Jim Newton"
   :description "Top level package which loads everything to do analsis in PhD research"
   :license "MIT"
-  :depends-on (#+sbcl :2d-array-test
+  :depends-on ((:feature :sbcl :2d-array-test)
                :adjuvant
 	       :adjuvant-test
                :dispatch-test
-               #+sbcl :lisp-types-baker-analysis
+               (:feature :sbcl :lisp-types-baker-analysis)
                :ndfa-test
                :rte-test
                :rte-regexp-test

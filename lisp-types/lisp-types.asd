@@ -28,7 +28,7 @@
                :cl-robdd
 	       :adjuvant
                ;; :sb-profile
-               #+sbcl :sb-sprof
+               (:feature :sbcl :sb-sprof)
                )
   :components
   ((:module "src"
