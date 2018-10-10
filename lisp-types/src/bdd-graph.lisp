@@ -35,7 +35,7 @@
              ((string= "png" (pathname-type pathname))
               (let ((dot-path (merge-pathnames (make-pathname :type "dot") pathname)))
                 (bdd-graph-to-dot graph (namestring dot-path))
-                (run-program "dot" (list "-Tpng" (namestring dot-path)
+                (run-program *dot-path* (list "-Tpng" (namestring dot-path)
                                          "-o" out))))))
      out)
     ((eql t)
