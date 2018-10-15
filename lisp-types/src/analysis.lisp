@@ -35,15 +35,15 @@
           (pushnew s symbols))))
     symbols))
 
-(defun valid-subtypes (super)
+(defun valid-subtypes (super &key (test (lambda (t1 t2)
+                                         (and (subtypep-wrapper t1 t2)
+                                              (subtypep-wrapper t2 t1)))))
   (let (all-types)
     (do-external-symbols (sym :cl)
       (when (and (valid-type-p sym)
                  (subtypep-wrapper sym super))
 	(push sym all-types)))
-    (remove-duplicates all-types :test (lambda (t1 t2)
-                                         (and (subtypep-wrapper t1 t2)
-                                              (subtypep-wrapper t2 t1))))))
+    (remove-duplicates all-types :test test)))
 
 
 
