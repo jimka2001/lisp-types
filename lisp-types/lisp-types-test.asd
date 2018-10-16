@@ -31,8 +31,7 @@
                :closer-mop
 	       :adjuvant
 	       :scrutiny
-               ;; :sb-profile
-               (:feature :sbcl :sb-sprof))
+               )
   :components
   ((:module "src"
     :components

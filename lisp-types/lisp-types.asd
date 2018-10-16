@@ -26,10 +26,7 @@
   :license "MIT"
   :depends-on (:dispatch
                :cl-robdd
-	       :adjuvant
-               ;; :sb-profile
-               (:feature :sbcl :sb-sprof)
-               )
+	       :adjuvant)
   :components
   ((:module "src"
     :components
