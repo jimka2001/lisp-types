@@ -43,7 +43,7 @@
   (setf *perf-results* nil)
   (ltbdd-with-new-hash ()
     (types/cmp-perfs :file-name "disjoint-cmp-1"
-                     :destination-dir "/tmp"
+                     :destination-dir (ensure-directories-exist (make-temp-dir "disjoint-cmp-1"))
                      :types '(sb-pcl::SYSTEM-CLASS
                               sb-pcl::SLOT-DEFINITION
                               sb-pcl::EQL-SPECIALIZER) :time-out nil)))
@@ -53,7 +53,7 @@
   (ltbdd-with-new-hash ()
     (assert-true (types/cmp-perfs :limit 3
                                   :file-name "bdd-numbers"
-                                  :destination-dir "/tmp"
+                                  :destination-dir  (ensure-directories-exist (make-temp-dir "bdd-numbers-3"))
                                   :decompose '(mdtd-bdd)
                                   :types (valid-subtypes 'number)))))
 
@@ -62,7 +62,7 @@
   (ltbdd-with-new-hash ()
     (assert-true (types/cmp-perfs :limit 6
                                   :file-name "bdd-numbers"
-                                  :destination-dir "/tmp"
+                                  :destination-dir (ensure-directories-exist (make-temp-dir "bdd-numbers-6"))
                                   :decompose '(mdtd-bdd)
                                   :types (valid-subtypes 'number)))))
 
@@ -71,7 +71,7 @@
   (ltbdd-with-new-hash ()
     (assert-true (types/cmp-perfs :limit 15
                                   :file-name "bdd-numbers"
-                                  :destination-dir "/tmp"
+                                  :destination-dir (ensure-directories-exist (make-temp-dir "bdd-numbers"))
                                   :decompose '(mdtd-bdd)
                                   :types (valid-subtypes 'number)))))
 
@@ -83,7 +83,7 @@
   (setf *perf-results* nil)
   (ltbdd-with-new-hash ()
     (types/cmp-perfs :file-name "disjoint-cmp-2"
-                     :destination-dir "/tmp"
+                     :destination-dir (ensure-directories-exist (make-temp-dir "disjoint-cmp-2"))
                      :types '(sb-pcl::SYSTEM-CLASS
                               sb-pcl::STANDARD-SLOT-DEFINITION
                               sb-pcl::EFFECTIVE-SLOT-DEFINITION
@@ -99,7 +99,7 @@
   (setf *perf-results* nil)
   (ltbdd-with-new-hash ()
     (types/cmp-perfs :file-name "disjoint-cmp-3"
-                   :destination-dir "/tmp"
+                   :destination-dir (ensure-directories-exist (make-temp-dir "disjoint-cmp-3"))
                    :types '(SB-PCL:SYSTEM-CLASS
                             SB-MOP:STANDARD-WRITER-METHOD
                             SB-MOP:DIRECT-SLOT-DEFINITION))))
@@ -110,7 +110,7 @@
   (setf *perf-results* nil)
   (ltbdd-with-new-hash ()
     (types/cmp-perfs :file-name "disjoint-cmp-4"
-                     :destination-dir "/tmp"
+                     :destination-dir (ensure-directories-exist (make-temp-dir "disjoint-cmp-4"))
                      :types '(SB-PCL:SYSTEM-CLASS
                               SB-MOP:DIRECT-SLOT-DEFINITION
                               SB-MOP:FORWARD-REFERENCED-CLASS
@@ -128,7 +128,7 @@
   (ltbdd-with-new-hash ()
     ;; mdtd-bdd-graph
     (types/cmp-perfs :file-name "disjoint-cmp-5"
-                     :destination-dir "/tmp"
+                     :destination-dir (ensure-directories-exist (make-temp-dir "disjoint-cmp-5"))
                      :types '(SB-PCL:SYSTEM-CLASS
                               SB-MOP:STANDARD-ACCESSOR-METHOD
                               SB-MOP:STANDARD-EFFECTIVE-SLOT-DEFINITION))))
@@ -137,7 +137,7 @@
   (setf *perf-results* nil)
   (ltbdd-with-new-hash ()
   (types/cmp-perfs :file-name "disjoint-cmp-6"
-                   :destination-dir "/tmp"
+                   :destination-dir (ensure-directories-exist (make-temp-dir "disjoint-cmp-6"))
                    :types '((MEMBER 2 4 5 6 8)
                             (MEMBER 0 5 6 9 10)
                             (MEMBER 0 1 3 4 10)
@@ -147,7 +147,7 @@
   (setf *perf-results* nil)
     (ltbdd-with-new-hash ()
   (types/cmp-perfs :file-name "disjoint-cmp-7"
-                   :destination-dir "/tmp"
+                   :destination-dir (ensure-directories-exist (make-temp-dir "disjoint-cmp-7"))
                    :types '((MEMBER 1 3 4 5 6 9)
                             (MEMBER 1 5 7 8)
                             (MEMBER 4 7 8 9 10)
@@ -158,7 +158,7 @@
   (setf *perf-results* nil)
     (ltbdd-with-new-hash ()
   (types/cmp-perfs :file-name "disjoint-cmp-8"
-                   :destination-dir "/tmp"
+                   :destination-dir (ensure-directories-exist (make-temp-dir "disjoint-cmp-8"))
                    :types '((MEMBER 0 2)
                             (MEMBER 0 1 2)
                             (MEMBER 0 2 4)))))
@@ -247,7 +247,7 @@
   (setf *perf-results* nil)
   (ltbdd-with-new-hash ()
     (types/cmp-perfs :file-name "disjoint-cmp-g"
-                     :destination-dir "/tmp"
+                     :destination-dir (ensure-directories-exist (make-temp-dir "disjoint-cmp-g"))
                      :types '((MEMBER 0 3 4)
                               (EQL 3)
                               (MEMBER 1 4)
@@ -261,7 +261,7 @@
   (setf *perf-results* nil)
   (ltbdd-with-new-hash ()
     (types/cmp-perfs :file-name "disjoint-cmp-h"
-                     :destination-dir "/tmp"
+                     :destination-dir (ensure-directories-exist (make-temp-dir "disjoint-cmp-h"))
                      :limit 5
                      :types '((COMMON-LISP:EQL 3)
                               (COMMON-LISP:MEMBER 1 2 3)
@@ -274,7 +274,7 @@
   (ltbdd-with-new-hash ()
     (types/cmp-perfs :limit 5
                      :file-name "disjoint-cmp-i"
-                     :destination-dir "/tmp"
+                     :destination-dir (ensure-directories-exist (make-temp-dir "disjoint-cmp-i"))
                      :types '(STRING STANDARD-GENERIC-FUNCTION ATOM METHOD SIMPLE-BASE-STRING
                               SEQUENCE COMPLEX STANDARD-OBJECT STANDARD-METHOD))))
 
@@ -404,7 +404,7 @@ if the function returned the same as it was passed as input (according to EQUAL)
     (parameterization-report :create-png-p nil
                              :multiplier 0.3
                              :bucket-reporters (list bucket)
-                             :destination-dir "/tmp/jnewton/analysis/.")))
+                             :destination-dir (ensure-directories-exist (make-temp-dir "parameterization-report-1")))))
 
 
 (define-test test/parameterization-report-2
@@ -413,7 +413,7 @@ if the function returned the same as it was passed as input (according to EQUAL)
     (parameterization-report :create-png-p nil
                              :multiplier 0.3
                              :bucket-reporters (list bucket)
-                             :destination-dir "/tmp/jnewton/analysis/.")))
+                             :destination-dir (ensure-directories-exist (make-temp-dir "parameterization-report-2")))))
 
 (define-test test/parameterization-report-3
   (let* ((bucket-index 3)
@@ -421,7 +421,7 @@ if the function returned the same as it was passed as input (according to EQUAL)
     (parameterization-report :create-png-p nil
                              :multiplier 0.3
                              :bucket-reporters (list bucket)
-                             :destination-dir "/tmp/jnewton/analysis/.")))
+                             :destination-dir (ensure-directories-exist (make-temp-dir "parameterization-report-3")))))
 
 (define-test test/parameterized-mdtd-bdd-graph
   (ltbdd-with-new-hash ()

@@ -1357,16 +1357,6 @@ E.g., (change-extension \"/path/to/file.gnu\" \"png\") --> \"/path/to/file.png\"
 							 :plist-hash plist-hash
 							 :profile-plists profile-plists))))))
 
-(defvar *autogen-dir* (or (find-if #'directory-exists-p '("/Users/jnewton/research/autogen"
-							  "/Volumes/Disk2/jimka/research/autogen"
-							  "/lrde/home/jnewton/analysis"))
-			  (error "cannot find suitable value for *autogen-dir*")))
-
-(defvar *destination-dir* (or (find-if #'directory-exists-p '("/Users/jnewton/analysis"
-							      "/Volumes/Disk2/jimka/research/autogen"
-							      "/lrde/home/jnewton/analysis"))
-			      (error "cannot find suitable value for *destination-dir*")))
-
 (defun test-report (&key sample (prefix "") (re-run t) (suite-time-out (* 60 60 4))
                       (time-out (* 3 60)) normalize (destination-dir *destination-dir*)
                       types file-name (limit 15) tag hilite-min (num-tries 2)
@@ -1886,7 +1876,7 @@ sleeping before the code finishes evaluating."
 	       :bucket-reporters *bucket-reporters*
 	       :destination-dir  destination-dir))
 
-(defun rebuild-plots (&key (destination-dir "/Users/jnewton/analysis") (create-png-p t))
+(defun rebuild-plots (&key (destination-dir *destination-dir*) (create-png-p t))
   (let ((plist-hash (make-hash-table :test #'equal))
 	(profile-function-legend (make-hash-table :test #'equal)))
     (dotimes (bucket-index (length *bucket-reporters*))
