@@ -155,13 +155,14 @@
      (compare-objects t1 t2))))
 
 (defun bdd-typecase-expander (obj clauses if-then-else)
-  (bdd-with-new-hash ()
+  (ltbdd-with-new-hash ()
     (let ((*satisfies-symbols* nil)
           (*reduce-member-type* nil)
           (var (gensym "obj")))
       (let* ((*bdd-cmp-function* #'bdd-typecase-cmp)
              (bdd-arg (typecase-to-type clauses))
-             (bdd (bdd bdd-arg)))
+             (bdd (ltbdd bdd-arg)))
+	;; (bdd-to-dot bdd "/Users/jimka/research/dot/launch-missiles.dot")
         `(,(funcall if-then-else bdd var)
           ,obj)))))
 
