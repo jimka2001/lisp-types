@@ -466,20 +466,4 @@ E.g.  (rule-case 12 ;; OBJECT
 		(recure (cdr types) (cons (car types) acc))))))
     (recure types nil)))
 
-(defun fixed-point (function arg &key (test #'equal))
-  "Find the fixed point of a FUNCTION, starting with the given ARG."
-  (declare (type (function (t) t) function))
-  (let ((result (funcall function arg)))
-	
-    (loop :while (not (funcall test result arg))
-	  :do (progn (setf arg result)
-		     (setf result (funcall function arg))))
-    ;; return arg rather than result, they are EQUAL, but this is a
-    ;; chance that arg was never changed, thus result may happen to be
-    ;; in short term memory and more easily GCed.
-    (if (eq test #'equal)
-	arg
-	result)))
-
-
 

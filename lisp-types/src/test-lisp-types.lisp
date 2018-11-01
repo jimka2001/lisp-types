@@ -220,16 +220,6 @@
 		     '(and (not t)
 		           (and (not keyword) (eql :a)))))))
 
-
-(define-test type/fixed-point
-  
-  (assert-true (< (lisp-types::fixed-point #'(lambda (obj)
-							    (/ obj 2.0))
-							10
-							:test #'(lambda (a b)
-								  (< (abs (- a b)) 0.01)))
-		  0.01)))
-
 (defclass AB-247 () ())
 (defclass A1-247 (AB-247) ())
 (defclass B1-247 (AB-247) ())
