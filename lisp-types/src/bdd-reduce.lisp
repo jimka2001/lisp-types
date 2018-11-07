@@ -421,7 +421,8 @@ Returns NIL otherwise."
 (defun bdd-reduce-lisp-type (type)
     "Given a common lisp type designator such as (AND A (or (not B) C)), 
 convert it to DNF (disjunctive-normal-form)"
-  (bdd-to-dnf (ltbdd type)))
+  (ltbdd-with-new-hash ()
+    (bdd-to-dnf (ltbdd type))))
 
 (defun %mdtd-bdd (type-specifiers)
   ;;(declare (optimize (debug 0) (speed 3))) ;; optimize tail call 
