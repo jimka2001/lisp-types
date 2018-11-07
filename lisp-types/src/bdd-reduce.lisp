@@ -21,8 +21,6 @@
 
 (in-package   :lisp-types)
 
-
-
 (labels ((relation (r x-parity y-parity)
            #'(lambda (x y)
                (funcall r
