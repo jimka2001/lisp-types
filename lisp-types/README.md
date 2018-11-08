@@ -178,7 +178,8 @@ be even simpler in cases such as `(OR A B)`, or `(AND A B)`.  A few restrictions
 3. OR never has fewer than 2 operands
 4. AND never has fewer than 2 operands.
 
-
+* `bdd-reduce-lisp-type` -- simplfy the type specifier by converting
+it to a bdd and then deserializing via `BDD-TO-DNF`
 
 ### Type API using BDDs
 
