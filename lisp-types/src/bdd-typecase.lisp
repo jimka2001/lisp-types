@@ -128,6 +128,7 @@
                             ,(branch (bdd-negative bdd)))))))))
       (walk-bdd bdd)
       `(lambda (,obj)
+	 (declare (ignorable ,obj))
          (block ,block-name
            (tagbody 
               ,@(mapcan #'label-function
