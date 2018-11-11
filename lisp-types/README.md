@@ -8,6 +8,18 @@ Utilities dealing with CL types
 
 ### Typecase API
 
+* `bdd-typecase` -- Syntactically similar to `CL:TYPECASE`. Expands to
+`BLOCK`/`TAGBODY`/`IF`/`GO` idiom assuring that no type check occurs
+more than once.  This is done by converting the typcase expression
+to an ROBDD, and serializing the ROBDD.
+
+```lisp
+(bdd-typecase obj
+  (float 41)
+  ((and number (not float)) 42))
+```
+
+
 * `reduced-typecase` --   Syntactically similar to `CL:TYPECASE`. Expands to a call to `CL:TYPECASE` but
 with cases reduced if possible.  In particular latter cases assume that previous
 cases have failed.  This macro preserves the order of the clauses, but is
@@ -16,8 +28,8 @@ of each clause. E.g.,
 
 ```lisp
 (reduced-typecase obj
-    (float 41)
-    ((and number (not float)) 42))
+  (float 41)
+  ((and number (not float)) 42))
 ```
 
 Because if clause 2 is reached, it is known that obj is not a `FLOAT`, so this expands to
