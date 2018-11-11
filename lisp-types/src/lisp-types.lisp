@@ -395,8 +395,8 @@ E.g.  (rule-case 12 ;; OBJECT
           13) ;; returned because it is different than OBJECT
          (... ;; remaining tests ignored
           ))"
-  (let ((new (gensym "new"))
-        (old (gensym "old")))
+  (let ((new (gensym "NEW"))
+        (old (gensym "OLD")))
     (labels ((expand-clause (clause)
                (destructuring-bind (test &body body) clause
                  (assert body () "invalid test/body used in RULE-CASE: ~A" clause)

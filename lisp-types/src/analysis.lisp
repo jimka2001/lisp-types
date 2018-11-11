@@ -87,7 +87,7 @@
                      floating-point-underflow          simple-bit-vector    ))
 
 (defmacro print-conditions (&body body)
-  (let ((conditions (gensym "conditions")))
+  (let ((conditions (gensym "CONDITIONS")))
     `(let (,conditions)
        (handler-bind ((t #'(lambda (condition) (push condition ,conditions))))
          (prog1 (progn ,@body)

@@ -99,7 +99,7 @@
 (defun bdd-to-if-then-else-tagbody/go (bdd obj)
   "expand into linear size code as TAGBODY/GO, whose runtime is logrithmic and code size is linear"
   (let (bdd->name-mapping
-        (block-name (gensym "block")))
+        (block-name (gensym "BLOCK")))
     (labels ((walk-bdd (bdd)
                (typecase bdd
                  (bdd-false)
@@ -158,7 +158,7 @@
   (ltbdd-with-new-hash ()
     (let ((*satisfies-symbols* nil)
           (*reduce-member-type* nil)
-          (var (gensym "obj")))
+          (var (gensym "OBJ")))
       (let* ((*bdd-cmp-function* #'bdd-typecase-cmp)
              (bdd-arg (typecase-to-type clauses))
              (bdd (ltbdd bdd-arg)))
@@ -166,8 +166,9 @@
         `(,(funcall if-then-else bdd var)
           ,obj)))))
 
-
 (defmacro bdd-typecase (obj &rest clauses)
+  "Syntactically and symantically similar to CL:TYPECASE, but uses BDDs
+ to expand into code avoiding redundant type checks."
   ;; to make the output more human readable, using LABELS, rather than GO
   ;;  use bdd-to-if-then-else-labels rather than bdd-to-if-then-else-tagbody/go
   (bdd-typecase-expander obj clauses #'bdd-to-if-then-else-tagbody/go)
