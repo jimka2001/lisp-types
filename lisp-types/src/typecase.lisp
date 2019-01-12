@@ -152,23 +152,6 @@ There may be cases when a type specifier reduces to nil, in which case the
 compiler may issue warnings about removing unreachable code."
   (expand-disjoint-typecase obj clauses))
 
-(defun map-permutations (visit data)
-  "call the given unary VISITOR function once for each permutation of the given list DATA"
-  (declare (type list data)
-	   (type (function (list) t)))
-  (let ((N (length data)))
-    (labels ((next (so-far k)
-               (cond
-                 ((eql k N)
-                  (funcall visit (mapcar #'car so-far)))
-                 (t
-                  (incf k)
-                  (loop :for items :on data
-			:unless (member items so-far
-                                        :test #'eq)
-                          :do (next (cons items so-far) k))))))
-      (next nil 0))))
-
 (defmacro auto-permute-typecase (obj &body clauses
                                  &aux (*reduce-member-type* nil))
   "Syntactically similar to TYPECASE. Expands to a call to TYPECASE but
