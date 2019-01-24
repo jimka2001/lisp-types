@@ -26,24 +26,24 @@
 
 
 (define-test bdd-17/decompose-simple
-  (dolist (class-name '(sexp-graph bdd-graph))
-    (assert-false (decompose-by-graph-1 (list nil) :graph-class class-name))
-    (assert-false (decompose-by-graph-2 (list nil):graph-class class-name))
-    (assert-true  (decompose-by-graph-1 (list t) :graph-class class-name))
-    (assert-true  (decompose-by-graph-2 (list t) :graph-class class-name))))
+  (dolist (class-name '(sexp-tir-graph bdd-tir-graph))
+    (assert-false (decompose-by-graph-1 (list nil) :tir-graph-class class-name))
+    (assert-false (decompose-by-graph-2 (list nil):tir-graph-class class-name))
+    (assert-true  (decompose-by-graph-1 (list t) :tir-graph-class class-name))
+    (assert-true  (decompose-by-graph-2 (list t) :tir-graph-class class-name))))
 
 (define-test bdd-17/decompose-simple-2
-  (dolist (class-name '(sexp-graph bdd-graph))
-    (assert-true (decompose-by-graph-1 '(number integer) :graph-class class-name))
-    (assert-true (decompose-by-graph-2 '(number integer):graph-class class-name))
-    (assert-true (decompose-by-graph-1 '(number string) :graph-class class-name))
-    (assert-true (decompose-by-graph-2 '(number string) :graph-class class-name))))
+  (dolist (class-name '(sexp-tir-graph bdd-tir-graph))
+    (assert-true (decompose-by-graph-1 '(number integer) :tir-graph-class class-name))
+    (assert-true (decompose-by-graph-2 '(number integer):tir-graph-class class-name))
+    (assert-true (decompose-by-graph-1 '(number string) :tir-graph-class class-name))
+    (assert-true (decompose-by-graph-2 '(number string) :tir-graph-class class-name))))
 
 
 (define-test bdd-17/decompose-simple-3
-  (dolist (class-name '(sexp-graph bdd-graph))
-    (assert-true (decompose-by-graph-1 '(number integer string) :graph-class class-name))
-    (assert-true (decompose-by-graph-2 '(number integer string):graph-class class-name))
-    (assert-true (decompose-by-graph-1 '(number string integer vector) :graph-class class-name))
-    (assert-true (decompose-by-graph-2 '(number string integer vector) :graph-class class-name))))
+  (dolist (class-name '(sexp-tir-graph bdd-tir-graph))
+    (assert-true (decompose-by-graph-1 '(number integer string) :tir-graph-class class-name))
+    (assert-true (decompose-by-graph-2 '(number integer string) :tir-graph-class class-name))
+    (assert-true (decompose-by-graph-1 '(number string integer vector) :tir-graph-class class-name))
+    (assert-true (decompose-by-graph-2 '(number string integer vector) :tir-graph-class class-name))))
 

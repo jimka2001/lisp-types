@@ -95,4 +95,4 @@
 
 (defun mdtd-bdd-graph (type-specifiers &key ((:bdd-hash-strength *bdd-hash-strength*) :weak-dynamic)
 					 ((:subtypep *subtypep*) *subtypep*))
-  (decompose-by-graph-1 type-specifiers :graph-class 'bdd-graph))
+  (decompose-by-graph-1 type-specifiers :tir-graph-class 'bdd-tir-graph))
