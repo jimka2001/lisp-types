@@ -1,4 +1,4 @@
-;; Copyright (c) 2016 EPITA Research and Development Laboratory
+;; Copyright (c) 2016,2019 EPITA Research and Development Laboratory
 ;;
 ;; Permission is hereby granted, free of charge, to any person obtaining
 ;; a copy of this software and associated documentation
@@ -231,8 +231,20 @@
 (defvar *iteration* 0)
 (defvar *previous-dot* "/dev/null")
 (defun create-png (graph &key (disjoint-types nil) (message "")
-                   &aux (dot-file (format nil "/tmp/jnewton/graph/graph-~2,'0D.dot" (incf *iteration*)))
-                     (out (format nil "/tmp/jnewton/graph/graph-~2,'0D.png" *iteration*)))
+                   &aux (index (incf *iteration*))
+                     (dir-name (make-temp-dir "graph"))
+                     (dot-file (make-temp-file-name (format nil "graph-~2,'0D" index)
+                                                    :dir-name dir-name
+                                                    :extension "dot"))
+                     (out (make-temp-file-name (format nil "graph-~2,'0D" index)
+                                               :dir-name dir-name
+                                               :extension "png"))
+                     (hold (make-temp-file-name "graph"
+                                               :dir-name dir-name
+                                               :extension "png"))
+                     (previous (make-temp-file-name "graph-previous"
+                                               :dir-name dir-name
+                                               :extension "png")))
   (declare #+sbcl (notinline sort))
   (flet ((count-touches ()
            (/ (loop :for node :in graph
@@ -256,8 +268,8 @@
     (graph-to-dot graph dot-file)
     (run-program "dot" (list "-Tpng" dot-file
                              "-o" out))
-    (run-program "cp" (list "-f" "/tmp/jnewton/graph/graph.png" "/tmp/jnewton/graph/graph-previous.png"))
-    (run-program "cp" (list "-f" out "/tmp/jnewton/graph/graph.png"))
+    (run-program "cp" (list "-f" hold previous))
+    (run-program "cp" (list "-f" out hold))
     (format t "created ~A~%" out)
     (when (diff-files *previous-dot* dot-file)
       (y-or-n-p "continue nodes=~D, touches=~D, supers=~D?"
