@@ -228,25 +228,6 @@
         )))
 
 
-(defun diff-files (file1 file2)
-  (with-open-file (s1 file1 :direction :input :if-does-not-exist :error)
-    (with-open-file (s2 file2 :direction :input :if-does-not-exist :error)
-      (while t
-        (let ((c1 (read-char s1 nil s1))
-              (c2 (read-char s2 nil s2)))
-          (cond
-            ((and (eql c1 s1)
-                  (eql c2 s2))
-             ;; reached eof at same time
-             (return-from diff-files nil))
-            ((or (eql c1 s1)
-                 (eql c2 s2))
-             ;; one reached eof but other didnt
-             (return-from diff-files t))
-            ((not (eql c1 c2))
-             ;; read different character
-             (return-from diff-files t))))))))
-
 (defvar *iteration* 0)
 (defvar *previous-dot* "/dev/null")
 (defun create-png (graph &key (disjoint-types nil) (message "")
