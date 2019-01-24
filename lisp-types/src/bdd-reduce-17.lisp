@@ -29,7 +29,7 @@
 (defclass tir-node ()
   ((id :type unsigned-byte :reader id :initform (incf *tir-node-num*))
    (label :initarg :label :accessor label)
-   (touches :initform nil :type list :accessor touches)
+   (touches :initform (make-hash-table :test #'eq) :accessor touches)
    (subsets :initform nil :type list :accessor subsets)
    (supersets :initform nil :type list :accessor supersets)))
 
@@ -67,8 +67,8 @@
         :do (dolist (x->y (blue g))
               (destructuring-bind (x y) x->y
                 (break-relaxed-subset g x y)))
-        :do (dolist (xy (green g))
-              (destructuring-bind (x y) xy
+        :do (dolist (x--y (green g))
+              (destructuring-bind (x y) x--y
                 (break-touching g x y))))
   (remove-duplicates (remove nil (extract-disjoint g))
 		     :test #'equal))
@@ -90,8 +90,8 @@
         :do (dolist (x->y (blue g))
               (destructuring-bind (x y) x->y
                 (break-strict-subset g x y)))
-        :do (dolist (xy (green g))
-              (destructuring-bind (x y) xy
+        :do (dolist (x--y (green g))
+              (destructuring-bind (x y) x--y
                 (break-touching g x y)))
         :do (dolist (x->y (blue g))
               (destructuring-bind (x y) x->y
@@ -130,13 +130,19 @@
     (maybe-disjoint-tir-node g tir-node))
 
   g)
-  
+
+(defun empty-hash (hash)
+  (= 0 (hash-table-count hash)))
+
+(defun inhabited-hash (hash)
+  (/= 0 (hash-table-count hash)))
+
 (defun maybe-disjoint-tir-node (g tir-node)
   (declare (type tir-graph g) (type tir-node tir-node))
   (cond
     ((tir-node-empty-type tir-node)
      (setf (tir-nodes g) (remove tir-node (tir-nodes g) :test #'eq)))
-    ((null (or (touches tir-node)
+    ((null (or (inhabited-hash (touches tir-node))
                (supersets tir-node)
                (subsets tir-node)))
      (setf (tir-nodes g) (remove tir-node (tir-nodes g) :test #'eq))
@@ -151,14 +157,14 @@
 (defun add-green-line (g x y)
   (declare (type tir-graph g) (type tir-node x y))
   (pushnew (sort-tir-nodes x y) (green g) :test #'equal)
-  (pushnew x (touches y) :test #'eq)
-  (pushnew y (touches x) :test #'eq))
+  (setf (gethash x (touches y)) t
+        (gethash y (touches x)) t))
 
 (defun delete-green-line (g x y)
   (declare (type tir-graph g) (type tir-node x y))
-  (setf (green g)   (remove (sort-tir-nodes x y) (green g) :test #'equal)
-        (touches y) (remove x (touches y) :test #'eq)
-        (touches x) (remove y (touches x) :test #'eq))
+  (setf (green g)   (remove (sort-tir-nodes x y) (green g) :test #'equal))
+  (remhash x (touches y))
+  (remhash y (touches x))
   (maybe-disjoint-tir-node g x)
   (maybe-disjoint-tir-node g y))
 
@@ -182,7 +188,7 @@
      nil)
     ((subsets sub)
      nil)
-    ((touches sub)
+    ((inhabited-hash (touches sub))
      nil)
     (t
      (setf (label super) (tir-node-and-not super sub))
@@ -197,37 +203,54 @@
          nil)
         (t
          (setf (label super) (tir-node-and-not super sub))
-         (dolist (alpha (intersection (touches sub) (subsets super) :test #'eq))
-           (add-green-line g alpha super)
-           (delete-blue-arrow g alpha super))
+         (dolist (alpha (subsets super))
+           ;; intersection (touches sub) (subsets super)
+           (when (gethash alpha (touches sub))
+             (add-green-line g alpha super)
+             (delete-blue-arrow g alpha super)))
          (delete-blue-arrow g sub super)))
   g)
+
+
 
 (defun break-touching (g x y)
   (declare (type tir-graph g) (type tir-node x y))
   (cond
-    ((null (member y (touches x) :test #'eq))
+    ((null (gethash y (touches x)))
      nil)
     ((subsets x)
      nil)
     ((subsets y)
      nil)
     (t
-     (let ((z (add-tir-node g (tir-node-and x y))))
-       (psetf (label x) (tir-node-and-not x y)
-              (label y) (tir-node-and-not y x))
-       (dolist (alpha (union (supersets x) (supersets y) :test #'eq))
-         (add-blue-arrow g z alpha))
-       (dolist (alpha (intersection (touches x) (touches y) :test #'eq))
-         (add-green-line g z alpha))
-       (maybe-disjoint-tir-node g z))
+     (flet ((maphash-intersection (function-designator hash1 hash2)
+              (declare (type hash-table hash1 hash2)
+                       (type (function (t) t) function-designator))
+              (when (< (hash-table-count hash1)
+                       (hash-table-count hash2))
+                (rotatef hash1 hash2))
+              (maphash (lambda (key _)
+                         (declare (ignore _))
+                         (when (gethash key hash2)
+                           (funcall function-designator key)))
+                       hash1)))
+       (let ((z (add-tir-node g (tir-node-and x y))))
+         (psetf (label x) (tir-node-and-not x y)
+                (label y) (tir-node-and-not y x))
+         (dolist (alpha (union (supersets x) (supersets y) :test #'eq))
+           (add-blue-arrow g z alpha))
+         (maphash-intersection (lambda (alpha)
+                                 (add-green-line g z alpha))
+                               (touches x)
+                               (touches y))
+         (maybe-disjoint-tir-node g z)))
      (delete-green-line g x y)))
   g)
        
 (defun break-loop  (g x y)
   (declare (type tir-graph g) (type tir-node x y))
   (cond
-    ((null (member y (touches x) :test #'eq))
+    ((null (gethash y (touches x)))
      nil)
     ((subsets x)
      nil)
@@ -236,8 +259,10 @@
     (t
      (let ((z (add-tir-node g (tir-node-and x y))))
        (setf (label x) (tir-node-and-not x y))
-       (dolist (alpha (touches x))
-         (add-green-line g z alpha))
+       (maphash (lambda (alpha _)
+                  (declare (ignore _))
+                  (add-green-line g z alpha))
+                (touches x))
        (dolist (alpha (union (supersets x) (supersets y) :test #'eq))
          (add-blue-arrow g z alpha))
        (add-blue-arrow g z y)
