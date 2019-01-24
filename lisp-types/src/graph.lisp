@@ -31,15 +31,6 @@
 	(push sym all-types)))
     all-types))
 
-(defun find-duplicates (data &key (test #'eql) (key #'identity))
-  (remove-duplicates
-   (mapcon (lambda (tail &aux (item (car tail)))
-	      (when (member item (cdr tail) :test test :key key)
-		(list item)))
-	    data)
-   :test test
-   :key key))
-
 (deftype type-option ()
   '(cons t null))
 

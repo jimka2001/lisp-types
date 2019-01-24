@@ -73,10 +73,6 @@
       (values data
 	      (length data)))))
 
-(define-test types/find-duplicates
-  (assert-true (equal '(a b) (lisp-types::find-duplicates '(a b a b)))))
-
-
 
 (define-test types/graph2
   (declare (notinline set-difference))
