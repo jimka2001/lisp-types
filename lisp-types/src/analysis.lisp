@@ -25,16 +25,6 @@
 (defparameter *decomposition-function-descriptors* nil)
 (defparameter *decomposition-functions* nil)
 
-(defun locate-symbol (name)
-  "Return a list of symbols which is a collection of symbols from all packages which have the given symbol-name"
-  (let (symbols)
-    (dolist (p (list-all-packages))
-      (do-symbols (s p)
-        (when (and (symbol-name s)
-                   (string= name (symbol-name s)))
-          (pushnew s symbols))))
-    symbols))
-
 (defun valid-subtypes (super &key (test (lambda (t1 t2)
                                          (and (subtypep-wrapper t1 t2)
                                               (subtypep-wrapper t2 t1)))))
