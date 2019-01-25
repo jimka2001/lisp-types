@@ -1164,13 +1164,6 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
 				       :logx t)))
 			  :logx t))))))
 
-(defun empty-file-p (fname)
-  (with-open-file (stream fname :direction :input
-                                :element-type 'unsigned-byte
-                                :if-does-not-exist nil)
-    (and stream
-	 (zerop (file-length stream)))))
-
 (defun create-gnu-profile-scatter-plot (hash gnu-name &key smooth (comment "") summary decompose top-names create-png-p)
   (with-open-file (gnu gnu-name
                        :direction :output
