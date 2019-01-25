@@ -228,10 +228,6 @@ else in the list.  If the list contains two elements which specify the
 same type, only one of them is removed, unless it is a supertype of
 something else in the list in which case both are removed.
 
-* `valid-type-p` -- Predicate to determine whether the given object is
-a valid type specifier.
-
-    
 
 ## Code Examples
 

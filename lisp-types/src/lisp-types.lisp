@@ -79,17 +79,6 @@ is supressed if this situation has happened already and memoized into
   `(destructuring-bind ,destructuring-lambda-list (multiple-value-list ,form)
      ,@body))
 
-(defun valid-type-p (type-designator)
-  "Predicate to determine whether the given object is a valid type specifier."
-  #+sbcl (handler-case (and (SB-EXT:VALID-TYPE-SPECIFIER-P type-designator)
-                            (not (eq type-designator 'cl:*)))
-           (SB-KERNEL::PARSE-UNKNOWN-TYPE (c) (declare (ignore c)) nil))
-  #+(or clisp  allegro) (ignore-errors (subtypep type-designator t))
-  #-(or sbcl clisp allegro) (error "VALID-TYEP-P not implemented for ~A" (lisp-implementation-type))
-)
-
-;;(assert (not (valid-type-p (gensym))))
-;;(assert (valid-type-p 'bignum))
 
 (defvar *reduce-member-type* t)
 
