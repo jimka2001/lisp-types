@@ -36,8 +36,8 @@
       (recure bdd)
       labels)))
 
-(defmacro remfq (obj place)
-  `(setf ,place (remove ,obj ,place :test #'eq)))
+(defun bdd-graph-to-dot (graph out)
+  (declare (type list graph))
 
 (defun parameterized-mdtd-bdd-graph (type-specifiers
                                        &key
