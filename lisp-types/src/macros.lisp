@@ -21,17 +21,5 @@
 
 (in-package   :lisp-types)
 
-(defmacro prog1-let ((var expr) &body body)
-  `(let ((,var ,expr))
-     ,@body
-     ,var))
 
-(defmacro exists-tail (var list &body body)
-  (let ((name (gensym)))
-    `(block ,name
-       (mapl #'(lambda (,var)
-		 (when (progn ,@body)
-		   (return-from ,name ,var)))
-	     ,list)
-       nil)))
 
