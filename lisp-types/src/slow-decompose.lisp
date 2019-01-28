@@ -36,8 +36,72 @@
       (recure bdd)
       labels)))
 
-(defmacro remfq (obj place)
-  `(setf ,place (remove ,obj ,place :test #'eq)))
+(defun bdd-graph-to-dot (graph out)
+  (declare (type list graph))
+  "graph is a list of nodes.  each node is a plist with the slots:
+:BDD - a bdd
+:SUPER-TYPES - list of node-plist
+:SUB-TYPES - list of node-plist
+:TOUCHES - list of node-plist
+:ID - unsigned-byte
+:REMOVED - boolean"
+  (typecase out
+    (string
+     (let ((pathname (pathname out)))
+       (cond ((string= "dot" (pathname-type pathname))
+              (with-open-file (stream out :direction :output :if-exists :supersede :if-does-not-exist :create)
+                (bdd-graph-to-dot graph stream)))
+             ((string= "png" (pathname-type pathname))
+              (let ((dot-path (merge-pathnames (make-pathname :type "dot") pathname)))
+                (bdd-graph-to-dot graph (namestring dot-path))
+                (run-program *dot-path* (list "-Tpng" (namestring dot-path)
+                                         "-o" out))))))
+     out)
+    ((eql t)
+     (bdd-graph-to-dot graph *standard-output*))
+    (null
+     (with-output-to-string (str)
+       (bdd-graph-to-dot graph str)))
+    (stream
+     (labels ((dnf (node)
+                (bdd-to-dnf (getf node :bdd)))
+              (print-head ()
+                (print-comments)
+                (format out "digraph G {~%")
+                (format out "  rankdir=BT ;~%"))
+              (print-foot ()
+                (format out "}~%"))
+              (print-comments ()
+                (dolist (node graph)
+                  (format out "// ~D " (getf node :id))
+                  (write (dnf node) :stream out :pretty nil)
+                  (format out "~%")))
+              (print-node-defs ()
+                (dolist (node graph)
+                  (format out "  ~D ; // " (getf node :id))
+                  (write (dnf node) :stream out :pretty nil)
+                  (terpri out)))
+              (print-touching ()
+                (format out "  subgraph Rel1 {~%")
+                (format out "    edge [dir=none, color=green]~%")
+                (dolist (node graph)
+                  (dolist (touch (getf node :touches))
+                    ;; avoid connecting A->B and B-> A
+                    (when (< (getf node :id) (getf touch :id))
+                      (format out "    ~D -> ~D~%" (getf node :id) (getf touch :id)))))
+                (format out "}~%"))
+              (print-sub-super ()
+                (format out "  subgraph Rel2 {~%")
+                (format out "    edge [color=blue]~%")
+                (dolist (node graph)
+                  (dolist (super (getf node :super-types))
+                    (format out "    ~D -> ~D~%" (getf node :id) (getf super :id))))
+                (format out "}~%")))
+       (print-head)
+       (print-node-defs)
+       (print-touching)
+       (print-sub-super)
+       (print-foot)))))
 
 (defun parameterized-mdtd-bdd-graph (type-specifiers
                                        &key

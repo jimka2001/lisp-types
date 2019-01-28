@@ -373,3 +373,6 @@
   (ltbdd-with-new-hash ()
     (construct-tir-graph g u)
     (call-next-method)))
+
+(defun mdtd-graph (type-specifiers &key &allow-other-keys)
+  (decompose-by-graph-1 type-specifiers :tir-graph-class 'sexp-tir-graph))

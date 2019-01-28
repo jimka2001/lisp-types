@@ -63,27 +63,6 @@ dynamic extend of WITH-SUBTYPEP-CACHE"
       (rec data)
       data)))
 
-(defun read-subtypep-data ()
-  (with-open-file (stream "/Users/jnewton/subtypep.lisp"
-                          :direction :input)
-    (let ((EOF '(EOF))
-          (items 3000)
-          data)
-      (loop :while (and (plusp items)
-                        (not (eq EOF (setf data (read stream nil EOF)))))
-            :do (decf items)
-            :collect (reduce-repetitions data)))))
-
-(defun time-subtypep ()
-  (let ((pairs (read-subtypep-data)))
-    (format t "starting timing~%")
-    (let ((start-time (get-internal-real-time)))
-      (dolist (pair pairs)
-        (apply #'subtypep-wrapper pair))
-      (let ((stop-time (get-internal-real-time)))
-        (float (/ (- stop-time start-time)
-                  internal-time-units-per-second))))))
-
 (defun count-1-bits (n &aux (bits 0))
   (declare (optimize (speed 3) (debug 0))
            (type (and unsigned-byte fixnum) bits)
