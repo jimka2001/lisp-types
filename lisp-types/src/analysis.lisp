@@ -281,7 +281,10 @@
             (time-out
              (format t "timed-out: ~D~%" time-out)
              (format t "given: ~D~%" (length types))
-             (let ((*package* (find-package "KEYWORD")))
+             ;; binding *package* to the CL package will try to minimize the amount
+             ;;   of text printed to the log file.  Otherwise we get stuff like
+             ;;   COMMON-LISP:NIL COMMON-LISP:STRING COMMON-LISP:NUMBER ...
+             (let ((*package* (find-package "CL")))
                (format t "given: ~S~%" types))
              ;; :known = number of elements of types X types for which A<B is known
              ;; :unknown = number of elements of types X types for which A<B is unknown
