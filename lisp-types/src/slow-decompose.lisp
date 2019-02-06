@@ -188,7 +188,7 @@
                        (format html "<li> ~D ~A~%" (getf node :id) (node-to-dnf node)))
                      (format html "</ul>~%")
                      (format html "<p><img src=~S><p>~%" png-file)
-                     (lisp-types::bdd-graph-to-dot graph png-file)
+                     (bdd-graph-to-dot graph png-file)
                      (format html "expression: <pre>~A</pre>~%<p>" (bdd-to-dnf graph-bdd))
                      (when graph
                        (format html "Graph Nodes:<br><ul>~%")
