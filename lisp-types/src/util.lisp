@@ -63,21 +63,6 @@ dynamic extend of WITH-SUBTYPEP-CACHE"
       (rec data)
       data)))
 
-(defun count-1-bits (n &aux (bits 0))
-  (declare (optimize (speed 3) (debug 0))
-           (type (and unsigned-byte fixnum) bits)
-           (type unsigned-byte n))
-  (while (plusp n)
-    (when (oddp n)
-      (incf bits))
-    (setf n (ash n -1)))
-  bits)
-
-(defun count-bit-diffs (a b)
-  (declare (type unsigned-byte a b) ; warning maybe bignums
-           (optimize (speed 3) (debug 0)))
-  (count-1-bits (boole boole-xor a b)))
-
 (defun grey-sort (integers)
   "given a list integers (which may be fixnum or bignum or a mix of the two), 
  put them into an order which makes it likely that adjacent 
