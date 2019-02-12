@@ -449,10 +449,6 @@
                           (incf c))))
     c))
 
-(defvar *gnuplot* (if (probe-file "/opt/local/bin/gnuplot")
-		      "/opt/local/bin/gnuplot"
-		      "gnuplot"))
-
 (defun create-gnuplot (sorted-file gnuplot-file png-filename normalize hilite-min include-decompose key create-png-p comment)
   (declare (type (member :smooth :xys) key)
            (type (or list (and symbol (satisfies symbol-function))) include-decompose))
@@ -619,7 +615,7 @@
 
     (when (and create-png-p
                (plusp min-num-points))
-      (run-program *gnuplot* (list gnuplot-file)
+      (run-program *gnuplot-path* (list gnuplot-file)
                    :output png-filename
                    :error *error-output*
                    :if-output-exists :supersede))))
@@ -1209,7 +1205,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
     (let* ((gnu-file (change-extension gnu-name "png"))
            (#+sbcl process
 	    #+allegro exit-status
-	    (run-program *gnuplot* (list gnu-name)
+	    (run-program *gnuplot-path* (list gnu-name)
 				 :wait t
 				 ;; TODO not sure whether allegro understands these options
                                  :output gnu-file
