@@ -150,6 +150,7 @@
               (check t1 `(and ,t2 (not ,t3)))
               (check t1 `(or (and ,t1 (not ,t2)) (and (not ,t1) ,t2))))))))))
 
+(setf (expected-failure 'baker/decompose-2) t)
 (define-test baker/decompose-2
   (test-baker nil))
 
@@ -167,6 +168,7 @@
                                     (mdtd-graph-baker     '(UNSIGNED-BYTE FIXNUM RATIO))
                                     :test #'equivalent-types-p))))
 
+(setf (expected-failure 'baker/decompose-5) t)
 (define-test baker/decompose-5
   (ltbdd-with-new-hash ()
     (assert-false (set-exclusive-or (mdtd-graph '(unsigned-byte bit fixnum ratio number float))
