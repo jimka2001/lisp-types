@@ -305,46 +305,6 @@ symbol _ somewhere (recursively)."
 	  (push element false-elements)))
     (values true-elements false-elements)))
 
-(defun cmp-objects (a b)
-  (cond ((equal a b)
-	 t)
-	((null a)
-	 t)
-	((null b)
-	 nil)
-	((not (eql (class-of a) (class-of b)))
-	 (cond 
-	   ((and (atom a) (listp b))
-	    t)
-	   ((and (listp a) (atom b))
-	    nil)
-	   (t
-	    (cmp-objects (class-name (class-of a)) (class-name (class-of b))))))
-        (t
-         (typecase a
-           (symbol
-            (if (equal (symbol-package a) (symbol-package b))
-                (string<= a b)
-                (cmp-objects (symbol-package a)
-                             (symbol-package b))))
-           (string
-            (string<= a b))
-           (number
-            (<= a b))
-           (character
-            (char<= a b))
-           (package
-            (cmp-objects (package-name a)
-                         (package-name b)))
-           (list
-            ;; compare the first two elements which are not equal
-            (while (equal (car a) (car b))
-              (pop a)
-              (pop b))
-            (cmp-objects (car a) (car b)))
-           (t
-            (error "cannot compare ~A ~A with ~A ~A" (class-of a) a (class-of b) b))))))
-
 (defun alphabetize (patterns)
   "descructively sort a list of patterns into a canonical order."
   (declare (type list patterns))
