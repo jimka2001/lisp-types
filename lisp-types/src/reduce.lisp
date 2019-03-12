@@ -519,7 +519,7 @@ a call to subtypep or friends."
 	      (cons 'eql (cdr type)))
 	     (t ;; (member) --> nil
 	      nil)))
-      ((setq it (reducable-compound? type))
+      ((setf it (reducable-compound? type))
        (setf type (remove-trailing-*s type))
        ;; reduce 'type' arguments
        (let ((tail type))
@@ -705,7 +705,7 @@ a call to subtypep or friends."
 		   (declare #+sbcl (notinline union)
 			    #+sbcl (notinline set-difference))
 		   (dolist (not-match (cdr not-matches))
-		     (setq not-common (union not-common (cdr (cadr not-match)))))
+		     (setf not-common (union not-common (cdr (cadr not-match)))))
 		   `(and (not (member ,@not-common))
 			 ,@others))))
 	      ;;      (and fixnum (not (member 1 2 a b)))
@@ -742,7 +742,7 @@ a call to subtypep or friends."
               ((and full
                     (exists t1 operands
                       (exists t2 operands
-                        (and (setq remove-me t2)
+                        (and (setf remove-me t2)
                              (not (eq t1 t2))
                              (smarter-subtypep t1 t2)))))
                ;; we have already removed duplicates (EQUAL) so removing supertypes is safe
@@ -850,7 +850,7 @@ a call to subtypep or friends."
 	       t)
               ((and full (exists t1 operands
 			   (exists t2 operands
-			     (and (setq remove-me t1)
+			     (and (setf remove-me t1)
 				  (not (eq t1 t2))
 				  (smarter-subtypep t1 t2)))))
                ;; we have already removed duplicates (EQUAL) so removing subtypes is safe

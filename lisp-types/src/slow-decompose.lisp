@@ -403,7 +403,7 @@
                                (t ;; touching
                                 (touch! node1 node2))))))
         
-        (setq graph (funcall sort-nodes graph))
+        (setf graph (funcall sort-nodes graph))
         
         (incf changed)
         #+:bdd-debug (dot "given")
