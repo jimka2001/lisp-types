@@ -236,11 +236,11 @@ to each node using the given LABEL and SEARCH."
                   (calc-constraints (bdd-positive bdd))
                   (calc-constraints (bdd-negative bdd))))))
       (calc-constraints bdd)
-      ;; constraints is a hash table mapping BEFORE to a list of BDDS which which BEFORE must preceed in the sorted list.
+      ;; constraints is a hash table mapping BEFORE to a list of BDDS which BEFORE must preceed in the sorted list.
 
       (let* ((nodes (topological-sort (let (collected)
-                                        (maphash (lambda (key value)
-                                                   (push (cons key value) collected)) constraints)
+                                        (maphash (lambda (before-key after-values)
+                                                   (push (cons before-key after-values) collected)) constraints)
                                         collected) :test #'eq))
              (name-map (mapcar (lambda (node)
                                  (list node (gensym "N")))
