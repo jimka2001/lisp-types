@@ -113,6 +113,12 @@
            (or? (obj)
              (and (consp obj)
                   (eq 'or (car obj))))
+           (member-or-eql? (obj)
+             (and (consp obj)
+                  (member (car obj) '(member eql))))
+           (not-member-or-eql? (obj)
+             (and (not? obj)
+                  (member-or-eql? (cadr obj))))
            (not? (obj)
              (and (consp obj)
                   (eq 'not (car obj))))
@@ -152,26 +158,28 @@
                           t ; zero
                           (remove-supers operands))))
            (do-and (dnf-a dnf-b)
-	     ;; dnf-a and dnf-b are type specifiers in dnf form.
-	     ;; this means they are not in an invalid form, so we don't
-	     ;; have to worry about cases like
-	     ;;   (not (or ..))
-	     ;;   (not (and ..))
-	     ;;   (and (or ...))
-	     ;;   (and (and ...))
-	     ;;   (or (or ...))
-	     ;; There are 6x6=36 cases, many of the duplicates
-	     ;;   dnf-a or dnf-b may be
+             ;; dnf-a and dnf-b are type specifiers in dnf form.
+             ;; this means they are not in an invalid form, so we don't
+             ;; have to worry about cases like
+             ;;   (not (or ..))
+             ;;   (not (and ..))
+             ;;   (and (or ...))
+             ;;   (and (and ...))
+             ;;   (or (or ...))
+             ;; There are 8x8=64 cases, many of the duplicates
+             ;;   dnf-a or dnf-b may be
 
-	     ;;   (and a b)   | t  nil  (or) (and) (not) (other)
-	     ;;   ------------+---+----+----+-----+-----+------
-	     ;;   t           | 3   2     3    3     3     3
-	     ;;   nil         | 1   1     1    1     1     1
-	     ;;   (or  ...)   | 4   2     9    8    10    10
-	     ;;   (and ...)   | 4   2     6    5     7     7
-	     ;;   (not ...)   | 4   2    11   11    11    11
-	     ;;   other       | 4   2    11   11    11    11
-	     ;;
+             ;;   (and a b)      | t  nil  (or) (and) (not) (member) (not (member) (other)
+             ;;   ---------------+---+----+----+-----+-----+--------+-------------+------
+             ;;   t              | 3   2     3    3     3    3         3             3
+             ;;   nil            | 1   1     1    1     1    1         1             1
+             ;;   (or  ...)      | 4   2     9    8    10    10        10           10
+             ;;   (and ...)      | 4   2     6    5     7    7         7             7
+             ;;   (not ...)      | 4   2    11   11    11    12        13            11
+             ;;   (member ...)   | 4   2    12   12    12    12        12            12
+             ;;   (not (member)) | 4   2    13   13    13    13        13            13
+             ;;   other          | 4   2    11   11    11    12        13            11
+             ;;
              (cond ((eq dnf-a nil) ; case 1
                     nil)
                    ((eq dnf-b nil) ; case 2
@@ -189,16 +197,33 @@
                           (t  ; case 7
                            (do-and dnf-a (list 'and dnf-b)))))
                    ((or? dnf-a)
-                    (cond ((and? dnf-b) ; 8
+                    (cond ((and? dnf-b) ; case 8
                            (make-or (loop :for x :in (cdr dnf-a)
                                           :collect (do-and x dnf-b))))
-                          ((or? dnf-b)  ; 9
+                          ((or? dnf-b)  ; case 9
                            (make-or (loop :for x :in (cdr dnf-a)
                                           :nconc (loop :for y :in (cdr dnf-b)
                                                        :collect (do-and x y)))))
-                          (t ; 10
+                          (t ; case 10
                            (do-and dnf-a (list 'and dnf-b)))))
-                   (t ;; 11
+                   ((and *reduce-member-type* (member-or-eql? dnf-a))
+                    ;; case 12
+                    (make-member (setof item (cdr dnf-a)
+                                   (typep item dnf-b))))
+                   ((and *reduce-member-type* (member-or-eql? dnf-b))
+                    ;; case 12
+                    (do-and dnf-b dnf-a))
+                   ((and *reduce-member-type* (not-member-or-eql? dnf-a))
+                    ;; case 13
+                    (destructuring-bind (_not (_member &rest items)) dnf-a
+                      (declare (ignore _not _member))
+                      (let ((filtered (setof item items (typep item dnf-b))))
+                        (make-and (list `(not ,(make-member filtered))
+                                        dnf-b)))))
+                   ((and *reduce-member-type* (not-member-or-eql? dnf-b))
+                    ;; case 13
+                    (do-and dnf-b dnf-a))
+                   (t ;; case 11
                     (do-and (list 'and dnf-a) dnf-b))))
            (do-or (dnf-a dnf-b)
              ;; The do-and and do-or functions are not duals, becasue
@@ -207,14 +232,16 @@
              ;; (and (or ...) ...) is not.
 	     ;; Also (not (and)) and (not (or)) don't appear.
 	     ;;
-	     ;;   (or a b)    | t  nil  (or) (and) (not) (other)
-	     ;;   ------------+---+----+----+-----+-----+------
-	     ;;   t           | 1   1    1     1     1     1
-	     ;;   nil         | 2   3    3     3     3     3
-	     ;;   (or  ...)   | 2   4    7     8     8     8
-	     ;;   (and ...)   | 2   4    5     6     6     6
-	     ;;   (not ...)   | 2   4    9    10    10    10
-	     ;;   other       | 2   4    9    10    10    10
+	     ;;   (or a b)          | t  nil  (or) (and) (not) (member) (not (member)) (other)
+	     ;;   ------------------+---+----+----+-----+-----------------------------+------
+	     ;;   t                 | 1   1    1     1     1     1        1              1
+	     ;;   nil               | 2   3    3     3     3     3        3              3
+	     ;;   (or  ...)         | 2   4    7     8     8     8        8              8
+	     ;;   (and ...)         | 2   4    5     6     6     6        6              6
+	     ;;   (not ...)         | 2   4    9    10    10    11       12             10
+             ;;   (member ..)       | 2   4    9    11    11    11       11             11
+             ;;   (not (member ..)) | 2   4    9    10    12    11       12             12
+	     ;;   other             | 2   4    9    10    10    11       12             10
              (cond ((eq dnf-a t) ; case 1
                     t)
                    ((eq dnf-b t) ; case 2
@@ -229,10 +256,28 @@
                           (t ; case 6
                            (make-or (list dnf-a dnf-b)))))
                    ((or? dnf-a)
-                    (cond ((or? dnf-b) ; 7
+                    (cond ((or? dnf-b) ; case 7
                            (make-or (append (cdr dnf-a) (cdr dnf-b))))
-                          (t ; 8
+                          (t ; case 8
                            (do-or dnf-a (list 'or dnf-b)))))
+                   ((and *reduce-member-type* (member-or-eql? dnf-a))
+                    ;; case 11
+                    (let ((filtered (setof item (cdr dnf-a)
+                                      (not (typep item dnf-b)))))
+                      (make-or (list (make-member filtered) dnf-b))))
+                   ((and *reduce-member-type* (member-or-eql? dnf-b))
+                    ;; case 11
+                    (do-or dnf-b dnf-a))
+                   ((and *reduce-member-type* (not-member-or-eql? dnf-a))
+                    ;; case 12
+                    (destructuring-bind (_not (_member &rest items)) dnf-a
+                      (declare (ignore _not _member))
+                      (let ((filtered (setof item items
+                                        (not (typep item dnf-b)))))
+                        `(not ,(make-member filtered)))))
+                   ((and *reduce-member-type* (not-member-or-eql? dnf-b))
+                    ;; case 12
+                    (do-or dnf-b dnf-a))
                    (t
                     (cond ((or? dnf-b) ; case 9
                            (do-or (list 'or dnf-a) dnf-b))
@@ -251,6 +296,7 @@
                     (cadr dnf-a))
                    (t
                     (list 'not dnf-a)))))
+
     (cond
       ((and? type)
        (reduce #'do-and (mapcar #'type-to-dnf-bottom-up (cdr type))

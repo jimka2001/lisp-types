@@ -169,7 +169,23 @@
   (assert-true (type-to-dnf-bottom-up '(not (not (or (not (or string (not string)))
                                                   (not (and string (not string))))))))
 
-
+  (assert-true (equal '(member t nil) (type-to-dnf-bottom-up '(and (not keyword) (member t nil)))))
+  (assert-true (equal '(member t nil) (type-to-dnf-bottom-up '(and (member t nil) (not keyword)))))
+  (assert-true (equal '(and (not (member 2 4)) (satisfies evenp))
+                      (type-to-dnf-bottom-up '(and (not (member 1 2 3 4)) (satisfies evenp)))))
+  (assert-true (equal '(and (not (member 2 4)) (satisfies evenp))
+                      (type-to-dnf-bottom-up '(and (satisfies evenp) (not (member 1 2 3 4))))))
+  (assert-true (equal 'string
+                      (type-to-dnf-bottom-up '(and (not (member 1 2 3 4)) string))))
+  (assert-true (equal '(not (member :x :y))
+                      (type-to-dnf-bottom-up '(or (not (member 1 2 :x :y)) number))))
+  (assert-true (equal '(not (member :x :y))
+                      (type-to-dnf-bottom-up '(or number (not (member 1 2 :x :y))))))
+  (assert-true (equal '(or (member :x :y) number)
+                      (type-to-dnf-bottom-up '(or (member 1 2 :x :y) number))))
+  (assert-true (equal '(or (member :x :y) number)
+                      (type-to-dnf-bottom-up '(or number (member 1 2 :x :y)))))
+  
   
 
   )
