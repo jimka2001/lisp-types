@@ -162,6 +162,15 @@
       (dolist (t1 *testing-types*)
         (dolist (t2 *testing-types*)
           (labels ((check2 (t1 t2)
+                     (unless (equal-n (equiv-control t1 t2)
+                                      (equiv-cl t1 t2)
+                                      (equiv-baker t1 t2))
+
+                       (warn "expecting equivalence check to be the same using cl:subtypep and baker:subtypep~%   t1=~A~%   t2=~A" t1 t2)
+                       (warn "cl:subtypep thinks they ~A equivalent."
+                             (if (equiv-cl t1 t2) "ARE" "are NOT"))
+                       (warn "baker:subtypep thinks they ~A equivalent"
+                             (if (equiv-baker t1 t2) "ARE" "are NOT")))
                      (assert-true (equal-n (equiv-control t1 t2)
                                            (equiv-cl t1 t2)
                                            (equiv-baker t1 t2)))
