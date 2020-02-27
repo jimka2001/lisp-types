@@ -1,4 +1,4 @@
-;; Copyright (c) 2018,2020 EPITA Research and Development Laboratory
+;; Copyright (c) 2016-18 EPITA Research and Development Laboratory
 ;;
 ;; Permission is hereby granted, free of charge, to any person obtaining
 ;; a copy of this software and associated documentation
@@ -19,29 +19,28 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+#-:sbtypep-debug
+(defpackage :FR.EPITA.LRDE.SUBTYPEP
+  (:nicknames :baker)
+  (:export
+   "BAKER-SUBTYPEP"
+   "SUBTYPEP"
+))
 
-(asdf:defsystem :lisp-types-baker-analysis
-  :version (:read-file-form "../version.lisp")
-  :author "Jim Newton"
-  :description "Extension of lisp-types-analysis and lisp-types-analysis-test for testing the baker subtypep algorithm"
-  :license "MIT"
-  :depends-on (:lisp-types
-	       :cl-robdd
-	       :cl-robdd-test
-	       :cl-robdd-analysis-test
-	       :lisp-types-analysis
-	       :lisp-types-test
-               ;; in order to test using fr.epita.lrde.subtypep, you need to
-               ;;   push :subtypep-debug onto *feature* before loading
-               ;;   this system.
-               (:feature :subtypep-debug :fr.epita.lrde.subtypep)
-	       :adjuvant
-	       :scrutiny)
-  :components
-  ((:module "src"
-    :components
-    ((:file "baker-work-around")
-     (:file "lisp-types-baker-analysis-package")
-     (:file "analysis-baker")
-     (:file "test-baker")
-     ))))
+;; some necessary symbols
+#-:sbtypep-debug
+'( baker::baker-subtypep
+	       baker::numeric-types->ranges
+	       baker::split-type
+	       baker::recursively-expand-type
+	       baker::literal-type-null?
+	       baker::type-keep-if
+	       baker::type/map-atomic-types)
+
+#-:sbtypep-debug
+(defun FR.EPITA.LRDE.SUBTYPEP::BAKER-SUBTYPEP (sub super)
+  (cl:subtypep sub super))
+
+#-:sbtypep-debug
+(defun FR.EPITA.LRDE.SUBTYPEP::SUBTYPEP (sub super)
+  (cl:subtypep sub super))
