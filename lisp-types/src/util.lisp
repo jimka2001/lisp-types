@@ -90,3 +90,12 @@ dynamic extend of WITH-SUBTYPEP-CACHE"
             (list hh mm ss)
             (format nil "~D:~D:~D" hh mm ss)))))
 
+(defun lazy-val (thunk)
+  (let ((done nil)
+        value)
+    (lambda ()
+      (if done
+          value
+          (progn (setq done t)
+                 (setq value (funcall thunk)))))))
+                 
