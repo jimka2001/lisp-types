@@ -1941,9 +1941,10 @@ sleeping before the code finishes evaluating."
 
 (defun rebuild-analysis (&key (destination-dir *destination-dir*) (autogen-dir *autogen-dir*))
   (rebuild-plots :destination-dir destination-dir :create-png-p t)
-  (generate-latex-plots :analysis-dir destination-dir
-			:gen-samples nil
-		 	:autogen-dir autogen-dir)
+  ;; TODO, the following seems to be broken for the moment because of missing files.
+  ;;(generate-latex-plots :analysis-dir destination-dir
+	;;		:gen-samples nil
+	;;	 	:autogen-dir autogen-dir)
   (gen-parameters-summary-tabular :destination-dir destination-dir :autogen-dir autogen-dir)
   (gen-mdtd-profile-single-figures :destination-dir destination-dir :autogen-dir autogen-dir)
 )
