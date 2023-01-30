@@ -1624,6 +1624,7 @@ sleeping before the code finishes evaluating."
                                         (suite-time-out (* 60 60 4)) (time-out 100) normalize hilite-min
                                         (decomposition-functions '(
 								   mdtd-baseline
+                                                                   mdtd-padl
 								   mdtd-bdd 
 
 								   mdtd-rtev2 
@@ -1681,6 +1682,7 @@ sleeping before the code finishes evaluating."
                                               ;;mdtd-bdd-strong
                                               ;;mdtd-bdd-weak
                                               mdtd-bdd ;; same as mdtd-bdd-weak-dynamic
+                                              mdtd-padl
                                               mdtd-rtev2
                                               mdtd-graph)))
 

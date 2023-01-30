@@ -141,6 +141,7 @@
 			  (cons 'local-minimum *decompose-fun-parameterized-names*)))))
 
 (define-mdtd-function :names 'mdtd-baseline :max-num-types 15)
+(define-mdtd-function :names 'mdtd-padl)
 (define-mdtd-function :names 'mdtd-rtev2)
 (define-mdtd-function :names 'mdtd-sat)
 (define-mdtd-function :names 'mdtd-graph)

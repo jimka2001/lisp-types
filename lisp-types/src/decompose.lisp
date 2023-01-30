@@ -86,3 +86,41 @@ is simple programmatically, but known to be poorly performing, in most cases."
   (caching-types
     (slow-mdtd-baseline type-specifiers)))
 
+(defun mdtd-padl (type-specifiers)
+  (caching-types
+    (slow-mdtd-padl type-specifiers)))
+
+(defun slow-mdtd-padl (type-specifiers)
+  (declare (type list type-specifiers))
+  (labels ((cons-unique (e data)
+             (if (member e data :test #'equal)
+                 data
+                 (cons e data)))
+           (expand-1 (mu nu f d)
+             (let ((t1 (reduce-lisp-type `(and ,mu ,nu)))
+                   (t2 (lazy-val (lambda () (reduce-lisp-type `(and (not ,mu) ,nu))))))
+               (cond ((subtypep t1 nil)
+                      (list (list nu
+                                  f
+                                  (cons-unique mu d))))
+                     ((subtypep (funcall t2) nil)
+                      (list (list nu
+                                  (cons-unique mu f)
+                                  d)))
+                     (t
+                      (list (list t1
+                                  (cons-unique mu f)
+                                  d)
+                            (list (funcall t2)
+                                  f
+                                  (cons-unique mu d)))))))
+           (expand (S type-specifiers)
+             (if type-specifiers
+                 (expand (mapcan #'(lambda (s)
+                                     (destructuring-bind (nu f d) s
+                                       (expand-1 (car type-specifiers) nu f d)))
+                                 S)
+                         (cdr type-specifiers))
+                 S)))
+    (let ((S (expand '((t (t) (nil))) type-specifiers)))
+      (values (mapcar #'car S) S))))
