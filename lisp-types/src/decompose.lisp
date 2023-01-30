@@ -87,8 +87,10 @@ is simple programmatically, but known to be poorly performing, in most cases."
     (slow-mdtd-baseline type-specifiers)))
 
 (defun mdtd-padl (type-specifiers)
-  (caching-types
-    (slow-mdtd-padl type-specifiers)))
+  (let (v)
+    (caching-types
+      (setq v (multiple-value-list (slow-mdtd-padl type-specifiers))))
+    (values-list v)))
 
 (defun slow-mdtd-padl (type-specifiers)
   (declare (type list type-specifiers))
@@ -98,7 +100,8 @@ is simple programmatically, but known to be poorly performing, in most cases."
                  (cons e data)))
            (expand-1 (mu nu f d)
              (let ((t1 (reduce-lisp-type `(and ,mu ,nu)))
-                   (t2 (lazy-val (lambda () (reduce-lisp-type `(and (not ,mu) ,nu))))))
+                   (t2 (lazy-val (lambda ()
+                                   (reduce-lisp-type `(and (not ,mu) ,nu))))))
                (cond ((subtypep t1 nil)
                       (list (list nu
                                   f
@@ -113,14 +116,14 @@ is simple programmatically, but known to be poorly performing, in most cases."
                                   d)
                             (list (funcall t2)
                                   f
-                                  (cons-unique mu d)))))))
-           (expand (S type-specifiers)
-             (if type-specifiers
-                 (expand (mapcan #'(lambda (s)
-                                     (destructuring-bind (nu f d) s
-                                       (expand-1 (car type-specifiers) nu f d)))
-                                 S)
-                         (cdr type-specifiers))
-                 S)))
-    (let ((S (expand '((t (t) (nil))) type-specifiers)))
-      (values (mapcar #'car S) S))))
+                                  (cons-unique mu d))))))))
+    (do* ((specs type-specifiers
+                (cdr specs))
+          (mu (car specs)
+              (car specs))
+          (expansion '((t (t) (nil)))
+                     (mapcan #'(lambda (triple)
+                                 (apply #'expand-1 mu triple))
+                             expansion)))
+         ((null specs)
+          (values (mapcar #'car expansion) expansion)))))
