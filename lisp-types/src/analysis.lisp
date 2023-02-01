@@ -515,7 +515,7 @@
                                           (incf line-style)
                                           (format stream "set style line ~D linewidth ~D linecolor rgb \"#~A\"~%"
                                                   line-style
-                                                  (or (getf descr :linewidth) 1)
+                                                  (or (getf descr :linewidth) 2)
                                                   (getf descr :gnu-color))
                                           ;; collect
                                           `(:line-style ,line-style ,@descr))
@@ -1938,6 +1938,7 @@ sleeping before the code finishes evaluating."
 			    (getf plist :tag)))
 		  '("STRONG" "WEAK")
 		  )))
+
 
 (defun rebuild-analysis (&key (destination-dir *destination-dir*) (autogen-dir *autogen-dir*))
   (rebuild-plots :destination-dir destination-dir :create-png-p t)

@@ -112,7 +112,7 @@
 (defun define-mdtd-function (&key names max-num-types
 			       gnu-color
 			       color
-			       (linewidth 1)
+			       (linewidth 2)
 			       (legend t))
   (let ((names (if (listp names)
 		   names
@@ -141,20 +141,22 @@
 			  (cons 'local-minimum *decompose-fun-parameterized-names*)))))
 
 (define-mdtd-function :names 'mdtd-baseline :max-num-types 15)
-(define-mdtd-function :names 'mdtd-padl)
-(define-mdtd-function :names 'mdtd-rtev2)
+
+(define-mdtd-function :names 'mdtd-padl :gnu-color "ff0094" )
+(define-mdtd-function :names 'mdtd-rtev2 :gnu-color "a500ff")
+(define-mdtd-function :names 'mdtd-graph :gnu-color "00aaad")
+(define-mdtd-function :names 'mdtd-bdd-graph :gnu-color "acbe29")
+(define-mdtd-function :names 'parameterized-mdtd-bdd-graph :gnu-color "9c5100")
+(define-mdtd-function :names 'mdtd-bdd :gnu-color "ef9608")
+
 (define-mdtd-function :names 'mdtd-sat)
-(define-mdtd-function :names 'mdtd-graph)
 (define-mdtd-function :names 'mdtd-bdd-strong)
 (define-mdtd-function :names 'mdtd-bdd-weak)
 (define-mdtd-function :names 'mdtd-bdd-weak-dynamic)
-(define-mdtd-function :names 'mdtd-bdd)
 (define-mdtd-function :names *decompose-fun-parameterized-names*  :gnu-color "b2daff" :color "light-blue" :legend nil)
 (define-mdtd-function :names 'mdtd-bdd-graph-strong)
 (define-mdtd-function :names 'mdtd-bdd-graph-weak-dynamic)
-(define-mdtd-function :names 'mdtd-bdd-graph)
 (define-mdtd-function :names 'mdtd-bdd-graph-weak)
-(define-mdtd-function :names 'parameterized-mdtd-bdd-graph :gnu-color "ff4444")
 (define-mdtd-function :names 'local-minimum :gnu-color "000000" :color "black" :linewidth 2)
 
 (defun parameterization-report (&key (re-run t) (multiplier 1) (create-png-p t) (destination-dir *destination-dir*)
