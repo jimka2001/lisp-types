@@ -903,7 +903,7 @@ i.e., of all the points whose xcoord is between x/2 and x*2."
 			      (format str "\\definecolor{color~A}{RGB}{~A,~A,~A}~%"
 				      color red green blue))
 			    (format str "\\addlegendimage{color~A,line width=2.0pt,font=\\ttfamily}~%" color))
-			  (format str "\\addlegendentry{~A};~%" (string-downcase legend-entry))))
+			  (format str "\\addlegendentry{~A}~%" (string-downcase legend-entry))))
 		  items)))
 	  (axis legend
 		'("hide axis"
@@ -1627,7 +1627,7 @@ sleeping before the code finishes evaluating."
                                                                    mdtd-padl
 								   mdtd-bdd 
 
-								   mdtd-rtev2 
+								   ;; mdtd-rtev2 
 								   
 								   
 								   mdtd-graph
@@ -1683,7 +1683,7 @@ sleeping before the code finishes evaluating."
                                               ;;mdtd-bdd-weak
                                               mdtd-bdd ;; same as mdtd-bdd-weak-dynamic
                                               mdtd-padl
-                                              mdtd-rtev2
+                                              ;; mdtd-rtev2
                                               mdtd-graph)))
 
 (defun mdtd-report (&key (re-run t) (multiplier 2.5) (create-png-p t) (bucket-reporters *bucket-reporters*) (destination-dir *destination-dir*))
@@ -1946,7 +1946,7 @@ sleeping before the code finishes evaluating."
   ;;(generate-latex-plots :analysis-dir destination-dir
 	;;		:gen-samples nil
 	;;	 	:autogen-dir autogen-dir)
-  (gen-parameters-summary-tabular :destination-dir destination-dir :autogen-dir autogen-dir)
-  (gen-mdtd-profile-single-figures :destination-dir destination-dir :autogen-dir autogen-dir)
+  ;;(gen-parameters-summary-tabular :destination-dir destination-dir :autogen-dir autogen-dir)
+  ;;(gen-mdtd-profile-single-figures :destination-dir destination-dir :autogen-dir autogen-dir)
 )
 
