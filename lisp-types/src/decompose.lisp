@@ -94,32 +94,31 @@ is simple programmatically, but known to be poorly performing, in most cases."
 
 (defun slow-mdtd-padl (type-specifiers)
   (declare (type list type-specifiers))
-  (labels ((expand-1 (mu nu f d)
-             (let ((t1 (reduce-lisp-type `(and ,mu ,nu)))
-                   (t2 (lazy-val (lambda ()
-                                   (reduce-lisp-type `(and (not ,mu) ,nu))))))
-               (cond ((subtypep t1 nil)
-                      (list (list nu
-                                  f
-                                  (adjoin mu d :test #'equal))))
-                     ((subtypep (funcall t2) nil)
-                      (list (list nu
-                                  (adjoin mu f :test #'equal)
-                                  d)))
-                     (t
-                      (list (list t1
-                                  (adjoin mu f :test #'equal)
-                                  d)
-                            (list (funcall t2)
-                                  f
-                                  (adjoin mu d :test #'equal))))))))
-    (do* ((specs type-specifiers
-                (cdr specs))
-          (mu (car specs)
-              (car specs))
-          (expansion '((t (t) (nil)))
-                     (mapcan #'(lambda (triple)
-                                 (apply #'expand-1 mu triple))
-                             expansion)))
-         ((null specs)
-          (values (mapcar #'car expansion) expansion)))))
+  (labels ((expand-1 (mu triple)
+             (destructuring-bind (nu f d) triple
+               (let ((t1 (reduce-lisp-type `(and ,mu ,nu)))
+                     (t2 (lazy-val (lambda ()
+                                     (reduce-lisp-type `(and (not ,mu) ,nu))))))
+                 (cond ((subtypep t1 nil)
+                        (list (list nu
+                                    f
+                                    (adjoin mu d :test #'equal))))
+                       ((subtypep (funcall t2) nil)
+                        (list (list nu
+                                    (adjoin mu f :test #'equal)
+                                    d)))
+                       (t
+                        (list (list t1
+                                    (adjoin mu f :test #'equal)
+                                    d)
+                              (list (funcall t2)
+                                    f
+                                    (adjoin mu d :test #'equal))))))))
+           (expand (acc mu)
+             (mapcan (lambda (triple)
+                       (expand-1 mu triple))
+                     acc)))
+    (let ((expansion (reduce #'expand
+                             type-specifiers
+                             :initial-value '((t (t) (nil))))))
+      (values (mapcar #'car expansion) expansion))))
