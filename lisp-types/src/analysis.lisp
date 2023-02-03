@@ -1,4 +1,4 @@
-;; Copyright (c) 2016-18 EPITA Research and Development Laboratory
+;; Copyright (c) 2016-23 EPITA Research and Development Laboratory
 ;;
 ;; Permission is hereby granted, free of charge, to any person obtaining
 ;; a copy of this software and associated documentation
@@ -1664,7 +1664,17 @@ sleeping before the code finishes evaluating."
 			:destination-dir destination-dir)))))
 
 (defun best-2-report (&key (re-run t) (multiplier 1.8) (create-png-p t) (destination-dir *destination-dir*)
-                        (bucket-reporters *bucket-reporters*))
+                        (bucket-reporters *bucket-reporters*)
+                        (decomposition-functions '(;; mdtd-bdd-graph-strong
+                                                   ;; mdtd-bdd-graph-weak
+					           parameterized-mdtd-bdd-graph ;; tuned by params- simulation
+                                                   mdtd-bdd-graph ;; same as mdtd-bdd-graph-weak-dynamic
+                                                   ;;mdtd-bdd-strong
+                                                   ;;mdtd-bdd-weak
+                                                   mdtd-bdd ;; same as mdtd-bdd-weak-dynamic
+                                                   mdtd-padl
+                                                   ;; mdtd-rtev2
+                                                   mdtd-graph)))
   (big-test-report :re-run re-run
                    :prefix "best-2-" ;; should change to best-4-
                    :multiplier multiplier
@@ -1675,16 +1685,7 @@ sleeping before the code finishes evaluating."
                    :destination-dir destination-dir
                    :create-png-p create-png-p
                    :bucket-reporters bucket-reporters
-                   :decomposition-functions '( ;; mdtd-bdd-graph-strong
-                                              ;; mdtd-bdd-graph-weak
-					      parameterized-mdtd-bdd-graph ;; tuned by params- simulation
-                                              mdtd-bdd-graph ;; same as mdtd-bdd-graph-weak-dynamic
-                                              ;;mdtd-bdd-strong
-                                              ;;mdtd-bdd-weak
-                                              mdtd-bdd ;; same as mdtd-bdd-weak-dynamic
-                                              mdtd-padl
-                                              ;; mdtd-rtev2
-                                              mdtd-graph)))
+                   :decomposition-functions decomposition-functions))
 
 (defun mdtd-report (&key (re-run t) (multiplier 2.5) (create-png-p t) (bucket-reporters *bucket-reporters*) (destination-dir *destination-dir*))
   (big-test-report :re-run re-run
