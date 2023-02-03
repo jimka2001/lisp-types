@@ -96,13 +96,12 @@ is simple programmatically, but known to be poorly performing, in most cases."
   (declare (type list type-specifiers))
   (labels ((expand-1 (mu nu f d)
              (let ((t1 (reduce-lisp-type `(and ,mu ,nu)))
-                   (t2 (lazy-val (lambda ()
-                                   (reduce-lisp-type `(and (not ,mu) ,nu))))))
+                   (t2 (lambda () (reduce-lisp-type `(and (not ,mu) ,nu)))))
                (cond ((subtypep t1 nil)
                       (list (list nu
                                   f
                                   (adjoin mu d :test #'equal))))
-                     ((subtypep (funcall t2) nil)
+                     ((subtypep nu mu)
                       (list (list nu
                                   (adjoin mu f :test #'equal)
                                   d)))
@@ -110,7 +109,7 @@ is simple programmatically, but known to be poorly performing, in most cases."
                       (list (list t1
                                   (adjoin mu f :test #'equal)
                                   d)
-                            (list (funcall t2)
+                            (list (t2)
                                   f
                                   (adjoin mu d :test #'equal))))))))
     (do* ((specs type-specifiers
