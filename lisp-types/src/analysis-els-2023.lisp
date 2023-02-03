@@ -32,3 +32,14 @@ It is the responsibility of the caller to make this copy."
                                             mdtd-bdd
                                             mdtd-padl
                                             mdtd-graph)))
+
+(defclass A1 () ())
+(defclass A2 (A1) ())
+(defclass A3 (A1) ())
+(defclass A23 (A2 A3) ())
+(defclass A4 (A1) ())
+(defclass A423 (A4 A23) ())
+(defclass A5 (A4) ())
+(defclass A6 (A1) ())
+
+(mdtd-padl '(A1 A2 A3 A4 A5 A6))

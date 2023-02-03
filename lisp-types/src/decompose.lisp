@@ -86,12 +86,6 @@ is simple programmatically, but known to be poorly performing, in most cases."
   (caching-types
     (slow-mdtd-baseline type-specifiers)))
 
-(defun mdtd-padl (type-specifiers)
-  (let (v)
-    (caching-types
-      (setq v (multiple-value-list (slow-mdtd-padl type-specifiers))))
-    (values-list v)))
-
 (defun slow-mdtd-padl (type-specifiers)
   (declare (type list type-specifiers))
   (labels ((expand-1 (mu triple)
@@ -114,11 +108,20 @@ is simple programmatically, but known to be poorly performing, in most cases."
                                     f
                                     (adjoin mu d :test #'equal))))))))
            (expand (acc mu)
+             (print (list :mu mu :acc (mapcar #'car acc)))
              (mapcan (lambda (triple)
-                       (expand-1 mu triple))
+                       (let ((e (expand-1 mu triple)))
+                         (print (list :expand-1 :mu mu :triple (car triple) :expanded (mapcar #'car e)))
+                         e))
                      acc)))
     (let ((expansion (reduce #'expand
                              type-specifiers
                              :initial-value '((t (t) (nil))))))
       (values (mapcar #'car expansion) expansion))))
 
+
+(defun mdtd-padl (type-specifiers)
+  (let (v)
+    (caching-types
+      (setq v (multiple-value-list (slow-mdtd-padl type-specifiers))))
+    (values-list v)))
