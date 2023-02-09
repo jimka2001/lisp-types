@@ -181,8 +181,8 @@
 (defclass B-151 () ())
 
 (define-test type/reduce-c
-  (assert-false (class-direct-subclasses (find-class 'a-150)))
-  (assert-false (class-direct-subclasses (find-class 'b-151)))
+  (assert-false (sb-mop:class-direct-subclasses (find-class 'a-150)))
+  (assert-false (sb-mop:class-direct-subclasses (find-class 'b-151)))
   (assert-true (equal (reduce-lisp-type '(OR (NOT A-150) B-151))
                       '(not a-150))))
 

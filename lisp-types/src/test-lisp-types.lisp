@@ -230,12 +230,12 @@
 (defclass :F-247 () ())
 (define-test type/reduce-lisp-type2
 
-  (assert-false (class-direct-subclasses (find-class 'C-247)))
-  (assert-false (class-direct-subclasses (find-class 'D-247)))
-  (assert-false (class-direct-subclasses (find-class 'E-247)))
-  (assert-false (class-direct-subclasses (find-class ':F-247)))
-  (assert-true (intersection (class-direct-subclasses (find-class 'A1-247))
-                             (class-direct-subclasses (find-class 'B1-247))))
+  (assert-false (sb-mop:class-direct-subclasses (find-class 'C-247)))
+  (assert-false (sb-mop:class-direct-subclasses (find-class 'D-247)))
+  (assert-false (sb-mop:class-direct-subclasses (find-class 'E-247)))
+  (assert-false (sb-mop:class-direct-subclasses (find-class ':F-247)))
+  (assert-true (intersection (sb-mop:class-direct-subclasses (find-class 'A1-247))
+                             (sb-mop:class-direct-subclasses (find-class 'B1-247))))
   (assert-true (equivalent-types-p (reduce-lisp-type '(or A1-247 (and A1-247 B1-247 C-247 D-247) E-247))
                                    '(or E-247 A1-247)))
   (let ((un-interned (gensym)))
@@ -267,9 +267,9 @@
 (define-test type/consensus-theorem
   (assert-true (reduce (lambda (classes class-name)
                          (intersection classes
-                                       (class-direct-subclasses (find-class class-name))))
+                                       (sb-mop:class-direct-subclasses (find-class class-name))))
                        '(W-282 A-282 B-282 C-282 U-282 V-282 X-282 Y-282 Z-282)
-                       :initial-value (class-direct-subclasses (find-class 'W-282))))
+                       :initial-value (sb-mop:class-direct-subclasses (find-class 'W-282))))
           
   (assert-true (equivalent-types-p (reduce-lisp-type '(or W-282 (and A-282 B-282) X-282
                                                        Y-282 (and (not A-282) C-282)
