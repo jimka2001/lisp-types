@@ -108,10 +108,10 @@ is simple programmatically, but known to be poorly performing, in most cases."
                                     f
                                     (adjoin mu d :test #'equal))))))))
            (expand (acc mu)
-             (print (list :mu mu :acc (mapcar #'car acc)))
+             ;;(print (list :mu mu :acc (mapcar #'car acc)))
              (mapcan (lambda (triple)
                        (let ((e (expand-1 mu triple)))
-                         (print (list :expand-1 :mu mu :triple (car triple) :expanded (mapcar #'car e)))
+                         ;;(print (list :expand-1 :mu mu :triple (car triple) :expanded (mapcar #'car e)))
                          e))
                      acc)))
     (let ((expansion (reduce #'expand
