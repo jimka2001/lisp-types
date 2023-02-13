@@ -43,3 +43,5 @@ It is the responsibility of the caller to make this copy."
 (defclass A6 (A1) ())
 
 (mdtd-padl '(A1 A2 A3 A4 A5 A6))
+(subtypep '(and A3 (not A2) (not A4)) 'A1)
+(subtypep '(and (and A3 (not A2) (not A4)) A1) nil)
