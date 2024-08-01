@@ -1,4 +1,4 @@
-;; Copyright (c) 2018,2020 EPITA Research and Development Laboratory
+;; Copyright (c) 2016 EPITA Research and Development Laboratory
 ;;
 ;; Permission is hereby granted, free of charge, to any person obtaining
 ;; a copy of this software and associated documentation
@@ -19,29 +19,30 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-
-(asdf:defsystem :lisp-types-baker-analysis
-  :version (:read-file-form "../version.lisp")
+(asdf:defsystem :lisp-types
+  :version (:read-file-form "version.lisp")
   :author "Jim Newton"
-  :description "Extension of lisp-types-analysis and lisp-types-analysis-test for testing the baker subtypep algorithm"
+  :description "Lisp type reduction utilities, and CL type-system compatible ROBDD implementation"
   :license "MIT"
-  :depends-on (:lisp-types
-	       :cl-robdd
-	       :cl-robdd-test
-	       :cl-robdd-analysis-test
-	       :lisp-types-analysis
-	       :lisp-types-test
-               ;; in order to test using fr.epita.lrde.subtypep, you need to
-               ;;   push :subtypep-debug onto *feature* before loading
-               ;;   this system.
-               (:feature :subtypep-debug :fr.epita.lrde.subtypep)
-	       :adjuvant
-	       :scrutiny)
+  :depends-on (:dispatch
+               :cl-robdd
+	       :adjuvant)
   :components
   ((:module "src"
     :components
-    ((:file "baker-work-around")
-     (:file "lisp-types-baker-analysis-package")
-     (:file "analysis-baker")
-     (:file "test-baker")
+    ((:file "lisp-types-package")
+     (:file "subtypep")
+     (:file "util")
+     (:file "ltbdd")
+     (:file "lisp-types")
+     (:file "reduce" :depends-on ("lisp-types"))
+     (:file "decompose" :depends-on ("reduce"))
+     (:file "sat" :depends-on ("lisp-types"))
+     (:file "typecase" :depends-on ("lisp-types"))
+     (:file "bdd-reduce-generic")
+     (:file "bdd-reduce" :depends-on ("bdd-reduce-generic"))
+     (:file "bdd-graph" :depends-on ("bdd-reduce"))
+     (:file "bdd-reduce-17")
+     (:file "decompose-rtev2")
+     (:file "bdd-typecase" :depends-on ("bdd-reduce-generic"))
      ))))

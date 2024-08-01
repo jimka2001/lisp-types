@@ -21,7 +21,7 @@
 
 
 (asdf:defsystem :lisp-types-test
-  :version (:read-file-form "../version.lisp")
+  :version (:read-file-form "version.lisp")
   :author "Jim Newton"
   :description "Test cases for :lisp-types"
   :license "MIT"
